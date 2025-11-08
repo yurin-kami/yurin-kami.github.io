@@ -104,24 +104,25 @@ excerpt: "我将演示如何使用 golang 连接 PG 并对其进行基本操作"
    
 6. 初始化项目并安装 pgx 库
 
-```bash
-mkdir goForPG
-cd goForPG
-go mod init
-go get github/jackc/pgx/v5
-vim main.go
-```
+    ```bash
+    mkdir goForPG
+    cd goForPG
+    go mod init
+    go get github/jackc/pgx/v5
+    vim main.go
+    ```
 
 7. 使用连接字符串创建连接对象
 
-```go
-conn, err := pgx.Connect(context.Background(), "postgres://postgres:password@your_DB_host:5432/goForTrain")
-if err != nil {
-	fmt.Println("connection error:", err)
-	return
-}
-fmt.Println("connection successful")
-```
+    ```go
+    conn, err := pgx.Connect(context.Background(), "postgres://postgres:password@your_DB_host:5432/goForTrain")
+    if err != nil {
+        fmt.Println("connection error:", err)
+        return
+    }
+    fmt.Println("connection successful")
+    ```
+
 8. 定义一个数据类型User
 
    ```go
@@ -158,21 +159,21 @@ fmt.Println("connection successful")
 
 10. 创建一个查询所有用户的函数
 
-   ```go
-   func GetAllUsers(ctx context.Context, conn *pgx.Conn) ([]User, error) {
-   	rows, err := conn.Query(context.Background(), "SELECT * FROM users")//返回用户表所有行
-   	if err != nil {
-   		fmt.Println("query error:", err)
-   		return nil, err
-   	}
-   	defer rows.Close()
-   	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[User])//将结果集塞入user切片users
-   	if err != nil {
-   		return nil, err
-   	}
-   	return users, nil
-   }
-   ```
+       ```go
+       func GetAllUsers(ctx context.Context, conn *pgx.Conn) ([]User, error) {
+        rows, err := conn.Query(context.Background(), "SELECT * FROM users")//返回用户表所有行
+        if err != nil {
+            fmt.Println("query error:", err)
+            return nil, err
+        }
+        defer rows.Close()
+        users, err := pgx.CollectRows(rows, pgx.RowToStructByName[User])//将结果集塞入user切片users
+        if err != nil {
+            return nil, err
+        }
+        return users, nil
+       }
+       ```
 
 11. 在main中调用它们
 
