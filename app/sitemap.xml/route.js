@@ -1,5 +1,7 @@
 import { getAllPosts } from '../../lib/posts';
 
+export const dynamic = 'force-static';
+
 export async function GET() {
   // 获取所有文章
   const posts = getAllPosts(['slug', 'date']);

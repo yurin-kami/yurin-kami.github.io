@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getPostBySlug, convertMarkdownToHtml, extractHeaders } from '../../../lib/posts';
+import { getPostBySlug, convertMarkdownToHtml, extractHeaders, getAllPosts } from '../../../lib/posts';
 
 // 服务端组件获取文章数据
 async function PostContent({ params }) {
@@ -43,6 +43,14 @@ export async function generateMetadata({ params }) {
       tags: post.tags,
     },
   };
+}
+
+// 生成静态参数
+export async function generateStaticParams() {
+  const posts = getAllPosts(['slug']);
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
 }
 
 // 骨架屏组件
