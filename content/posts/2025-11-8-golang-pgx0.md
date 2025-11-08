@@ -1,11 +1,11 @@
 ---
-title: "0.学习使用 golang 连接 psotgresql 数据库"
+title: "0.学习使用 golang 连接 postgresql 数据库"
 date: "2025-11-8"
 tags: ["golang", "postgresql", "pgx", "baseful"]
 excerpt: "我将演示如何使用 golang 连接 PG 并对其进行基本操作"
 ---
 
-# 学习使用 golang 连接 psotgresql 数据库
+# 学习使用 golang 连接 postgresql 数据库
 
 0. 安装postgresql· [PostgreSQL: 下载 - PostgreSQL 数据库](https://postgresql.ac.cn/download/)· 个人更推荐再wsl中使用容器工具启动PG，减少开发环境的污染
 
