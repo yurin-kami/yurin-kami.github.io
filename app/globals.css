@@ -512,13 +512,26 @@ mark {
     padding-left: 2rem;
   }
   
-  li {
-    flex-direction: column;
+  /* 首页文章列表项在小屏幕上也保持水平排列 */
+  main > ul > li {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
   
-  li .thumbnail {
-    margin-top: 1rem;
+  main > ul > li .content {
+    flex: 1 1 auto;
+    min-width: 200px; /* 确保内容有足够的空间 */
+  }
+  
+  main > ul > li .thumbnail {
+    margin-top: 0;
+    margin-left: 1rem;
     align-self: flex-start;
+  }
+  
+  /* 如果列表项不是文章列表项，则使用垂直排列 */
+  .toc ul li {
+    flex-direction: column;
   }
   
   .avatar-header {
