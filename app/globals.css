@@ -109,6 +109,9 @@ footer {
 ul {
   list-style: none;
   padding: 0;
+  overflow-x: auto; /* 防止列表内容溢出 */
+  max-width: 100%; /* 限制列表最大宽度 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
 li {
@@ -192,6 +195,8 @@ div > span > a:hover {
   margin: 1.5rem 0;
   align-self: flex-start; /* 与文章内容对齐 */
   backdrop-filter: blur(8px); /* 背景模糊效果 */
+  overflow-x: auto; /* 防止大纲内容溢出 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
 .toc h3 {
@@ -255,6 +260,9 @@ article {
   max-height: none;
   padding: 1rem;
   overflow-y: visible;
+  overflow-x: auto; /* 防止内容水平溢出 */
+  max-width: 100%; /* 限制最大宽度 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
 /* 代码块样式 */
@@ -267,6 +275,8 @@ pre {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e1e4e8;
   backdrop-filter: blur(5px); /* 背景模糊效果 */
+  max-width: 100%; /* 防止代码块溢出容器 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
 code {
@@ -300,6 +310,10 @@ table {
   overflow: hidden;
   backdrop-filter: blur(5px); /* 背景模糊效果 */
   background-color: rgba(255, 255, 255, 0.7);
+  display: block; /* 允许表格水平滚动 */
+  overflow-x: auto; /* 表格内容溢出时显示滚动条 */
+  max-width: 100%; /* 防止表格溢出容器 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
 th, td {
