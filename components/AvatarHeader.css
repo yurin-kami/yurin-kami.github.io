@@ -1,0 +1,61 @@
+.avatar-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.8) 0%, rgba(255, 142, 158, 0.8) 100%); /* 添加透明度到渐变背景 */
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+  backdrop-filter: blur(10px); /* 添加背景模糊效果 */
+}
+
+.avatar-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px; /* 圆角矩形 */
+  object-fit: cover;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-image:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(147, 112, 219, 0.5); /* 淡紫色阴影 */
+}
+
+.social-icons {
+  display: flex;
+  margin-left: 2rem;
+  gap: 1rem;
+}
+
+.social-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* 圆形 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9); /* 添加透明度到社交图标背景 */
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(147, 112, 219, 0.4);
+}
+
+.github-icon {
+  color: #333;
+}
+
+.bilibili-icon {
+  color: #00a1d6;
+}

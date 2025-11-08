@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/image-proxy/
+
+Sitemap: https://kamishow.example.com/sitemap.xml

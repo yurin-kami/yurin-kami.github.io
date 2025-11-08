@@ -1,0 +1,425 @@
+/* 全局样式 */
+/* 定义自定义字体 */
+@font-face {
+  font-family: 'FZXIANGSU16';
+  src: url('/fonts/FZXIANGSU16.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* 设置全局背景 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'FZXIANGSU16', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* 背景图片设置 */
+  background-image: url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* 背景模糊效果容器 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(5px); /* 降低模糊度从10px到5px */
+  z-index: -2;
+}
+
+/* 背景遮罩层 */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 249, 251, 0.7); /* 降低遮罩透明度到0.7 */
+  z-index: -1;
+}
+
+header {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.8) 0%, rgba(255, 142, 158, 0.8) 100%); /* 添加透明度到导航栏 */
+  padding: 1rem;
+  box-shadow: 0 2px 10px rgba(255, 107, 157, 0.3);
+  backdrop-filter: blur(5px); /* 添加背景模糊效果 */
+}
+
+nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+nav a {
+  color: white;
+  margin: 0 1rem;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+nav a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+main {
+  max-width: 1200px;
+  width: 100%;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: rgba(255, 255, 255, 0.75); /* 降低主要容器透明度到0.75 */
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(255, 107, 157, 0.15);
+  flex: 1;
+  min-height: 600px; /* 固定最小高度 */
+  backdrop-filter: blur(8px); /* 调整背景模糊效果到8px */
+}
+
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 142, 158, 0.8) 0%, rgba(255, 107, 157, 0.8) 100%); /* 添加透明度到页脚 */
+  color: white;
+  font-weight: 500;
+  margin-top: auto;
+  backdrop-filter: blur(5px); /* 添加背景模糊效果 */
+}
+
+/* 文章列表样式 */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.7); /* 降低列表项透明度到0.7 */
+  border-radius: 15px;
+  box-shadow: 0 3px 10px rgba(255, 107, 157, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+}
+
+li:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(255, 107, 157, 0.2);
+}
+
+li .content {
+  flex: 1;
+  padding-right: 1rem;
+}
+
+li .thumbnail {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 8px rgba(150, 130, 170, 0.3);
+  align-self: center;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #ff6b9d; /* 粉色标题 */
+  font-family: 'FZXIANGSU16', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+a {
+  color: #ff6b9d;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #ff4785;
+  text-decoration: underline;
+}
+
+/* 标签样式 */
+div > span {
+  margin-right: 0.5rem;
+}
+
+div > span > a {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background-color: rgba(255, 230, 240, 0.8); /* 添加透明度到标签背景 */
+  color: #ff6b9d;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+div > span > a:hover {
+  background-color: #ff6b9d;
+  color: white;
+  text-decoration: none;
+}
+
+/* 大纲样式 */
+.toc {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.2);
+  max-width: 100%;
+  margin: 1.5rem 0;
+  align-self: flex-start; /* 与文章内容对齐 */
+  backdrop-filter: blur(8px); /* 背景模糊效果 */
+}
+
+.toc h3 {
+  margin-top: 0;
+  color: #ff6b9d;
+  font-size: 1.2rem;
+  margin-bottom: 0.8rem;
+}
+
+.toc ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.toc ul li {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  box-shadow: none;
+  display: block;
+}
+
+.toc ul li:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.toc a {
+  color: #333;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  transition: all 0.2s ease;
+}
+
+.toc a:hover {
+  color: #ff6b9d;
+  text-decoration: underline;
+  background-color: rgba(255, 107, 157, 0.1);
+}
+
+.toc .toc-h2 {
+  padding-left: 1rem;
+}
+
+.toc .toc-h3 {
+  padding-left: 2rem;
+}
+
+/* 博客正文盒子固定大小 */
+article {
+  min-height: 500px; /* 固定最小高度 */
+  padding: 1rem;
+}
+
+/* 确保文章内容区域不会超出固定大小 */
+.article-content {
+  max-height: none;
+  padding: 1rem;
+  overflow-y: visible;
+}
+
+/* 代码块样式 */
+pre {
+  background-color: rgba(246, 248, 250, 0.8);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow: auto;
+  margin: 1rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e4e8;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85em;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* 行内代码样式 */
+:not(pre) > code {
+  background-color: rgba(27, 31, 35, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 85%;
+}
+
+/* 表格样式 */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+th {
+  background-color: rgba(246, 248, 250, 0.8);
+  font-weight: 600;
+  border-bottom: 2px solid #e1e4e8;
+}
+
+tr:nth-child(even) {
+  background-color: rgba(246, 248, 250, 0.4);
+}
+
+tr:hover {
+  background-color: rgba(255, 245, 247, 0.6);
+}
+
+/* 引用样式 */
+blockquote {
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 4px solid #ff6b9d;
+  background-color: rgba(255, 245, 247, 0.6);
+  color: #666;
+  backdrop-filter: blur(5px); /* 背景模糊效果 */
+}
+
+blockquote p {
+  margin: 0;
+}
+
+/* 分割线样式 */
+hr {
+  border: 0;
+  height: 1px;
+  background: #e1e4e8;
+  margin: 1.5rem 0;
+}
+
+/* 删除线样式 */
+del {
+  color: #999;
+}
+
+/* 任务列表样式 */
+.task-list-item {
+  list-style-type: none;
+}
+
+.task-list-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+/* 高亮文本样式 */
+mark {
+  background-color: rgba(255, 249, 196, 0.8); /* 添加透明度到高亮文本 */
+  padding: 0.2em;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  main {
+    margin: 1rem;
+    padding: 1rem;
+    border-radius: 10px; /* 在小屏幕上调整边框半径 */
+  }
+  
+  nav {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  nav a {
+    margin: 0.25rem 0;
+    padding: 0.5rem 0.8rem; /* 在小屏幕上调整内边距 */
+  }
+  
+  .toc {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    max-width: 100%;
+    margin: 1rem 0;
+    border-radius: 10px; /* 在小屏幕上调整边框半径 */
+  }
+  
+  .toc ul {
+    padding-left: 1rem; /* 在小屏幕上保持缩进 */
+  }
+  
+  .toc .toc-h2 {
+    padding-left: 1rem;
+  }
+  
+  .toc .toc-h3 {
+    padding-left: 2rem;
+  }
+  
+  li {
+    flex-direction: column;
+  }
+  
+  li .thumbnail {
+    margin-top: 1rem;
+    align-self: flex-start;
+  }
+  
+  .avatar-header {
+    flex-direction: column; /* 在小屏幕上将头像和社交图标垂直排列 */
+    text-align: center;
+  }
+  
+  .social-icons {
+    margin-left: 0;
+    margin-top: 1rem;
+  }
+}
