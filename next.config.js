@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",
   experimental: {
-    output: "export",
     serverActions: {
       bodySizeLimit: '5mb',
     },

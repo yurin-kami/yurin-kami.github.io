@@ -40,6 +40,8 @@ function isKnownCrawler(userAgent) {
   return crawlers.some(crawler => lowerUA.includes(crawler));
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const imageUrl = searchParams.get('url');
