@@ -105,16 +105,13 @@ footer {
   backdrop-filter: blur(5px); /* 添加背景模糊效果 */
 }
 
-/* 文章列表样式 */
+/* 首页文章列表样式 */
 ul {
   list-style: none;
   padding: 0;
-  overflow-x: auto; /* 防止列表内容溢出 */
-  max-width: 100%; /* 限制列表最大宽度 */
-  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
 }
 
-li {
+main > ul > li {
   margin-bottom: 2rem;
   padding: 1.5rem;
   background-color: rgba(255, 255, 255, 0.7); /* 降低列表项透明度到0.7 */
@@ -125,6 +122,28 @@ li {
   justify-content: space-between;
   align-items: flex-start;
   backdrop-filter: blur(5px); /* 背景模糊效果 */
+  overflow-x: auto; /* 防止列表内容溢出 */
+  max-width: 100%; /* 限制列表最大宽度 */
+  box-sizing: border-box; /* 确保padding不会增加元素宽度 */
+}
+
+main > ul > li:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(255, 107, 157, 0.2);
+}
+
+main > ul > li .content {
+  flex: 1;
+  padding-right: 1rem;
+}
+
+main > ul > li .thumbnail {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 8px rgba(150, 130, 170, 0.3);
+  align-self: center;
 }
 
 li:hover {
@@ -277,6 +296,80 @@ pre {
   backdrop-filter: blur(5px); /* 背景模糊效果 */
   max-width: 100%; /* 防止代码块溢出容器 */
   box-sizing: border-box; /* 确保padding不会增加元素宽度 */
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85em;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* 行内代码样式 */
+:not(pre) > code {
+  background-color: rgba(27, 31, 35, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 85%;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* 文章内容中的列表样式 */
+.article-content ul,
+.article-content ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.article-content ul li,
+.article-content ol li {
+  margin: 0.5rem 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  display: list-item;
+  justify-content: normal;
+  align-items: normal;
+  backdrop-filter: none;
+}
+
+/* 区分有序和无序列表 */
+.article-content ul {
+  list-style-type: disc;
+}
+
+.article-content ol {
+  list-style-type: decimal;
+}
+
+/* 嵌套列表样式 */
+.article-content ul ul,
+.article-content ol ol,
+.article-content ul ol,
+.article-content ol ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+/* 嵌套列表的缩进 */
+.article-content ul ul,
+.article-content ol ul {
+  list-style-type: circle;
+}
+
+.article-content ol ol,
+.article-content ul ol {
+  list-style-type: lower-alpha;
 }
 
 code {
