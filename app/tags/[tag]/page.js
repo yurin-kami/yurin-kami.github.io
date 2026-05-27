@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { getAllPosts, getAllTags } from '../../../lib/posts';
 
 export default async function TagPosts({ params }) {
-  const tag = params.tag;
+  const resolvedParams = await params;
+  const tag = resolvedParams.tag;
   const allPosts = getAllPosts(['title', 'date', 'slug', 'tags']);
   const posts = allPosts.filter(post => post.tags && post.tags.includes(tag));
 
@@ -24,9 +25,10 @@ export default async function TagPosts({ params }) {
 }
 
 export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
   return {
-    title: `标签: ${params.tag} - KAMISHOW!!!!!`,
-    description: `包含标签 ${params.tag} 的所有文章`,
+    title: `标签: ${resolvedParams.tag} - KAMISHOW!!!!!`,
+    description: `包含标签 ${resolvedParams.tag} 的所有文章`,
   };
 }
 
