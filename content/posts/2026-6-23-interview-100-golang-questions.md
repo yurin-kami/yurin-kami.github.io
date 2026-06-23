@@ -66,7 +66,8 @@ make 和 new 都是⽤于内存分配的内建函数，但它们的使⽤场景�
 
     // 使⽤ make 创建 slice
     s := make([]int, 5) // 创建⼀个⻓度为 5 的 slice
-    fmt.Println(s) // 输出: [0 0 0 0 0]// 使⽤ new 创建 int 指针
+    fmt.Println(s) // 输出: [0 0 0 0 0]
+    // 使⽤ new 创建 int 指针
     p := new(int) // 分配内存给 int 类型
     fmt.Println(*p) // 输出: 0 (初始值)
 
@@ -172,12 +173,12 @@ strings.join也是基于strings.builder来实现的,并且可以⾃定义分隔�
 
 defer执⾏顺序和调⽤顺序相反，类似于栈后进先出(LIFO)
 
-    defer 的作⽤是：当 defer 语句被执⾏时，跟在 defer 后⾯的函数会被延迟执⾏。直到 包含该 defer 语句的函数执⾏
+defer 的作⽤是：当 defer 语句被执⾏时，跟在 defer 后⾯的函数会被延迟执⾏。直到 包含该 defer 语句的函数执⾏
 
 完毕时，defer 后的函数才会被执⾏，不论包含 defer 语句的函数是通过 return 正常结束，还是由于 panic 导致的
 异常结束。 你可以在⼀个函数中执⾏多条 defer 语句，它们的执⾏顺序与声明顺序相反。
 
-    defer 的常⽤场景:
+defer 的常⽤场景:
 
 defer语句经常被⽤于处理成对的操作，如打开、关闭、连接、断开连接、 加锁、释放锁。
 通过defer机制，不论函数逻辑多复杂，都能保证在任何执⾏路径下，资 源被释放。
@@ -191,7 +192,7 @@ defer语句经常被⽤于处理成对的操作，如打开、关闭、连接、
     }()
     defer func() {
 
-i += 1
+        i += 1
 
     fmt.Println("defer2")
     }()
@@ -213,7 +214,7 @@ i += 1
     i = 0
     defer func() {
 
-i += 1
+        i += 1
 
     fmt.Println("defer2")
     }()
@@ -293,10 +294,10 @@ tag可以为结构体成员提供属性。常见的：
 
     package main
     import (
-
-"fmt"
-"unsafe"
-)
+        
+        "fmt"
+        "unsafe"
+    )
 
     func main() {
 
@@ -315,7 +316,7 @@ tag可以为结构体成员提供属性。常见的：
     set := make(Set)
     for _, item := range []string{"A", "A", "B", "C"} {
 
-set[item] = struct{}{}
+        set[item] = struct{}{}
 
     }
 
@@ -437,10 +438,10 @@ Go 语⾔的多返回值是通过在函数调⽤栈帧上预留空间并进⾏�
 
     package main
     import (
-
-"fmt"
-_ "net/http/pprof" // 导⼊ pprof 包，只为了执⾏其 init 函数注册 profiling 接⼝
-)
+        
+        "fmt"
+        _ "net/http/pprof" // 导⼊ pprof 包，只为了执⾏其 init 函数注册 profiling 接⼝
+    )
 
     func main() {
 
@@ -513,7 +514,8 @@ Go1.18及以后，引⼊了新的扩容规则：
 ⽰例：
 
     package main
-    import "fmt"func main() {
+    import "fmt"
+    func main() {
 
     slice := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
     s1 := slice[2:5]
@@ -521,7 +523,7 @@ Go1.18及以后，引⼊了新的扩容规则：
     s2 = append(s2, 100)
     s2 = append(s2, 200)
 
-s1[2] = 20
+        s1[2] = 20
 
     fmt.Println(s1)
     fmt.Println(s2)
@@ -586,15 +588,15 @@ s1[2] = 20
     // i只是⼀个副本，不能改变s中元素的值
     /*for _, i := range s {
 
-i++
+        i++
 
     }
 
-- /
+    */
 
     for i := range s {
 
-s[i] += 1
+        s[i] += 1
 
     }
     }
@@ -620,7 +622,7 @@ s[i] += 1
     func myAppendPtr(s *[]int) {
     // 会改变外层 s 本身
 
-- s = append(*s, 100)
+    s = append(*s, 100)
 
     return
     }
@@ -708,21 +710,21 @@ Go从根本上杜绝了程序员依赖特定遍历顺序的可能性，强制我
 
     package main
     import (
-
-"fmt"
-"sort"
-)
+        
+        "fmt"
+        "sort"
+    )
 
     func main() {
     keyList := make([]int, 0)
     m := map[int]int{
 
-3: 200,
-4: 200,
-1: 100,
-8: 800,
-5: 500,
-2: 200,
+        3: 200,
+        4: 200,
+        1: 100,
+        8: 800,
+        5: 500,
+        2: 200,
 
     }
     for key := range m {
@@ -909,10 +911,10 @@ hchan定义如下：
 
 
     import (
-
-"fmt"
-"time"
-)
+        
+        "fmt"
+        "time"
+    )
 
     func goroutineA(a <-chan int) {
     val := <-a
@@ -1885,31 +1887,31 @@ STW 是 Stop the World 的缩写，通常意义上指的是⽤户代码被完全
 时
 序 回收器 赋值器 ｜说明
 
-### 1 shade(A, 回收器：根对象的⼦节点着⾊为灰⾊对象
+1 shade(A, 回收器：根对象的⼦节点着⾊为灰⾊对象
 
 
 gray)
 
-### 2 shade(C, 回收器：当所有⼦节点着⾊为灰⾊后，将节点着为⿊⾊
+2 shade(C, 回收器：当所有⼦节点着⾊为灰⾊后，将节点着为⿊⾊
 
 
 black)
 
-### 3 C.ref3 = 赋值器：并发的修改了 C 的⼦节点
+3 C.ref3 = 赋值器：并发的修改了 C 的⼦节点
 
 
 C.ref2.ref1
 
-### 4 A.ref1 = 赋值器：并发的修改了 A 的⼦节点
+4 A.ref1 = 赋值器：并发的修改了 A 的⼦节点
 
     nil
 
-### 5 shade(A.ref1, 回收器：进⼀步灰⾊对象的⼦节点并着⾊为灰⾊对象，这时由于 A.ref1 为
+5 shade(A.ref1, 回收器：进⼀步灰⾊对象的⼦节点并着⾊为灰⾊对象，这时由于 A.ref1 为
 
 
 gray) nil，什么事情也没有发⽣
 
-### 6 shade(A, 回收器：由于所有⼦节点均已标记，回收器也不会重新扫描已经被标记为⿊⾊
+6 shade(A, 回收器：由于所有⼦节点均已标记，回收器也不会重新扫描已经被标记为⿊⾊
 
 
 black) 的对象，此时 A 被着⾊为⿊⾊，scan(A) 什么也不会发⽣，进⽽ B 在此次回收
@@ -2020,7 +2022,7 @@ Go⽤语⾔主要有以下两种：
 
 ⽅式⼀：GODEBUG=gctrace=1
 我们⾸先可以通过
-$ go build -o main
+    $ go build -o main
 
     $ GODEBUG=gctrace=1 ./main
     gc 1 @0.000s 2%: 0.009+0.23+0.004 ms clock, 0.11+0.083/0.019/0.14+0.049 ms cpu, 4->6->2
@@ -2088,36 +2090,36 @@ MB, 5 MB goal, 12 P
 字段 含义
 gc 2 第⼆个 GC 周期
 
-### 0.001 程序开始后的 0.001 秒
+0.001 程序开始后的 0.001 秒
 
 
 2% 该 GC 周期中 CPU 的使⽤率
 
-### 0.018 标记开始时， STW 所花费的时间（wall clock）
+0.018 标记开始时， STW 所花费的时间（wall clock）
 
-### 1.1 标记过程中，并发标记所花费的时间（wall clock）
+1.1 标记过程中，并发标记所花费的时间（wall clock）
 
-### 0.029 标记终⽌时， STW 所花费的时间（wall clock）
+0.029 标记终⽌时， STW 所花费的时间（wall clock）
 
-### 0.22 标记开始时， STW 所花费的时间（cpu time）
+0.22 标记开始时， STW 所花费的时间（cpu time）
 
-### 0.047 标记过程中，标记辅助所花费的时间（cpu time）
+0.047 标记过程中，标记辅助所花费的时间（cpu time）
 
-### 0.074 标记过程中，并发标记所花费的时间（cpu time）
+0.074 标记过程中，并发标记所花费的时间（cpu time）
 
-### 0.048 标记过程中，GC 空闲的时间（cpu time）
+0.048 标记过程中，GC 空闲的时间（cpu time）
 
-### 0.34 标记终⽌时， STW 所花费的时间（cpu time）
+0.34 标记终⽌时， STW 所花费的时间（cpu time）
 
-### 4 标记开始时，堆的⼤⼩的实际值
+4 标记开始时，堆的⼤⼩的实际值
 
-### 7 标记结束时，堆的⼤⼩的实际值
+7 标记结束时，堆的⼤⼩的实际值
 
-### 3 标记结束时，标记为存活的对象⼤⼩
+3 标记结束时，标记为存活的对象⼤⼩
 
-### 5 标记结束时，堆的⼤⼩的预测值
+5 标记结束时，堆的⼤⼩的预测值
 
-### 12 P 的数量
+12 P 的数量
 
     wall clock 是指开始执⾏到完成所经历的实际时间，包括其他程序和本程序所消耗的时间； cpu time 是指特定
 
@@ -2137,17 +2139,17 @@ gc 2 第⼆个 GC 周期
 
 字段 含义
 
-### 8 KB released 向操作系统归还了 8 KB 内存
+8 KB released 向操作系统归还了 8 KB 内存
 
-### 3 已经分配给⽤户代码、正在使⽤的总内存⼤⼩ (MB)
+3 已经分配给⽤户代码、正在使⽤的总内存⼤⼩ (MB)
 
-### 60 空闲以及等待归还给操作系统的总内存⼤⼩（MB）
+60 空闲以及等待归还给操作系统的总内存⼤⼩（MB）
 
-### 63 通知操作系统中保留的内存⼤⼩（MB）
+63 通知操作系统中保留的内存⼤⼩（MB）
 
-### 57 已经归还给操作系统的（或者说还未正式申请）的内存⼤⼩（MB）
+57 已经归还给操作系统的（或者说还未正式申请）的内存⼤⼩（MB）
 
-### 6 已经从操作系统中申请的内存⼤⼩（MB）
+6 已经从操作系统中申请的内存⼤⼩（MB）
 
 
 ⽅式⼆：go tool trace
@@ -2162,15 +2164,15 @@ gc 2 第⼆个 GC 周期
     trace.Start(f)
     defer trace.Stop()
 
-(...)
+    (...)
 
     }
 
 并通过
-$ go tool trace trace.out
-2019/12/30 15:50:33 Parsing trace...
-2019/12/30 15:50:38 Splitting trace...
-2019/12/30 15:50:45 Opening browser. Trace viewer is listening on http://127.0.0.1:51839
+    $ go tool trace trace.out
+    2019/12/30 15:50:33 Parsing trace...
+    2019/12/30 15:50:38 Splitting trace...
+    2019/12/30 15:50:45 Opening browser. Trace viewer is listening on http://127.0.0.1:51839
 来启动可视化界⾯：
 
 
@@ -2184,14 +2186,14 @@ $ go tool trace trace.out
     t := time.NewTicker(time.Second)
     s := debug.GCStats{}
     for {
-
+    
     select {
     case <-t.C:
     debug.ReadGCStats(&s)
     fmt.Printf("gc %d last@%v, PauseTotal %v\n", s.NumGC, s.LastGC,
-
-s.PauseTotal)
-
+    
+    s.PauseTotal)
+    
     }
     }
     }
@@ -2199,12 +2201,12 @@ s.PauseTotal)
 
     go printGCStats()
 
-(...)
+    (...)
 
     }
 
 我们能够看到如下输出：
-$ go run main.go
+    $ go run main.go
 
     gc 4954 last@2019-12-30 15:19:37.505575 +0100 CET, PauseTotal 29.901171ms
     gc 9195 last@2019-12-30 15:19:38.50565 +0100 CET, PauseTotal 77.579622ms
@@ -2232,11 +2234,11 @@ $ go run main.go
 
     go printMemStats()
 
-(...)
+    (...)
 
     }
 
-$ go run main.go
+    $ go run main.go
 
     gc 4887 last@2019-12-30 15:44:56 +0100 CET, next_heap_size@4MB
     gc 10049 last@2019-12-30 15:44:57 +0100 CET, next_heap_size@4MB
@@ -2262,7 +2264,7 @@ $ go run main.go
     //填充map,初始化channel
     for i := 1; i <= 100; i++ {
 
-m[i] = make(chan int)
+        m[i] = make(chan int)
 
     }
     //开启100个协程，死循环打印
@@ -2277,7 +2279,7 @@ m[i] = make(chan int)
     s <- struct{}{}
     }
 
-}(i)
+        }(i)
 
     }
     //}()
@@ -2291,7 +2293,7 @@ m[i] = make(chan int)
     id = 100
     }
 
-m[id] <- i
+        m[id] <- i
 
     //通过s这个来控制打印顺序。每次遍历⼀次i
     //都通过s阻塞协程的打印，最后打印完毕
@@ -2306,10 +2308,10 @@ m[id] <- i
 
     package main
     import (
-
-"fmt"
-"sync"
-)
+        
+        "fmt"
+        "sync"
+    )
 
     func main() {
     // 定义3个channel
@@ -2367,10 +2369,10 @@ m[id] <- i
 
     package main
     import (
-
-"fmt"
-"sync"
-)
+        
+        "fmt"
+        "sync"
+    )
 
     // ⽤不超过10个goroutine不重复的打印slice中的100个元素
     // 容量为10的有缓冲channel实现
@@ -2382,7 +2384,7 @@ m[id] <- i
     ss := make([]int, 100)
     for i := 0; i < 100; i++ {
 
-ss[i] = i
+        ss[i] = i
 
     }
 
@@ -2399,7 +2401,7 @@ ss[i] = i
     // 打印结束，从缓冲channel中删除⼀个
     <-ch
 
-}(i)
+    }(i)
 
     }
 
@@ -2418,7 +2420,7 @@ ss[i] = i
     ss := make([]int, 100)
     for i := 0; i < 100; i++ {
 
-ss[i] = i
+        ss[i] = i
 
     }
     // 创建channel和goroutine
@@ -2427,7 +2429,7 @@ ss[i] = i
     sort := make(chan struct{})
     for i := 0; i < 10; i++ {
 
-hashMap[i] = make(chan int)
+        hashMap[i] = make(chan int)
 
     wg.Add(1)
     go func(idx int) {
@@ -2437,7 +2439,7 @@ hashMap[i] = make(chan int)
     sort <- struct{}{}
     }
 
-}(i)
+        }(i)
 
     }
     // 循环切⽚，对10取模，找到对应channel的key，写⼊值
@@ -2445,11 +2447,11 @@ hashMap[i] = make(chan int)
 
     id := v % 10
 
-hashMap[id] <- v
+        hashMap[id] <- v
 
     // 有序
 
-    <-sort
+        <-sort
     }
     // 循环结束关闭channel,删除map的key
     for k, _ := range hashMap {
@@ -2468,10 +2470,10 @@ hashMap[id] <- v
 
     package main
     import (
-
-"fmt"
-"time"
-)
+        
+        "fmt"
+        "time"
+    )
 
     func main() {
     //golang交替打印奇偶数
@@ -2515,10 +2517,10 @@ hashMap[id] <- v
 
     package main
     import (
-
-"fmt"
-"time"
-)
+        
+        "fmt"
+        "time"
+    )
 
     func main() {
     msg := make(chan struct{})
@@ -2544,15 +2546,15 @@ hashMap[id] <- v
 
     package main
     import (
-
-"context"
-"fmt"
-
-    "math/rand"
-
-"sync"
-"time"
-)
+        
+        "context"
+        "fmt"
+        
+        "math/rand"
+        
+        "sync"
+        "time"
+    )
 
     func main() {
     var wg sync.WaitGroup
@@ -2651,12 +2653,13 @@ hashMap[id] <- v
 ### 12.7 使⽤go实现1000个并发控制并设置执⾏超时时间1秒
 
     package main
-    import ("context"
-
-"fmt"
-"sync"
-"time"
-)
+    import (
+        "context"
+        
+        "fmt"
+        "sync"
+        "time"
+    )
 
     func main() {
     // 创建 1000 个协程，并且进⾏打印
@@ -2680,7 +2683,7 @@ hashMap[id] <- v
     fmt.Printf("goroutine id: %d\n", id)
     }
 
-}(i)
+        }(i)
 
     }
     <-ctx.Done()
@@ -2696,10 +2699,11 @@ hashMap[id] <- v
 字，输出是a1b2c3
 
     package main
-    import ("fmt"
-
-"sync"
-)
+    import (
+        "fmt"
+        
+        "sync"
+    )
 
     func main() {
     // 定义两个channel，⼀个打印数字，⼀个打印字⺟
@@ -2739,10 +2743,10 @@ hashMap[id] <- v
 
     package main
 
-import 
-("fmt"
-"sync"
-)
+    import (
+        "fmt"
+        "sync"
+    )
 
     // 编写⼀个程序限制10个goroutine执⾏，每执⾏完⼀个goroutine就放⼀个新的goroutine进来
     func main() {
@@ -2756,7 +2760,7 @@ import
     fmt.Println("id: %d", id)
     <-ch
 
-}(i)
+        }(i)
 
     }
     wg.Wait()
