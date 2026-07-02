@@ -2663,7 +2663,89 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;Apache Curator: &lt;a href=&quot;https://curator.apache.org/curator-recipes/shared-lock.html&quot;&gt;Shared Lock 文档&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;etcd 官方: &lt;a href=&quot;https://etcd.io/docs/v3.5/dev-guide/recipes/#lock&quot;&gt;Lock recipe&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-context</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
+在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。
+问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中关于 Channel 的提问方式通常有以下几种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“说一下 Channel 的底层数据结构”&lt;/li&gt;
+&lt;li&gt;“有缓冲和无缓冲 Channel 有什么区别？”&lt;/li&gt;
+&lt;li&gt;“Channel 什么情况下会死锁？怎么避免？”&lt;/li&gt;
+&lt;li&gt;“什么时候用 Channel，什么时候用 Mutex？”&lt;/li&gt;
+&lt;li&gt;“select 是怎么工作的？nil channel 和 closed channel 各自有什么行为？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些问题看似基础，但要答出深度，需要把源码层面的实现和使用层面的经验结合起来。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;有缓冲 vs 无缓冲&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;无缓冲 Channel（&lt;code&gt;make(chan int)&lt;/code&gt;）要求发送方和接收方同时就绪才能完成通信，本质上是一个同步握手。有缓冲 Channel（&lt;code&gt;make(chan int, 10)&lt;/code&gt;）内部维护一个环形队列，发送方在缓冲区未满时可以直接写入而不阻塞，接收方在缓冲区非空时可以直接读取而不阻塞。一句话总结：无缓冲是”打电话”，双方必须同时在线；有缓冲是”发短信”，发完就走，对方有空再看。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;三种典型使用模式&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第一种是 fan-out（扇出）。一个生产者往 Channel 写，多个消费者竞争读取，天然实现了工作池模型：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;jobs &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; Job&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 5&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        for&lt;/span&gt;&lt;span&gt; job &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; jobs {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;            process&lt;/span&gt;&lt;span&gt;(job)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第二种是同步屏障。用无缓冲 Channel 做 goroutine 之间的同步信号，比 WaitGroup 更轻量：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{})&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    doWork&lt;/span&gt;&lt;span&gt;()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    close&lt;/span&gt;&lt;span&gt;(done)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;// 等待完成&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三种是背压控制（backpressure）。有缓冲 Channel 天然限制了并发量——缓冲区满了生产者就会阻塞，避免了无限堆积：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;sem &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}, &lt;/span&gt;&lt;span&gt;10&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 最多 10 个并发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; _, task &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; tasks {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    sem &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}{}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;t&lt;/span&gt;&lt;span&gt; Task&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() { &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;sem }()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        handle&lt;/span&gt;&lt;span&gt;(t)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }(task)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;hchan 底层结构简述&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Channel 在运行时的核心结构是 &lt;code&gt;hchan&lt;/code&gt;，关键字段包括：&lt;code&gt;buf&lt;/code&gt;（指向环形缓冲区的指针）、&lt;code&gt;sendx&lt;/code&gt; 和 &lt;code&gt;recvx&lt;/code&gt;（发送和接收的索引位置）、&lt;code&gt;sendq&lt;/code&gt; 和 &lt;code&gt;recvq&lt;/code&gt;（阻塞的发送者和接收者等待队列，由 &lt;code&gt;sudog&lt;/code&gt; 链表构成）、&lt;code&gt;lock&lt;/code&gt;（互斥锁保护所有操作）。发送时优先找等待中的接收者直接传递数据，其次写入缓冲区，都没有就把自己挂起。接收的逻辑对称。关闭 Channel 时会唤醒所有等待的接收者（它们收到零值）和所有等待的发送者（它们直接 panic）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;死锁场景和避免方法&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;最常见的死锁是”发送了但没人收”或者”想收但没人发”。比如主 goroutine 里往无缓冲 Channel 发送数据，却没有另一个 goroutine 来接收，程序直接 panic &lt;code&gt;fatal error: all goroutines are asleep - deadlock!&lt;/code&gt;。另一种典型场景是两个 goroutine 互相等待对方先发消息。避免死锁的核心原则：确保每个 Channel 操作都有对应的配对操作，善用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;context&lt;/code&gt; 做超时和取消，不要在没有退出机制的情况下让 goroutine 永久阻塞在 Channel 上。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;什么时候该用 Channel，什么时候该用 Mutex？这是面试中区分”会用”和”理解”的关键问题。&lt;/p&gt;
+&lt;p&gt;Channel 擅长的是 goroutine 之间的&lt;strong&gt;通信和协调&lt;/strong&gt;——传递数据所有权、发送信号、编排执行顺序。典型场景是生产者-消费者、流水线（pipeline）、任务分发。&lt;/p&gt;
+&lt;p&gt;Mutex 擅长的是保护&lt;strong&gt;共享状态&lt;/strong&gt;——当你需要在多个 goroutine 之间安全地读写同一个变量时，锁是更直接的选择。比如计数器、缓存 map、配置项。&lt;/p&gt;
+&lt;p&gt;一个常见的反模式是用 Channel 来模拟锁的行为（发一个值表示”拿锁”，收一个值表示”释放锁”），这样做不仅代码复杂，性能也更差。经验法则：&lt;strong&gt;通信选 Channel，共享状态选 Mutex&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;无缓冲 Channel 是同步的，有缓冲 Channel 在缓冲区范围内是异步的&lt;/li&gt;
+&lt;li&gt;Channel 底层是 &lt;code&gt;hchan&lt;/code&gt; 结构体 + 环形缓冲区 + &lt;code&gt;sudog&lt;/code&gt; 等待队列 + 互斥锁&lt;/li&gt;
+&lt;li&gt;向已关闭的 Channel 发送数据会 panic，从已关闭的 Channel 读取会收到零值&lt;/li&gt;
+&lt;li&gt;nil Channel 上的任何操作都会永久阻塞&lt;/li&gt;
+&lt;li&gt;关闭 Channel 会唤醒所有等待方，发送方 panic，接收方收到零值&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;select&lt;/code&gt; 随机选择一个就绪的 case 执行，没有就绪的则阻塞或走 default&lt;/li&gt;
+&lt;li&gt;死锁的根源是缺少配对操作，用 context 和超时机制防御&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;select 多路复用&lt;/strong&gt;：&lt;code&gt;select&lt;/code&gt; 的底层通过 &lt;code&gt;runtime.selectgo&lt;/code&gt; 实现，它会随机打乱 case 顺序后遍历，防止某个 Channel 永远优先（饥饿问题）。如果多个 case 同时就绪，随机选一个执行；没有就绪的且有 &lt;code&gt;default&lt;/code&gt;，走 default；没有 default 就阻塞。一个实用技巧是用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;time.After&lt;/code&gt; 做超时控制，避免 goroutine 永久卡死。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;nil channel 的行为&lt;/strong&gt;：未初始化的 Channel（值为 nil）上，发送和接收都会永久阻塞。这个特性可以用来做”动态禁用”——比如把一个 case 对应的 Channel 设为 nil，select 就会自动跳过它。但也要注意，如果你忘记初始化 Channel 就直接使用，程序会静默卡死，没有任何 panic 提示。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;closed channel 的行为&lt;/strong&gt;：关闭后发送会 panic，但接收不会——它会立即返回零值，&lt;code&gt;ok&lt;/code&gt; 标识为 &lt;code&gt;false&lt;/code&gt;。这衍生出一个常用模式：用 &lt;code&gt;for range&lt;/code&gt; 遍历 Channel，发送方 &lt;code&gt;close&lt;/code&gt; 之后循环自动退出。需要注意的是 Channel 只能关闭一次，重复关闭同样会 panic。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先动手踩坑&lt;/strong&gt;：写几个会死锁的小程序，观察 panic 信息，比看文档印象更深&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;读 runtime 源码&lt;/strong&gt;：&lt;code&gt;src/runtime/chan.go&lt;/code&gt; 不长，&lt;code&gt;hchan&lt;/code&gt;、&lt;code&gt;chansend&lt;/code&gt;、&lt;code&gt;chanrecv&lt;/code&gt;、&lt;code&gt;closechan&lt;/code&gt; 四个函数看懂就够&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;掌握 select 的各种用法&lt;/strong&gt;：超时、心跳、fan-in、nil channel 禁用，这些是日常开发高频场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结合 context 一起学&lt;/strong&gt;：Channel 的生命周期管理离不开 context，两者一起理解才完整&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写一个 worker pool 或 pipeline&lt;/strong&gt;：把 fan-out、背压、优雅关闭全部串起来，是最好的综合练习&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/ref/spec#Channel_types&quot;&gt;Go 官方文档 - Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://gobyexample.com/channels&quot;&gt;Go by Example: Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/runtime/chan.go&quot;&gt;Go 运行时源码 src/runtime/chan.go&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-context</guid><description>前情提要
 在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 context.WithTimeout，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 &lt;code&gt;context.WithTimeout&lt;/code&gt;，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context 的设计思想、使用方式和常见陷阱做一次完整的梳理。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -2922,222 +3004,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
-在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。
-问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中关于 Channel 的提问方式通常有以下几种：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“说一下 Channel 的底层数据结构”&lt;/li&gt;
-&lt;li&gt;“有缓冲和无缓冲 Channel 有什么区别？”&lt;/li&gt;
-&lt;li&gt;“Channel 什么情况下会死锁？怎么避免？”&lt;/li&gt;
-&lt;li&gt;“什么时候用 Channel，什么时候用 Mutex？”&lt;/li&gt;
-&lt;li&gt;“select 是怎么工作的？nil channel 和 closed channel 各自有什么行为？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这些问题看似基础，但要答出深度，需要把源码层面的实现和使用层面的经验结合起来。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;有缓冲 vs 无缓冲&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;无缓冲 Channel（&lt;code&gt;make(chan int)&lt;/code&gt;）要求发送方和接收方同时就绪才能完成通信，本质上是一个同步握手。有缓冲 Channel（&lt;code&gt;make(chan int, 10)&lt;/code&gt;）内部维护一个环形队列，发送方在缓冲区未满时可以直接写入而不阻塞，接收方在缓冲区非空时可以直接读取而不阻塞。一句话总结：无缓冲是”打电话”，双方必须同时在线；有缓冲是”发短信”，发完就走，对方有空再看。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三种典型使用模式&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;第一种是 fan-out（扇出）。一个生产者往 Channel 写，多个消费者竞争读取，天然实现了工作池模型：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;jobs &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; Job&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 5&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        for&lt;/span&gt;&lt;span&gt; job &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; jobs {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;            process&lt;/span&gt;&lt;span&gt;(job)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;第二种是同步屏障。用无缓冲 Channel 做 goroutine 之间的同步信号，比 WaitGroup 更轻量：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{})&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    doWork&lt;/span&gt;&lt;span&gt;()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    close&lt;/span&gt;&lt;span&gt;(done)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;// 等待完成&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;第三种是背压控制（backpressure）。有缓冲 Channel 天然限制了并发量——缓冲区满了生产者就会阻塞，避免了无限堆积：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;sem &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}, &lt;/span&gt;&lt;span&gt;10&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 最多 10 个并发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; _, task &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; tasks {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    sem &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}{}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;t&lt;/span&gt;&lt;span&gt; Task&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() { &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;sem }()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        handle&lt;/span&gt;&lt;span&gt;(t)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }(task)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;hchan 底层结构简述&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Channel 在运行时的核心结构是 &lt;code&gt;hchan&lt;/code&gt;，关键字段包括：&lt;code&gt;buf&lt;/code&gt;（指向环形缓冲区的指针）、&lt;code&gt;sendx&lt;/code&gt; 和 &lt;code&gt;recvx&lt;/code&gt;（发送和接收的索引位置）、&lt;code&gt;sendq&lt;/code&gt; 和 &lt;code&gt;recvq&lt;/code&gt;（阻塞的发送者和接收者等待队列，由 &lt;code&gt;sudog&lt;/code&gt; 链表构成）、&lt;code&gt;lock&lt;/code&gt;（互斥锁保护所有操作）。发送时优先找等待中的接收者直接传递数据，其次写入缓冲区，都没有就把自己挂起。接收的逻辑对称。关闭 Channel 时会唤醒所有等待的接收者（它们收到零值）和所有等待的发送者（它们直接 panic）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;死锁场景和避免方法&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;最常见的死锁是”发送了但没人收”或者”想收但没人发”。比如主 goroutine 里往无缓冲 Channel 发送数据，却没有另一个 goroutine 来接收，程序直接 panic &lt;code&gt;fatal error: all goroutines are asleep - deadlock!&lt;/code&gt;。另一种典型场景是两个 goroutine 互相等待对方先发消息。避免死锁的核心原则：确保每个 Channel 操作都有对应的配对操作，善用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;context&lt;/code&gt; 做超时和取消，不要在没有退出机制的情况下让 goroutine 永久阻塞在 Channel 上。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;什么时候该用 Channel，什么时候该用 Mutex？这是面试中区分”会用”和”理解”的关键问题。&lt;/p&gt;
-&lt;p&gt;Channel 擅长的是 goroutine 之间的&lt;strong&gt;通信和协调&lt;/strong&gt;——传递数据所有权、发送信号、编排执行顺序。典型场景是生产者-消费者、流水线（pipeline）、任务分发。&lt;/p&gt;
-&lt;p&gt;Mutex 擅长的是保护&lt;strong&gt;共享状态&lt;/strong&gt;——当你需要在多个 goroutine 之间安全地读写同一个变量时，锁是更直接的选择。比如计数器、缓存 map、配置项。&lt;/p&gt;
-&lt;p&gt;一个常见的反模式是用 Channel 来模拟锁的行为（发一个值表示”拿锁”，收一个值表示”释放锁”），这样做不仅代码复杂，性能也更差。经验法则：&lt;strong&gt;通信选 Channel，共享状态选 Mutex&lt;/strong&gt;。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;无缓冲 Channel 是同步的，有缓冲 Channel 在缓冲区范围内是异步的&lt;/li&gt;
-&lt;li&gt;Channel 底层是 &lt;code&gt;hchan&lt;/code&gt; 结构体 + 环形缓冲区 + &lt;code&gt;sudog&lt;/code&gt; 等待队列 + 互斥锁&lt;/li&gt;
-&lt;li&gt;向已关闭的 Channel 发送数据会 panic，从已关闭的 Channel 读取会收到零值&lt;/li&gt;
-&lt;li&gt;nil Channel 上的任何操作都会永久阻塞&lt;/li&gt;
-&lt;li&gt;关闭 Channel 会唤醒所有等待方，发送方 panic，接收方收到零值&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;select&lt;/code&gt; 随机选择一个就绪的 case 执行，没有就绪的则阻塞或走 default&lt;/li&gt;
-&lt;li&gt;死锁的根源是缺少配对操作，用 context 和超时机制防御&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;select 多路复用&lt;/strong&gt;：&lt;code&gt;select&lt;/code&gt; 的底层通过 &lt;code&gt;runtime.selectgo&lt;/code&gt; 实现，它会随机打乱 case 顺序后遍历，防止某个 Channel 永远优先（饥饿问题）。如果多个 case 同时就绪，随机选一个执行；没有就绪的且有 &lt;code&gt;default&lt;/code&gt;，走 default；没有 default 就阻塞。一个实用技巧是用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;time.After&lt;/code&gt; 做超时控制，避免 goroutine 永久卡死。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;nil channel 的行为&lt;/strong&gt;：未初始化的 Channel（值为 nil）上，发送和接收都会永久阻塞。这个特性可以用来做”动态禁用”——比如把一个 case 对应的 Channel 设为 nil，select 就会自动跳过它。但也要注意，如果你忘记初始化 Channel 就直接使用，程序会静默卡死，没有任何 panic 提示。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;closed channel 的行为&lt;/strong&gt;：关闭后发送会 panic，但接收不会——它会立即返回零值，&lt;code&gt;ok&lt;/code&gt; 标识为 &lt;code&gt;false&lt;/code&gt;。这衍生出一个常用模式：用 &lt;code&gt;for range&lt;/code&gt; 遍历 Channel，发送方 &lt;code&gt;close&lt;/code&gt; 之后循环自动退出。需要注意的是 Channel 只能关闭一次，重复关闭同样会 panic。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先动手踩坑&lt;/strong&gt;：写几个会死锁的小程序，观察 panic 信息，比看文档印象更深&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;读 runtime 源码&lt;/strong&gt;：&lt;code&gt;src/runtime/chan.go&lt;/code&gt; 不长，&lt;code&gt;hchan&lt;/code&gt;、&lt;code&gt;chansend&lt;/code&gt;、&lt;code&gt;chanrecv&lt;/code&gt;、&lt;code&gt;closechan&lt;/code&gt; 四个函数看懂就够&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;掌握 select 的各种用法&lt;/strong&gt;：超时、心跳、fan-in、nil channel 禁用，这些是日常开发高频场景&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;结合 context 一起学&lt;/strong&gt;：Channel 的生命周期管理离不开 context，两者一起理解才完整&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;写一个 worker pool 或 pipeline&lt;/strong&gt;：把 fan-out、背压、优雅关闭全部串起来，是最好的综合练习&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/ref/spec#Channel_types&quot;&gt;Go 官方文档 - Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://gobyexample.com/channels&quot;&gt;Go by Example: Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/runtime/chan.go&quot;&gt;Go 运行时源码 src/runtime/chan.go&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
-前情提要
-Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
-问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中常见的问法：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
-&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
-&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
-&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
-&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
 准备面试的时候发现，Go 的 sync 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
 这篇文章是我对 sync 包相关知识的系统梳理，把</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选&lt;a href=&quot;#面试笔记go的sync包怎么用mutex和rwmutex怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;准备面试的时候发现，Go 的 &lt;code&gt;sync&lt;/code&gt; 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
@@ -3356,7 +3223,209 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/sync/mutex.go&quot;&gt;Go Mutex 源码分析（正常模式与饥饿模式）&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://pkg.go.dev/golang.org/x/sync/errgroup&quot;&gt;errgroup - golang.org/x/sync/errgroup&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://book.douban.com/subject/30378095/&quot;&gt;Go 并发编程实战 - 许式伟&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-http-evolution</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
+前情提要
+Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
+问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中常见的问法：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
+&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
+&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
+&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
+&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
+
+准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：JWT 和 Session 认证到底怎么选&lt;a href=&quot;#面试笔记jwt-和-session-认证到底怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完 CRUD 想搞清楚”登录到底发生了什么”的同学。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;认证（Authentication）解决的是”你是谁”的问题，授权（Authorization）解决的是”你能干什么”的问题。面试中这两块经常绑在一起问，但底层逻辑完全不同。Session 是最经典的方案，JWT 是前后端分离时代的宠儿，OAuth2 则是第三方登录的行业标准。理解它们的演进关系，比死记硬背强得多。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 1：Session 是怎么工作的？有什么优缺点？&lt;a href=&quot;#问题-1session-是怎么工作的有什么优缺点&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最早做 Web 应用的时候，用户登录成功后服务端会在内存或 Redis 中创建一个 Session 对象，包含用户 ID、登录时间等信息，然后把 Session ID 通过 &lt;code&gt;Set-Cookie&lt;/code&gt; 响应头塞给浏览器。之后浏览器每次请求都会自动携带这个 Cookie，服务端拿着 Session ID 去查对应的 Session 数据，确认身份。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;优点很明确&lt;/strong&gt;：服务端掌控一切。想注销？直接删掉 Session 就行。想限制同时在线设备数？数一下 Session 个数就好。安全性方面，配合 Cookie 的 &lt;code&gt;HttpOnly&lt;/code&gt;（防 XSS 读取）、&lt;code&gt;Secure&lt;/code&gt;（仅 HTTPS 传输）、&lt;code&gt;SameSite&lt;/code&gt;（防 CSRF）属性，防御体系比较完善。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;问题也很明显&lt;/strong&gt;：Session 存在服务端，横向扩展就麻烦了。你部署了三个服务节点，用户的 Session 在节点 A 上，请求被负载均衡到节点 B，B 查不到 Session 就会拒绝。解决办法要么搞 Sticky Session（绑定用户到固定节点），要么搞 Session 共享（Redis 集中存储），都增加了运维复杂度。另外 Cookie 有跨域限制，前后端分离部署在不同域名下就很头疼。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 2：JWT 的三段结构和无状态验证是怎么回事？&lt;a href=&quot;#问题-2jwt-的三段结构和无状态验证是怎么回事&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;JWT（JSON Web Token）由三部分组成，用 &lt;code&gt;.&lt;/code&gt; 分隔：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Header&lt;/strong&gt;：声明算法类型，比如 &lt;code&gt;{&quot;alg&quot;: &quot;HS256&quot;, &quot;typ&quot;: &quot;JWT&quot;}&lt;/code&gt;，Base64URL 编码。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Payload&lt;/strong&gt;：存放声明（Claims），包括标准字段（&lt;code&gt;iss&lt;/code&gt; 签发者、&lt;code&gt;exp&lt;/code&gt; 过期时间、&lt;code&gt;sub&lt;/code&gt; 用户标识）和自定义字段（userId、role 等）。同样 Base64URL 编码。这里有个关键点：&lt;strong&gt;Payload 不是加密的&lt;/strong&gt;，任何人拿到 token 都能解码看到内容，所以绝对不能放密码之类的敏感信息。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Signature&lt;/strong&gt;：对 Header 和 Payload 的签名。服务端用密钥计算 &lt;code&gt;HMACSHA256(base64UrlEncode(header) + &quot;.&quot; + base64UrlEncode(payload), secret)&lt;/code&gt;，后续验证时重新计算并比对，判断 token 是否被篡改。&lt;/p&gt;
+&lt;p&gt;验证流程非常简洁：客户端在请求头中带上 &lt;code&gt;Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code&gt;，服务端提取 token，验证签名，检查过期时间，解析 Payload 拿到用户信息。全程不查数据库，所以叫&lt;strong&gt;无状态&lt;/strong&gt;。这让它在微服务和多节点部署中如鱼得水——任意节点拿到 token 都能独立验证。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 3：JWT 的致命伤是什么？怎么解决？&lt;a href=&quot;#问题-3jwt-的致命伤是什么怎么解决&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;JWT 最大的问题是&lt;strong&gt;无法主动失效&lt;/strong&gt;。token 一旦签发，在过期之前就一直有效。你点了”退出登录”，客户端删掉了本地存储的 token，但如果有人在这之前截获了那个 token，他依然可以用到过期为止。&lt;/p&gt;
+&lt;p&gt;这引出了一个设计上的矛盾：过期时间设短了，用户频繁被踢出要重新登录，体验极差；设长了，token 泄露后的攻击窗口就很大。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;是目前的主流方案。Access Token 短命（15 分钟到 2 小时），用于日常 API 调用；Refresh Token 长寿（7 到 30 天），用于换取新的 Access Token。流程是这样的：客户端用 Access Token 请求，服务端返回 401 表示过期，客户端自动拿 Refresh Token 去 &lt;code&gt;/auth/refresh&lt;/code&gt; 接口换新 token，然后重试原请求。整个过程对用户透明。&lt;/p&gt;
+&lt;p&gt;Refresh Token 和 Access Token 不同，它是&lt;strong&gt;有状态&lt;/strong&gt;的——存在数据库里，可以主动删除（实现真正的注销）。更安全的做法是加上&lt;strong&gt;旋转机制（Rotation）&lt;/strong&gt;：每次用 Refresh Token 换新 token 时，同时签发新的 Refresh Token 并作废旧的。如果检测到旧 Refresh Token 被重复使用，说明可能被盗用，立刻注销该用户的所有 token。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 4：OAuth2 的四种模式和授权码流程？&lt;a href=&quot;#问题-4oauth2-的四种模式和授权码流程&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;OAuth2 解决的是”第三方应用如何安全地获取用户资源访问权限”。它和 JWT 不冲突——OAuth2 定义获取 token 的流程，JWT 可以作为 token 的格式。&lt;/p&gt;
+&lt;p&gt;四种授权模式中，&lt;strong&gt;授权码模式（Authorization Code）&lt;/strong&gt; 最安全也最常用，面试必问：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;用户点击”用 GitHub 登录”，跳转到 GitHub 授权页面&lt;/li&gt;
+&lt;li&gt;用户同意授权，GitHub 回调你的应用并附带一个 authorization code&lt;/li&gt;
+&lt;li&gt;你的后端拿 code + client_secret 向 GitHub 换取 Access Token&lt;/li&gt;
+&lt;li&gt;用 Access Token 调 GitHub API 拿到用户信息&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;code 只能用一次且有效期很短（通常 10 分钟），client_secret 始终在后端使用不暴露给前端。这就是为什么授权码模式最安全——敏感凭证全程不经过浏览器。&lt;/p&gt;
+&lt;p&gt;其他三种：&lt;strong&gt;简化模式（Implicit）&lt;/strong&gt; 直接在 URL fragment 返回 token，已不推荐；&lt;strong&gt;密码模式（Password）&lt;/strong&gt; 让用户把密码交给第三方应用，仅适用于高度信任的官方应用；&lt;strong&gt;客户端凭证模式（Client Credentials）&lt;/strong&gt; 应用以自己的身份获取 token，用于服务间通信，不涉及用户。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;分析：实际项目中怎么选？&lt;a href=&quot;#分析实际项目中怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我的理解是：没有绝对的好坏，只有适不适合。&lt;strong&gt;传统 Web 应用、需要即时注销的管理后台&lt;/strong&gt;用 Session 更省心。&lt;strong&gt;前后端分离、微服务架构、移动端&lt;/strong&gt;用 JWT 更灵活。实际上很多项目两者结合——用 Session 管理登录态，用 JWT 做 API 间的无状态鉴权。&lt;/p&gt;
+&lt;p&gt;OAuth2 则是另一个维度的问题。只要涉及第三方登录或开放平台，就必须用它。而 OAuth2 颁发的 Access Token 完全可以采用 JWT 格式，兼得授权流程的安全性和无状态验证的性能优势。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Session&lt;/strong&gt; 有状态，服务端存储，注销方便，但横向扩展需要额外方案&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;JWT&lt;/strong&gt; 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;OAuth2 授权码模式&lt;/strong&gt;是第三方登录的标准流程，code 一次性 + client_secret 后端保密&lt;/li&gt;
+&lt;li&gt;JWT 常见攻击包括 alg&lt;div&gt;&lt;/div&gt; 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期&lt;/li&gt;
+&lt;li&gt;Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;双 Token 的工程实现细节&lt;/strong&gt;：Access Token 过期后前端自动刷新需要处理并发请求的竞态问题。多个请求同时收到 401，不应该同时发起多次刷新。常见做法是用一个 Promise 或锁机制，让第一个 401 触发刷新，其他请求排队等待新 token。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;OpenID Connect（OIDC）&lt;/strong&gt;：在 OAuth2 之上加了一层身份认证。OAuth2 只解决”授权”，不告诉你用户是谁；OIDC 新增了 ID Token（也是 JWT 格式），包含用户身份信息， standardized 了 &lt;code&gt;/userinfo&lt;/code&gt; 端点。简单说，OAuth2 + OIDC = 认证 + 授权。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;JWT 安全最佳实践&lt;/strong&gt;：使用 RS256 非对称签名（私钥签发、公钥验证），避免 HS256 的密钥分发问题；密钥足够长（256 位以上）并定期轮换，存在 Vault 等密钥管理服务中而非硬编码；敏感操作（如修改密码、转账）要求二次验证，不单纯依赖 token。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你是初学者，建议按这个顺序理解：先搞懂 HTTP 是无状态的 -&amp;gt; 为什么需要 Cookie/Session -&amp;gt; Session 的扩展性问题 -&amp;gt; JWT 如何解决 -&amp;gt; JWT 自身的问题 -&amp;gt; 双 Token 方案 -&amp;gt; OAuth2 的授权流程。这条线串下来，面试中不管怎么追问都能接住。&lt;/p&gt;
+&lt;p&gt;动手实践比看十遍文章有用。试着自己用 Go 的 &lt;code&gt;golang-jwt&lt;/code&gt; 库实现一个登录签发 + 刷新 + 注销的完整流程，或者接入 GitHub OAuth2 做一次第三方登录。写完之后你会发现很多细节问题（token 存哪里、并发刷新怎么处理、密钥怎么管理）是看文档时根本想不到的。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://jwt.io/introduction&quot;&gt;JWT.io - Introduction to JSON Web Tokens&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc6749&quot;&gt;OAuth 2.0 授权框架 - RFC 6749&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://openid.net/specs/openid-connect-core-1_0.html&quot;&gt;OpenID Connect Core 1.0&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/&quot;&gt;Auth0 Blog - Refresh Tokens: What Are They and When to Use Them&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html&quot;&gt;OWASP JWT Cheat Sheet&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-http-evolution</guid><description>前情提要
 上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web 性能的演进史。&lt;/p&gt;
 &lt;h2&gt;面试问题&lt;a href=&quot;#面试问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -3523,76 +3592,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc8446&quot;&gt;RFC 8446 - TLS 1.3&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://blog.cloudflare.com/http3-the-past-present-and-future/&quot;&gt;Cloudflare - HTTP/3: The past, present, and future&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://docs.google.com/document/d/1gY9_YNDsTFHj9QgE-vLpRfGdMm2BYTdkj5n0R1VmEYQ&quot;&gt;Google - QUIC Design Document&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
-
-准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：JWT 和 Session 认证到底怎么选&lt;a href=&quot;#面试笔记jwt-和-session-认证到底怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;blockquote&gt;
-&lt;p&gt;准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完 CRUD 想搞清楚”登录到底发生了什么”的同学。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;认证（Authentication）解决的是”你是谁”的问题，授权（Authorization）解决的是”你能干什么”的问题。面试中这两块经常绑在一起问，但底层逻辑完全不同。Session 是最经典的方案，JWT 是前后端分离时代的宠儿，OAuth2 则是第三方登录的行业标准。理解它们的演进关系，比死记硬背强得多。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 1：Session 是怎么工作的？有什么优缺点？&lt;a href=&quot;#问题-1session-是怎么工作的有什么优缺点&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;最早做 Web 应用的时候，用户登录成功后服务端会在内存或 Redis 中创建一个 Session 对象，包含用户 ID、登录时间等信息，然后把 Session ID 通过 &lt;code&gt;Set-Cookie&lt;/code&gt; 响应头塞给浏览器。之后浏览器每次请求都会自动携带这个 Cookie，服务端拿着 Session ID 去查对应的 Session 数据，确认身份。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;优点很明确&lt;/strong&gt;：服务端掌控一切。想注销？直接删掉 Session 就行。想限制同时在线设备数？数一下 Session 个数就好。安全性方面，配合 Cookie 的 &lt;code&gt;HttpOnly&lt;/code&gt;（防 XSS 读取）、&lt;code&gt;Secure&lt;/code&gt;（仅 HTTPS 传输）、&lt;code&gt;SameSite&lt;/code&gt;（防 CSRF）属性，防御体系比较完善。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;问题也很明显&lt;/strong&gt;：Session 存在服务端，横向扩展就麻烦了。你部署了三个服务节点，用户的 Session 在节点 A 上，请求被负载均衡到节点 B，B 查不到 Session 就会拒绝。解决办法要么搞 Sticky Session（绑定用户到固定节点），要么搞 Session 共享（Redis 集中存储），都增加了运维复杂度。另外 Cookie 有跨域限制，前后端分离部署在不同域名下就很头疼。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 2：JWT 的三段结构和无状态验证是怎么回事？&lt;a href=&quot;#问题-2jwt-的三段结构和无状态验证是怎么回事&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;JWT（JSON Web Token）由三部分组成，用 &lt;code&gt;.&lt;/code&gt; 分隔：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Header&lt;/strong&gt;：声明算法类型，比如 &lt;code&gt;{&quot;alg&quot;: &quot;HS256&quot;, &quot;typ&quot;: &quot;JWT&quot;}&lt;/code&gt;，Base64URL 编码。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Payload&lt;/strong&gt;：存放声明（Claims），包括标准字段（&lt;code&gt;iss&lt;/code&gt; 签发者、&lt;code&gt;exp&lt;/code&gt; 过期时间、&lt;code&gt;sub&lt;/code&gt; 用户标识）和自定义字段（userId、role 等）。同样 Base64URL 编码。这里有个关键点：&lt;strong&gt;Payload 不是加密的&lt;/strong&gt;，任何人拿到 token 都能解码看到内容，所以绝对不能放密码之类的敏感信息。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Signature&lt;/strong&gt;：对 Header 和 Payload 的签名。服务端用密钥计算 &lt;code&gt;HMACSHA256(base64UrlEncode(header) + &quot;.&quot; + base64UrlEncode(payload), secret)&lt;/code&gt;，后续验证时重新计算并比对，判断 token 是否被篡改。&lt;/p&gt;
-&lt;p&gt;验证流程非常简洁：客户端在请求头中带上 &lt;code&gt;Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code&gt;，服务端提取 token，验证签名，检查过期时间，解析 Payload 拿到用户信息。全程不查数据库，所以叫&lt;strong&gt;无状态&lt;/strong&gt;。这让它在微服务和多节点部署中如鱼得水——任意节点拿到 token 都能独立验证。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 3：JWT 的致命伤是什么？怎么解决？&lt;a href=&quot;#问题-3jwt-的致命伤是什么怎么解决&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;JWT 最大的问题是&lt;strong&gt;无法主动失效&lt;/strong&gt;。token 一旦签发，在过期之前就一直有效。你点了”退出登录”，客户端删掉了本地存储的 token，但如果有人在这之前截获了那个 token，他依然可以用到过期为止。&lt;/p&gt;
-&lt;p&gt;这引出了一个设计上的矛盾：过期时间设短了，用户频繁被踢出要重新登录，体验极差；设长了，token 泄露后的攻击窗口就很大。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;是目前的主流方案。Access Token 短命（15 分钟到 2 小时），用于日常 API 调用；Refresh Token 长寿（7 到 30 天），用于换取新的 Access Token。流程是这样的：客户端用 Access Token 请求，服务端返回 401 表示过期，客户端自动拿 Refresh Token 去 &lt;code&gt;/auth/refresh&lt;/code&gt; 接口换新 token，然后重试原请求。整个过程对用户透明。&lt;/p&gt;
-&lt;p&gt;Refresh Token 和 Access Token 不同，它是&lt;strong&gt;有状态&lt;/strong&gt;的——存在数据库里，可以主动删除（实现真正的注销）。更安全的做法是加上&lt;strong&gt;旋转机制（Rotation）&lt;/strong&gt;：每次用 Refresh Token 换新 token 时，同时签发新的 Refresh Token 并作废旧的。如果检测到旧 Refresh Token 被重复使用，说明可能被盗用，立刻注销该用户的所有 token。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 4：OAuth2 的四种模式和授权码流程？&lt;a href=&quot;#问题-4oauth2-的四种模式和授权码流程&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;OAuth2 解决的是”第三方应用如何安全地获取用户资源访问权限”。它和 JWT 不冲突——OAuth2 定义获取 token 的流程，JWT 可以作为 token 的格式。&lt;/p&gt;
-&lt;p&gt;四种授权模式中，&lt;strong&gt;授权码模式（Authorization Code）&lt;/strong&gt; 最安全也最常用，面试必问：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;用户点击”用 GitHub 登录”，跳转到 GitHub 授权页面&lt;/li&gt;
-&lt;li&gt;用户同意授权，GitHub 回调你的应用并附带一个 authorization code&lt;/li&gt;
-&lt;li&gt;你的后端拿 code + client_secret 向 GitHub 换取 Access Token&lt;/li&gt;
-&lt;li&gt;用 Access Token 调 GitHub API 拿到用户信息&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;code 只能用一次且有效期很短（通常 10 分钟），client_secret 始终在后端使用不暴露给前端。这就是为什么授权码模式最安全——敏感凭证全程不经过浏览器。&lt;/p&gt;
-&lt;p&gt;其他三种：&lt;strong&gt;简化模式（Implicit）&lt;/strong&gt; 直接在 URL fragment 返回 token，已不推荐；&lt;strong&gt;密码模式（Password）&lt;/strong&gt; 让用户把密码交给第三方应用，仅适用于高度信任的官方应用；&lt;strong&gt;客户端凭证模式（Client Credentials）&lt;/strong&gt; 应用以自己的身份获取 token，用于服务间通信，不涉及用户。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;分析：实际项目中怎么选？&lt;a href=&quot;#分析实际项目中怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;我的理解是：没有绝对的好坏，只有适不适合。&lt;strong&gt;传统 Web 应用、需要即时注销的管理后台&lt;/strong&gt;用 Session 更省心。&lt;strong&gt;前后端分离、微服务架构、移动端&lt;/strong&gt;用 JWT 更灵活。实际上很多项目两者结合——用 Session 管理登录态，用 JWT 做 API 间的无状态鉴权。&lt;/p&gt;
-&lt;p&gt;OAuth2 则是另一个维度的问题。只要涉及第三方登录或开放平台，就必须用它。而 OAuth2 颁发的 Access Token 完全可以采用 JWT 格式，兼得授权流程的安全性和无状态验证的性能优势。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;Session&lt;/strong&gt; 有状态，服务端存储，注销方便，但横向扩展需要额外方案&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;JWT&lt;/strong&gt; 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;OAuth2 授权码模式&lt;/strong&gt;是第三方登录的标准流程，code 一次性 + client_secret 后端保密&lt;/li&gt;
-&lt;li&gt;JWT 常见攻击包括 alg&lt;div&gt;&lt;/div&gt; 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期&lt;/li&gt;
-&lt;li&gt;Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段&lt;/li&gt;
-&lt;/ol&gt;
-&lt;hr /&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;双 Token 的工程实现细节&lt;/strong&gt;：Access Token 过期后前端自动刷新需要处理并发请求的竞态问题。多个请求同时收到 401，不应该同时发起多次刷新。常见做法是用一个 Promise 或锁机制，让第一个 401 触发刷新，其他请求排队等待新 token。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;OpenID Connect（OIDC）&lt;/strong&gt;：在 OAuth2 之上加了一层身份认证。OAuth2 只解决”授权”，不告诉你用户是谁；OIDC 新增了 ID Token（也是 JWT 格式），包含用户身份信息， standardized 了 &lt;code&gt;/userinfo&lt;/code&gt; 端点。简单说，OAuth2 + OIDC = 认证 + 授权。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;JWT 安全最佳实践&lt;/strong&gt;：使用 RS256 非对称签名（私钥签发、公钥验证），避免 HS256 的密钥分发问题；密钥足够长（256 位以上）并定期轮换，存在 Vault 等密钥管理服务中而非硬编码；敏感操作（如修改密码、转账）要求二次验证，不单纯依赖 token。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;如果你是初学者，建议按这个顺序理解：先搞懂 HTTP 是无状态的 -&amp;gt; 为什么需要 Cookie/Session -&amp;gt; Session 的扩展性问题 -&amp;gt; JWT 如何解决 -&amp;gt; JWT 自身的问题 -&amp;gt; 双 Token 方案 -&amp;gt; OAuth2 的授权流程。这条线串下来，面试中不管怎么追问都能接住。&lt;/p&gt;
-&lt;p&gt;动手实践比看十遍文章有用。试着自己用 Go 的 &lt;code&gt;golang-jwt&lt;/code&gt; 库实现一个登录签发 + 刷新 + 注销的完整流程，或者接入 GitHub OAuth2 做一次第三方登录。写完之后你会发现很多细节问题（token 存哪里、并发刷新怎么处理、密钥怎么管理）是看文档时根本想不到的。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://jwt.io/introduction&quot;&gt;JWT.io - Introduction to JSON Web Tokens&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc6749&quot;&gt;OAuth 2.0 授权框架 - RFC 6749&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://openid.net/specs/openid-connect-core-1_0.html&quot;&gt;OpenID Connect Core 1.0&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/&quot;&gt;Auth0 Blog - Refresh Tokens: What Are They and When to Use Them&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html&quot;&gt;OWASP JWT Cheat Sheet&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-architecture</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-architecture</guid><description>前情提要
 聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka 核心架构组件理清楚：Broker、Topic、Partition、Replica、Consumer Group，顺便聊聊分区策略和 Rebalance 机制。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -4483,7 +4483,140 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model and Locking&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cache-problems</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
+整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。
+问题
+
+面试官常见问法：
+
+MySQL 有哪几种事务隔离级别？各自解决了什么问题？
+什么是</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;面试官常见问法：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;MySQL 有哪几种事务隔离级别？各自解决了什么问题？&lt;/li&gt;
+&lt;li&gt;什么是 MVCC？InnoDB 是怎么实现的？&lt;/li&gt;
+&lt;li&gt;RR 级别下是怎么解决幻读的？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;ACID 回顾&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;事务四大特性：原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）、持久性（Durability）。其中隔离性就是我们今天要聊的核心——不同隔离级别本质上是在”并发性能”和”数据一致性”之间做取舍。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;四种隔离级别与三种读问题&lt;/strong&gt;&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;隔离级别&lt;/th&gt;&lt;th&gt;脏读&lt;/th&gt;&lt;th&gt;不可重复读&lt;/th&gt;&lt;th&gt;幻读&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Read Uncommitted&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Read Committed&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Repeatable Read&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Serializable&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;三种读问题的区别：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;脏读&lt;/strong&gt;：事务 A 读到了事务 B 还没提交的数据。B 一回滚，A 手里的数据就是脏的。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不可重复读&lt;/strong&gt;：事务 A 两次读同一行，中间事务 B 更新了这行并提交，A 两次读到不同的值。侧重于”修改”。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;幻读&lt;/strong&gt;：事务 A 两次用相同条件查询，中间事务 B 插入了新行，A 第二次查到了”幻影行”。侧重于”新增/删除”。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;MySQL 默认隔离级别是 &lt;strong&gt;Repeatable Read&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MVCC 实现原理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;MVCC（Multi-Version Concurrency Control）的核心思想是：读操作不加锁，通过数据的多个历史版本来实现一致性非阻塞读。&lt;/p&gt;
+&lt;p&gt;InnoDB 中每行数据有两个隐藏列：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;DB_TRX_ID&lt;/code&gt;：最近修改该行的事务 ID&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DB_ROLL_PTR&lt;/code&gt;：回滚指针，指向 undo log 中的旧版本&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当一行被多次修改时，undo log 中会形成一条&lt;strong&gt;版本链&lt;/strong&gt;，每个版本通过回滚指针串起来，从最新版本可以追溯到最初版本。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Read View 的可见性判断&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;事务执行快照读（普通 SELECT）时会生成 Read View，包含：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;m_ids&lt;/code&gt;：生成 Read View 时所有活跃（未提交）事务 ID 列表&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;min_trx_id&lt;/code&gt;：活跃事务中最小的 ID&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;max_trx_id&lt;/code&gt;：下一个要分配的事务 ID（即当前最大事务 ID + 1）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;creator_trx_id&lt;/code&gt;：创建这个 Read View 的事务 ID&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;判断某行版本是否可见的规则：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID == creator_trx_id&lt;/code&gt;，说明是自己修改的，可见。&lt;/li&gt;
+&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID &amp;lt; min_trx_id&lt;/code&gt;，说明该事务在 Read View 创建前就提交了，可见。&lt;/li&gt;
+&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID &amp;gt;= max_trx_id&lt;/code&gt;，说明该事务在 Read View 创建后才开始，不可见。&lt;/li&gt;
+&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID&lt;/code&gt; 在 &lt;code&gt;[min_trx_id, max_trx_id)&lt;/code&gt; 范围内，看它是否在 &lt;code&gt;m_ids&lt;/code&gt; 中：在则不可见（事务还没提交），不在则可见（事务已经提交）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;如果当前版本不可见，就沿着版本链继续找更早的版本，直到找到可见的或到链尾。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;RC vs RR 的关键区别&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;区别只有一个：&lt;strong&gt;Read View 的生成时机不同&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Read Committed&lt;/strong&gt;：每次 SELECT 都重新生成一个新的 Read View。所以能读到其他事务在本事务期间提交的变更，导致不可重复读。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Repeatable Read&lt;/strong&gt;：只在事务第一次 SELECT 时生成 Read View，之后整个事务复用同一个。所以多次读取结果一致，解决了不可重复读。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这就是为什么 RR 比 RC “看到的数据更稳定”——不是锁更多，而是快照拍得更早、用得更久。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;行锁、间隙锁、Next-Key Lock 如何解决幻读&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;MVCC 解决了不可重复读，但幻读还需要靠锁。在 RR 级别下，InnoDB 使用 &lt;strong&gt;Next-Key Lock&lt;/strong&gt;（临键锁）来防止幻读，它是 Record Lock + Gap Lock 的组合：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Record Lock&lt;/strong&gt;：锁定索引上的单行记录。&lt;code&gt;SELECT ... WHERE id = 1 FOR UPDATE&lt;/code&gt; 锁住 id=1 这行。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Gap Lock&lt;/strong&gt;：锁定索引记录之间的间隙，防止其他事务在间隙中插入新行。比如索引中有 id=5 和 id=10，间隙锁会锁住 (5, 10) 这个区间。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Next-Key Lock&lt;/strong&gt;：左开右闭区间，锁住 &lt;code&gt;(prev, current]&lt;/code&gt;。InnoDB 在 RR 下对扫描范围加 Next-Key Lock，既锁记录又锁间隙。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;举个例子：事务 A 执行 &lt;code&gt;SELECT * FROM orders WHERE order_no &amp;gt; 100 FOR UPDATE&lt;/code&gt;，InnoDB 会对符合条件的行加 Record Lock，同时对相关间隙加 Gap Lock。此时事务 B 想 &lt;code&gt;INSERT INTO orders (order_no) VALUES (150)&lt;/code&gt; 就会被阻塞，从而避免幻读。&lt;/p&gt;
+&lt;p&gt;需要注意的是，&lt;strong&gt;间隙锁只在 RR 级别存在&lt;/strong&gt;。降到 RC 后间隙锁自动消失，这也是 RC 下幻读无法被阻止的原因。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;四种隔离级别从低到高，并发性能递减，数据一致性递增。&lt;/li&gt;
+&lt;li&gt;MVCC 通过 undo log 版本链 + Read View 实现无锁快照读，核心是可见性判断算法。&lt;/li&gt;
+&lt;li&gt;RC 每次 SELECT 都刷新 Read View，RR 只在第一次 SELECT 时创建并复用。&lt;/li&gt;
+&lt;li&gt;RR 下通过 Next-Key Lock（Record Lock + Gap Lock）解决幻读。&lt;/li&gt;
+&lt;li&gt;实际项目中大部分场景用 RR 就够了；写冲突多的场景可以考虑降到 RC 减少锁竞争。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;分布式事务中的隔离级别&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在微服务架构中，单个服务通常使用本地事务的 RR 或 RC。但跨服务的全局隔离很难保证——2PC 性能差，TCC/Saga 模式本身就是在应用层补偿。实际工程中，跨服务一致性往往退化为”最终一致性”，全局隔离级别的概念变得模糊。选择本地隔离级别时需要考虑：如果你的服务是读多写少，RR 足够安全；如果是高并发写入场景（如库存扣减），RC + 乐观锁可能是更好的选择。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MySQL 8.0 对 READ COMMITTED 的改进&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;MySQL 8.0 之前，RC 级别有一个痛点：binlog 必须使用 ROW 格式（不能用 STATEMENT），否则主从复制可能出现数据不一致。MySQL 8.0 延续了这个要求，但在锁行为上做了优化——RC 下 &lt;code&gt;UPDATE&lt;/code&gt; 语句只锁最终匹配的行（而非扫描过程中碰到的所有行），大幅减少了锁冲突。很多互联网公司将生产环境从 RR 切到 RC，就是为了更好的并发写入性能。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先理解 ACID&lt;/strong&gt;，搞清楚隔离性要解决什么问题。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：开两个 MySQL 客户端，设置不同隔离级别，分别复现脏读、不可重复读、幻读。亲手操作一遍比看十遍文章都有效。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;读 InnoDB 源码注释&lt;/strong&gt;：理解 Read View 的四个字段和可见性判断逻辑，这是面试区分”背过”和”真懂”的关键。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;关注锁的部分&lt;/strong&gt;：MVCC 解决的是快照读的问题，当前读（&lt;code&gt;FOR UPDATE&lt;/code&gt;、&lt;code&gt;LOCK IN SHARE MODE&lt;/code&gt;）仍然走锁机制。搞清楚”快照读 vs 当前读”的边界。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结合项目思考&lt;/strong&gt;：你的项目用了什么隔离级别？有没有遇到过锁等待或死锁？怎么排查的？面试中结合实际项目讲会比纯理论有说服力得多。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;《高性能 MySQL》第 4 章：事务和并发控制&lt;/li&gt;
+&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 6 章：事务与 MVCC 实现细节&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cache-problems</guid><description>前情提要
 最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
 问题
 面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -4649,140 +4782,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
-整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。
-问题
-
-面试官常见问法：
-
-MySQL 有哪几种事务隔离级别？各自解决了什么问题？
-什么是</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;blockquote&gt;
-&lt;p&gt;面试官常见问法：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;MySQL 有哪几种事务隔离级别？各自解决了什么问题？&lt;/li&gt;
-&lt;li&gt;什么是 MVCC？InnoDB 是怎么实现的？&lt;/li&gt;
-&lt;li&gt;RR 级别下是怎么解决幻读的？&lt;/li&gt;
-&lt;/ol&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;ACID 回顾&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;事务四大特性：原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）、持久性（Durability）。其中隔离性就是我们今天要聊的核心——不同隔离级别本质上是在”并发性能”和”数据一致性”之间做取舍。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;四种隔离级别与三种读问题&lt;/strong&gt;&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;隔离级别&lt;/th&gt;&lt;th&gt;脏读&lt;/th&gt;&lt;th&gt;不可重复读&lt;/th&gt;&lt;th&gt;幻读&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Read Uncommitted&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Read Committed&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Repeatable Read&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;可能&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Serializable&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;td&gt;不可能&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;三种读问题的区别：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;脏读&lt;/strong&gt;：事务 A 读到了事务 B 还没提交的数据。B 一回滚，A 手里的数据就是脏的。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;不可重复读&lt;/strong&gt;：事务 A 两次读同一行，中间事务 B 更新了这行并提交，A 两次读到不同的值。侧重于”修改”。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;幻读&lt;/strong&gt;：事务 A 两次用相同条件查询，中间事务 B 插入了新行，A 第二次查到了”幻影行”。侧重于”新增/删除”。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;MySQL 默认隔离级别是 &lt;strong&gt;Repeatable Read&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;MVCC 实现原理&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;MVCC（Multi-Version Concurrency Control）的核心思想是：读操作不加锁，通过数据的多个历史版本来实现一致性非阻塞读。&lt;/p&gt;
-&lt;p&gt;InnoDB 中每行数据有两个隐藏列：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;DB_TRX_ID&lt;/code&gt;：最近修改该行的事务 ID&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;DB_ROLL_PTR&lt;/code&gt;：回滚指针，指向 undo log 中的旧版本&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;当一行被多次修改时，undo log 中会形成一条&lt;strong&gt;版本链&lt;/strong&gt;，每个版本通过回滚指针串起来，从最新版本可以追溯到最初版本。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Read View 的可见性判断&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;事务执行快照读（普通 SELECT）时会生成 Read View，包含：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;m_ids&lt;/code&gt;：生成 Read View 时所有活跃（未提交）事务 ID 列表&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;min_trx_id&lt;/code&gt;：活跃事务中最小的 ID&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;max_trx_id&lt;/code&gt;：下一个要分配的事务 ID（即当前最大事务 ID + 1）&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;creator_trx_id&lt;/code&gt;：创建这个 Read View 的事务 ID&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;判断某行版本是否可见的规则：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID == creator_trx_id&lt;/code&gt;，说明是自己修改的，可见。&lt;/li&gt;
-&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID &amp;lt; min_trx_id&lt;/code&gt;，说明该事务在 Read View 创建前就提交了，可见。&lt;/li&gt;
-&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID &amp;gt;= max_trx_id&lt;/code&gt;，说明该事务在 Read View 创建后才开始，不可见。&lt;/li&gt;
-&lt;li&gt;如果 &lt;code&gt;DB_TRX_ID&lt;/code&gt; 在 &lt;code&gt;[min_trx_id, max_trx_id)&lt;/code&gt; 范围内，看它是否在 &lt;code&gt;m_ids&lt;/code&gt; 中：在则不可见（事务还没提交），不在则可见（事务已经提交）。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;如果当前版本不可见，就沿着版本链继续找更早的版本，直到找到可见的或到链尾。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;RC vs RR 的关键区别&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;区别只有一个：&lt;strong&gt;Read View 的生成时机不同&lt;/strong&gt;。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Read Committed&lt;/strong&gt;：每次 SELECT 都重新生成一个新的 Read View。所以能读到其他事务在本事务期间提交的变更，导致不可重复读。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Repeatable Read&lt;/strong&gt;：只在事务第一次 SELECT 时生成 Read View，之后整个事务复用同一个。所以多次读取结果一致，解决了不可重复读。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这就是为什么 RR 比 RC “看到的数据更稳定”——不是锁更多，而是快照拍得更早、用得更久。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;行锁、间隙锁、Next-Key Lock 如何解决幻读&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;MVCC 解决了不可重复读，但幻读还需要靠锁。在 RR 级别下，InnoDB 使用 &lt;strong&gt;Next-Key Lock&lt;/strong&gt;（临键锁）来防止幻读，它是 Record Lock + Gap Lock 的组合：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Record Lock&lt;/strong&gt;：锁定索引上的单行记录。&lt;code&gt;SELECT ... WHERE id = 1 FOR UPDATE&lt;/code&gt; 锁住 id=1 这行。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Gap Lock&lt;/strong&gt;：锁定索引记录之间的间隙，防止其他事务在间隙中插入新行。比如索引中有 id=5 和 id=10，间隙锁会锁住 (5, 10) 这个区间。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Next-Key Lock&lt;/strong&gt;：左开右闭区间，锁住 &lt;code&gt;(prev, current]&lt;/code&gt;。InnoDB 在 RR 下对扫描范围加 Next-Key Lock，既锁记录又锁间隙。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;举个例子：事务 A 执行 &lt;code&gt;SELECT * FROM orders WHERE order_no &amp;gt; 100 FOR UPDATE&lt;/code&gt;，InnoDB 会对符合条件的行加 Record Lock，同时对相关间隙加 Gap Lock。此时事务 B 想 &lt;code&gt;INSERT INTO orders (order_no) VALUES (150)&lt;/code&gt; 就会被阻塞，从而避免幻读。&lt;/p&gt;
-&lt;p&gt;需要注意的是，&lt;strong&gt;间隙锁只在 RR 级别存在&lt;/strong&gt;。降到 RC 后间隙锁自动消失，这也是 RC 下幻读无法被阻止的原因。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;四种隔离级别从低到高，并发性能递减，数据一致性递增。&lt;/li&gt;
-&lt;li&gt;MVCC 通过 undo log 版本链 + Read View 实现无锁快照读，核心是可见性判断算法。&lt;/li&gt;
-&lt;li&gt;RC 每次 SELECT 都刷新 Read View，RR 只在第一次 SELECT 时创建并复用。&lt;/li&gt;
-&lt;li&gt;RR 下通过 Next-Key Lock（Record Lock + Gap Lock）解决幻读。&lt;/li&gt;
-&lt;li&gt;实际项目中大部分场景用 RR 就够了；写冲突多的场景可以考虑降到 RC 减少锁竞争。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;分布式事务中的隔离级别&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;在微服务架构中，单个服务通常使用本地事务的 RR 或 RC。但跨服务的全局隔离很难保证——2PC 性能差，TCC/Saga 模式本身就是在应用层补偿。实际工程中，跨服务一致性往往退化为”最终一致性”，全局隔离级别的概念变得模糊。选择本地隔离级别时需要考虑：如果你的服务是读多写少，RR 足够安全；如果是高并发写入场景（如库存扣减），RC + 乐观锁可能是更好的选择。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;MySQL 8.0 对 READ COMMITTED 的改进&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;MySQL 8.0 之前，RC 级别有一个痛点：binlog 必须使用 ROW 格式（不能用 STATEMENT），否则主从复制可能出现数据不一致。MySQL 8.0 延续了这个要求，但在锁行为上做了优化——RC 下 &lt;code&gt;UPDATE&lt;/code&gt; 语句只锁最终匹配的行（而非扫描过程中碰到的所有行），大幅减少了锁冲突。很多互联网公司将生产环境从 RR 切到 RC，就是为了更好的并发写入性能。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先理解 ACID&lt;/strong&gt;，搞清楚隔离性要解决什么问题。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：开两个 MySQL 客户端，设置不同隔离级别，分别复现脏读、不可重复读、幻读。亲手操作一遍比看十遍文章都有效。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;读 InnoDB 源码注释&lt;/strong&gt;：理解 Read View 的四个字段和可见性判断逻辑，这是面试区分”背过”和”真懂”的关键。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;关注锁的部分&lt;/strong&gt;：MVCC 解决的是快照读的问题，当前读（&lt;code&gt;FOR UPDATE&lt;/code&gt;、&lt;code&gt;LOCK IN SHARE MODE&lt;/code&gt;）仍然走锁机制。搞清楚”快照读 vs 当前读”的边界。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;结合项目思考&lt;/strong&gt;：你的项目用了什么隔离级别？有没有遇到过锁等待或死锁？怎么排查的？面试中结合实际项目讲会比纯理论有说服力得多。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;《高性能 MySQL》第 4 章：事务和并发控制&lt;/li&gt;
-&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 6 章：事务与 MVCC 实现细节&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cluster</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cluster</guid><description>前情提要
 单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster 集群，分别解决数据冗余、自动故障转移和水平扩展三个层次的问题。面试中经常一轮追问到底：“主从怎么同步数据的？哨兵怎么选主？Cluster 的 16384 个槽什么意思？“这篇笔记把三种方案一次打通。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
