@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：分布式事务的四种解决方案怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：分布式事务的四种解决方案怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F" class="tag-link" data-astro-cid-gysqo7gh>分布式系统</a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1" class="tag-link" data-astro-cid-gysqo7gh>分布式事务</a><a href="/tags/2pc" class="tag-link" data-astro-cid-gysqo7gh>2PC</a><a href="/tags/saga" class="tag-link" data-astro-cid-gysqo7gh>Saga</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h2 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h2>
+<p>在单机数据库里，事务靠 ACID 就能搞定。但系统一旦拆成微服务，一个业务流程往往要跨多个服务、多个数据库——这时候本地事务就不够用了，我们需要<strong>分布式事务</strong>来保证数据一致性。</p>
+<p>这篇笔记整理自面试中最高频的分布式事务问题：四种主流方案分别是什么？各自适用什么场景？面试时该怎么组织回答？</p>
+<h2 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h2>
+<blockquote>
+<p>分布式环境下，一个操作涉及多个服务节点，如何保证要么全部成功，要么全部回滚？常见方案有哪些，它们的取舍是什么？</p>
+</blockquote>
+<h2 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h2>
+<h3 id="方案一两阶段提交2pc">方案一：两阶段提交（2PC）<a class="anchor-link" aria-label="Link to this section" href="#方案一两阶段提交2pc"><span class="icon icon-link"></span></a></h3>
+<p>2PC 是最经典的分布式事务协议，思路很直接——先问大家”准备好了没”，再统一发指令。</p>
+<p><strong>阶段 1（Prepare）</strong>：协调者向所有参与者发送 Prepare 请求。参与者执行事务操作但不提交，写 redo/undo 日志后返回 Yes 或 No。</p>
+<p><strong>阶段 2（Commit/Rollback）</strong>：如果所有参与者都返回 Yes，协调者发送 Commit；只要有一个返回 No，就发送 Rollback。</p>
+<p>2PC 的优点是概念清晰，能保证强一致性。但缺点也很明显：</p>
+<ul>
+<li><strong>同步阻塞</strong>：Prepare 阶段所有参与者都持有锁，互相等待，吞吐量很低。</li>
+<li><strong>单点故障</strong>：协调者挂了，参与者只能一直阻塞等待，没有自愈能力。</li>
+<li><strong>数据不一致风险</strong>：Commit 阶段如果部分参与者收到 Commit、部分没收到，数据就不一致了。</li>
+</ul>
+<p>实际生产中很少直接用 2PC，但它是一切后续方案的思想起点。</p>
+<h3 id="方案二tcctry-confirm-cancel">方案二：TCC（Try-Confirm-Cancel）<a class="anchor-link" aria-label="Link to this section" href="#方案二tcctry-confirm-cancel"><span class="icon icon-link"></span></a></h3>
+<p>TCC 把事务逻辑搬到了业务层，每个操作都要实现三个接口：</p>
+<ul>
+<li><strong>Try</strong>：预留资源。比如下单时冻结库存 <code>frozen += 1</code>，但不真正扣减。</li>
+<li><strong>Confirm</strong>：确认提交。真正扣库存 <code>stock -= 1, frozen -= 1</code>。</li>
+<li><strong>Cancel</strong>：取消释放。解冻库存 <code>frozen -= 1</code>。</li>
+</ul>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>用户下单 -> Try(冻结库存) -> Try(冻结余额)</span></span>
+<span class="line"><span>          |                        |</span></span>
+<span class="line"><span>          v                        v</span></span>
+<span class="line"><span>     全部成功? ──Yes──> Confirm(扣库存) -> Confirm(扣余额)</span></span>
+<span class="line"><span>          |</span></span>
+<span class="line"><span>          No</span></span>
+<span class="line"><span>          |</span></span>
+<span class="line"><span>          v</span></span>
+<span class="line"><span>     Cancel(解冻库存) -> Cancel(解冻余额)</span></span></code></pre>
+<p>TCC 的核心优势是<strong>不依赖数据库层面的事务</strong>，性能好，适合高并发场景（电商、支付）。代价是业务侵入性强——每个服务都得写三套逻辑，开发成本高，而且 Confirm/Cancel 必须保证幂等。</p>
+<h3 id="方案三saga-模式">方案三：Saga 模式<a class="anchor-link" aria-label="Link to this section" href="#方案三saga-模式"><span class="icon icon-link"></span></a></h3>
+<p>Saga 把一个大事务拆成一连串本地事务，每个本地事务都有对应的补偿操作。如果某一步失败，就逆序执行已完成步骤的补偿。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>T1 -> T2 -> T3 -> T4   (正向执行)</span></span>
+<span class="line"><span>C1 &#x3C;- C2 &#x3C;- C3         (T4 失败，逆序补偿)</span></span></code></pre>
+<p>Saga 有两种实现风格：</p>
+<p><strong>编排式（Choreography）</strong>：没有中心协调者，每个服务完成本地事务后发事件，下一个服务监听事件并执行。优点是解耦，缺点是流程一复杂就很难追踪。</p>
+<p><strong>协调式（Orchestration）</strong>：有一个中心协调器按顺序调用各个服务，失败时负责触发补偿。流程清晰，但协调器本身需要保证高可用。</p>
+<p>Saga 适合长事务场景（比如订单履约、物流），但它的隔离性比较弱——中间状态对外可见，可能出现”脏读”。</p>
+<h3 id="方案四本地消息表--定时补偿">方案四：本地消息表 + 定时补偿<a class="anchor-link" aria-label="Link to this section" href="#方案四本地消息表--定时补偿"><span class="icon icon-link"></span></a></h3>
+<p>这是最”接地气”的方案。核心思路：把”发消息”和”写业务数据”放在同一个本地事务里，靠消息队列 + 轮询来实现最终一致性。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>BEGIN TRANSACTION</span></span>
+<span class="line"><span>  UPDATE accounts SET balance = balance - 100 WHERE id = 1;</span></span>
+<span class="line"><span>  INSERT INTO outbox_messages (id, payload, status) VALUES (uuid, '...', 'pending');</span></span>
+<span class="line"><span>COMMIT</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>-- 后台定时任务</span></span>
+<span class="line"><span>SELECT * FROM outbox_messages WHERE status = 'pending';</span></span>
+<span class="line"><span>  -> 发送到 MQ</span></span>
+<span class="line"><span>  -> UPDATE outbox_messages SET status = 'sent';</span></span></code></pre>
+<p>优点是方案简单、不依赖特殊中间件、业务侵入小。缺点是只适用于对实时一致性要求不高的场景，且需要消费端做好幂等处理。</p>
+<h3 id="四种方案对比">四种方案对比<a class="anchor-link" aria-label="Link to this section" href="#四种方案对比"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>维度</th><th>2PC</th><th>TCC</th><th>Saga</th><th>本地消息表</th></tr></thead><tbody><tr><td>一致性</td><td>强一致</td><td>最终一致</td><td>最终一致</td><td>最终一致</td></tr><tr><td>性能</td><td>低</td><td>高</td><td>中</td><td>中</td></tr><tr><td>业务侵入</td><td>低</td><td>高（三个接口）</td><td>中（补偿逻辑）</td><td>低</td></tr><tr><td>隔离性</td><td>有</td><td>有（预留资源）</td><td>弱</td><td>无</td></tr><tr><td>实现复杂度</td><td>中</td><td>高</td><td>中</td><td>低</td></tr><tr><td>典型场景</td><td>金融核心</td><td>电商/支付</td><td>长流程业务</td><td>通知/异步场景</td></tr></tbody></table>
+<h2 id="分析cap-视角下的一致性选择">分析：CAP 视角下的一致性选择<a class="anchor-link" aria-label="Link to this section" href="#分析cap-视角下的一致性选择"><span class="icon icon-link"></span></a></h2>
+<p>回到 CAP 理论：分布式系统必须在 P（分区容错）的前提下，在 C（一致性）和 A（可用性）之间做取舍。</p>
+<ul>
+<li><strong>2PC 偏向 CP</strong>：优先保证一致性，网络分区时宁可阻塞也不返回脏数据。</li>
+<li><strong>TCC / Saga / 本地消息表偏向 AP</strong>：优先保证可用性，允许短暂的不一致，靠补偿机制达到最终一致。</li>
+</ul>
+<p>这就引出了 <strong>BASE 理论</strong>——Basically Available（基本可用）、Soft State（软状态）、Eventually Consistent（最终一致性）。BASE 本质上是对 CAP 中 AP 方向的工程化落地：承认系统会存在中间状态，但只要最终能收敛到一致就行。</p>
+<p>大多数互联网业务并不需要银行级别的强一致性，最终一致性 + 补偿机制在性能和可用性之间取得了更好的平衡。</p>
+<h2 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>2PC</strong> 是理论基石，强一致但性能差，生产中很少裸用。</li>
+<li><strong>TCC</strong> 性能好但开发成本高，适合对一致性和性能都有要求的金融/电商场景。</li>
+<li><strong>Saga</strong> 适合长事务、多步骤流程，但隔离性弱，需要容忍中间状态。</li>
+<li><strong>本地消息表</strong> 是最轻量的方案，适合异步通知类场景，搭配 MQ 使用效果最好。</li>
+<li>选型的核心判断标准：<strong>一致性要求有多强？业务能不能接受中间状态？开发成本能承受多少？</strong></li>
+</ol>
+<h2 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h2>
+<h3 id="seata-框架">Seata 框架<a class="anchor-link" aria-label="Link to this section" href="#seata-框架"><span class="icon icon-link"></span></a></h3>
+<p>阿里巴巴开源的 Seata 是目前 Java 生态最主流的分布式事务框架，它把上述方案都做了封装：</p>
+<ul>
+<li><strong>AT 模式</strong>：改良版 2PC，对业务无侵入，自动生成回滚 SQL。</li>
+<li><strong>TCC 模式</strong>：业务自定义 Try/Confirm/Cancel。</li>
+<li><strong>Saga 模式</strong>：支持状态机编排长事务。</li>
+<li><strong>XA 模式</strong>：基于数据库 XA 协议的强一致方案。</li>
+</ul>
+<p>如果用 Java 技术栈，Seata 基本是分布式事务的首选方案。Go 生态可以关注 DTM 等开源项目。</p>
+<h3 id="最终一致性-vs-强一致性">最终一致性 vs 强一致性<a class="anchor-link" aria-label="Link to this section" href="#最终一致性-vs-强一致性"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>强一致性</strong>：写完成后所有读立刻看到最新值。代价是高延迟、低可用。典型实现：2PC、Paxos、Raft。</li>
+<li><strong>最终一致性</strong>：允许短暂不一致，经过一段时间后数据收敛。代价是业务需要处理中间状态。典型实现：TCC、Saga、消息队列。</li>
+</ul>
+<p>实际工程中，80% 以上的场景用最终一致性就够了。面试时如果被追问”你们用的哪种”，建议结合具体业务说清楚选择理由。</p>
+<h2 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>先理解 CAP 和 BASE</strong>，搞清楚一致性和可用性的取舍关系。</li>
+<li><strong>从 2PC 学起</strong>，理解同步阻塞的根因，再推导为什么需要后续方案。</li>
+<li><strong>手写一个 TCC demo</strong>（哪怕只是伪代码），体会 Try/Confirm/Cancel 的语义。</li>
+<li><strong>读 Saga 相关论文</strong>（Hector Garcia-Molina 1987 年的原始论文），理解编排和协调的区别。</li>
+<li><strong>跑一下 Seata 或 DTM 的样例项目</strong>，感受框架是怎么把这些理论落地的。</li>
+<li><strong>面试表达建议</strong>：先总述四种方案，再挑一个最熟悉的深入展开，最后用 CAP/BASE 做总结收尾。</li>
+</ol>
+<h2 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h2>
+<ul>
+<li>Hector Garcia-Molina, <em>Sagas</em>, ACM SIGMOD Record, 1987</li>
+<li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em>, O’Reilly, 第 9 章</li>
+<li>Seata 官方文档：<a href="https://seata.apache.org">https://seata.apache.org</a></li>
+<li>DTM（Go 分布式事务框架）：<a href="https://github.com/dtm-labs/dtm">https://github.com/dtm-labs/dtm</a></li>
+<li>Chris Richardson, <em>Pattern: Saga</em>, <a href="https://microservices.io/patterns/data/saga.html">https://microservices.io/patterns/data/saga.html</a></li>
+<li>周志明, <em>凤凰架构</em>, 第 16 章：分布式事务</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案一：两阶段提交（）" data-astro-cid-gysqo7gh>方案一：两阶段提交（2PC）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-23" data-astro-cid-gysqo7gh>**同步阻塞**：Prepare 阶段所有参与者都持有锁，互相等待，吞吐量很低。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-24" data-astro-cid-gysqo7gh>**单点故障**：协调者挂了，参与者只能一直阻塞等待，没有自愈能力。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-25" data-astro-cid-gysqo7gh>**数据不一致风险**：Commit 阶段如果部分参与者收到 Commit、部分没收到，数据就不一致了。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案二：（）" data-astro-cid-gysqo7gh>方案二：TCC（Try-Confirm-Cancel）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-33" data-astro-cid-gysqo7gh>**Try**：预留资源。比如下单时冻结库存 `frozen += 1`，但不真正扣减。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-34" data-astro-cid-gysqo7gh>**Confirm**：确认提交。真正扣库存 `stock -= 1, frozen -= 1`。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-35" data-astro-cid-gysqo7gh>**Cancel**：取消释放。解冻库存 `frozen -= 1`。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案三：模式" data-astro-cid-gysqo7gh>方案三：Saga 模式</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案四：本地消息表+定时补偿" data-astro-cid-gysqo7gh>方案四：本地消息表 + 定时补偿</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#四种方案对比" data-astro-cid-gysqo7gh>四种方案对比</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#分析：视角下的一致性选择" data-astro-cid-gysqo7gh>分析：CAP 视角下的一致性选择</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-101" data-astro-cid-gysqo7gh>**2PC 偏向 CP**：优先保证一致性，网络分区时宁可阻塞也不返回脏数据。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-102" data-astro-cid-gysqo7gh>**TCC / Saga / 本地消息表偏向 AP**：优先保证可用性，允许短暂的不一致，靠补偿机制达到最终一致。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-110" data-astro-cid-gysqo7gh>**2PC** 是理论基石，强一致但性能差，生产中很少裸用。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**TCC** 性能好但开发成本高，适合对一致性和性能都有要求的金融/电商场景。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-112" data-astro-cid-gysqo7gh>**Saga** 适合长事务、多步骤流程，但隔离性弱，需要容忍中间状态。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-113" data-astro-cid-gysqo7gh>**本地消息表** 是最轻量的方案，适合异步通知类场景，搭配 MQ 使用效果最好。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-114" data-astro-cid-gysqo7gh>选型的核心判断标准：**一致性要求有多强？业务能不能接受中间状态？开发成本能承受多少？**</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#框架" data-astro-cid-gysqo7gh>Seata 框架</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-122" data-astro-cid-gysqo7gh>**AT 模式**：改良版 2PC，对业务无侵入，自动生成回滚 SQL。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-123" data-astro-cid-gysqo7gh>**TCC 模式**：业务自定义 Try/Confirm/Cancel。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-124" data-astro-cid-gysqo7gh>**Saga 模式**：支持状态机编排长事务。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-125" data-astro-cid-gysqo7gh>**XA 模式**：基于数据库 XA 协议的强一致方案。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#最终一致性强一致性" data-astro-cid-gysqo7gh>最终一致性 vs 强一致性</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-131" data-astro-cid-gysqo7gh>**强一致性**：写完成后所有读立刻看到最新值。代价是高延迟、低可用。典型实现：2PC、Paxos、Raft。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-132" data-astro-cid-gysqo7gh>**最终一致性**：允许短暂不一致，经过一段时间后数据收敛。代价是业务需要处理中间状态。典型实现：TCC、Saga、消息队列。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-138" data-astro-cid-gysqo7gh>**先理解 CAP 和 BASE**，搞清楚一致性和可用性的取舍关系。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-139" data-astro-cid-gysqo7gh>**从 2PC 学起**，理解同步阻塞的根因，再推导为什么需要后续方案。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-140" data-astro-cid-gysqo7gh>**手写一个 TCC demo**（哪怕只是伪代码），体会 Try/Confirm/Cancel 的语义。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-141" data-astro-cid-gysqo7gh>**读 Saga 相关论文**（Hector Garcia-Molina 1987 年的原始论文），理解编排和协调的区别。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-142" data-astro-cid-gysqo7gh>**跑一下 Seata 或 DTM 的样例项目**，感受框架是怎么把这些理论落地的。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-143" data-astro-cid-gysqo7gh>**面试表达建议**：先总述四种方案，再挑一个最熟悉的深入展开，最后用 CAP/BASE 做总结收尾。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-147" data-astro-cid-gysqo7gh>Hector Garcia-Molina, *Sagas*, ACM SIGMOD Record, 1987</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-148" data-astro-cid-gysqo7gh>Martin Kleppmann, *Designing Data-Intensive Applications*, O&#39;Reilly, 第 9 章</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-149" data-astro-cid-gysqo7gh>Seata 官方文档：https://seata.apache.org</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-150" data-astro-cid-gysqo7gh>DTM（Go 分布式事务框架）：https://github.com/dtm-labs/dtm</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-151" data-astro-cid-gysqo7gh>Chris Richardson, *Pattern: Saga*, https://microservices.io/patterns/data/saga.html</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-152" data-astro-cid-gysqo7gh>周志明, *凤凰架构*, 第 16 章：分布式事务</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

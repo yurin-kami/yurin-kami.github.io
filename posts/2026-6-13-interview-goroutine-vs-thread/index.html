@@ -1,0 +1,151 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Goroutine和线程到底有什么区别 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Goroutine和线程到底有什么区别</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/go" class="tag-link" data-astro-cid-gysqo7gh>Go</a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B" class="tag-link" data-astro-cid-gysqo7gh>并发编程</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记goroutine和线程到底有什么区别">面试笔记：Goroutine和线程到底有什么区别<a class="anchor-link" aria-label="Link to this section" href="#面试笔记goroutine和线程到底有什么区别"><span class="icon icon-link"></span></a></h1>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中常见的问法：</p>
+<blockquote>
+<p>“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”</p>
+</blockquote>
+<p>这个问题表面上在问两者的差异，实际上考察的是你对 <strong>Go runtime 调度机制</strong>的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<h4 id="一句话概括">一句话概括<a class="anchor-link" aria-label="Link to this section" href="#一句话概括"><span class="icon icon-link"></span></a></h4>
+<p>Goroutine 是 Go runtime 管理的<strong>用户态轻量级协程</strong>，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。</p>
+<h4 id="对比表格">对比表格<a class="anchor-link" aria-label="Link to this section" href="#对比表格"><span class="icon icon-link"></span></a></h4>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>特性</th><th>Goroutine</th><th>OS Thread</th></tr></thead><tbody><tr><td>初始栈大小</td><td>2KB</td><td>1-8MB（通常固定）</td></tr><tr><td>栈增长</td><td>动态增长，最大 1GB，可收缩</td><td>固定大小</td></tr><tr><td>创建开销</td><td>~0.3us</td><td>~10-100us</td></tr><tr><td>上下文切换</td><td>~100ns（用户态）</td><td>~1-10us（内核态）</td></tr><tr><td>调度方</td><td>Go runtime（GMP 模型）</td><td>操作系统内核</td></tr><tr><td>并发数量</td><td>轻松百万级</td><td>通常几千到几万</td></tr></tbody></table>
+<h4 id="为什么-goroutine-更轻量">为什么 Goroutine 更轻量<a class="anchor-link" aria-label="Link to this section" href="#为什么-goroutine-更轻量"><span class="icon icon-link"></span></a></h4>
+<p>有四个关键机制在支撑：</p>
+<p><strong>1. 动态栈管理</strong></p>
+<p>Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。</p>
+<p><strong>2. 用户态调度</strong></p>
+<p>Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。</p>
+<p><strong>3. 复用线程（M</strong></p><div></div><strong> 调度）</strong><p></p>
+<p>多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。</p>
+<p><strong>4. 内存池化</strong></p>
+<p>Goroutine 的 <code>g</code> 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。</p>
+<h4 id="gmp-调度模型速览">GMP 调度模型速览<a class="anchor-link" aria-label="Link to this section" href="#gmp-调度模型速览"><span class="icon icon-link"></span></a></h4>
+<p>GMP 是 Go scheduler 的核心，三个组件各司其职：</p>
+<ul>
+<li><strong>G（Goroutine）</strong>：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。</li>
+<li><strong>M（Machine）</strong>：对应一个 OS 线程，负责执行 G 中的代码。</li>
+<li><strong>P（Processor）</strong>：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 <code>GOMAXPROCS</code> 控制。</li>
+</ul>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 查看当前 P 的数量</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">fmt.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Println</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(runtime.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">GOMAXPROCS</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">))</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 每个 P 维护本地队列，M 从 P 中取 G 执行</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 当本地队列为空时，P 会从全局队列或其他 P 的队列中"窃取"任务</span></span></code></pre>
+<p>调度器还有一个重要的机制——<strong>工作窃取（work stealing）</strong>：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。</p>
+<h4 id="代码示例">代码示例<a class="anchor-link" aria-label="Link to this section" href="#代码示例"><span class="icon icon-link"></span></a></h4>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 启动 goroutine 极其简单</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">go</span><span style="color:#D73A49;--shiki-dark:#F97583"> func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    fmt.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Println</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"hello from goroutine"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 轻松启动 10 万个 goroutine</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 100000</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    go</span><span style="color:#D73A49;--shiki-dark:#F97583"> func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">id</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">        // 每个 goroutine 只占 2KB 初始栈</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Sleep</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(time.Second)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }(i)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p><strong>面试官为什么关心这个问题？</strong></p>
+<p>这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。</p>
+<p><strong>容易踩的坑：</strong></p>
+<ol>
+<li><strong>只说”轻量级”不解释原因</strong> —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。</li>
+<li><strong>混淆协程和 goroutine</strong> —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。</li>
+<li><strong>忽略线程复用</strong> —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。</li>
+<li><strong>GOMAXPROCS 的容器陷阱</strong> —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 <code>GOMAXPROCS</code>，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。</li>
+</ol>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>Goroutine</strong>：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。</li>
+<li><strong>GMP 模型</strong>：Go 的 M<div></div> 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。</li>
+<li><strong>用户态调度</strong>：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。</li>
+<li><strong>工作窃取</strong>：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。</li>
+<li><strong>动态栈</strong>：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>1. Go 调度器的抢占式调度</strong></p>
+<p>Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 <code>SIGURG</code> 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。</p>
+<p><strong>2. Goroutine 泄漏检测</strong></p>
+<p>goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 <code>runtime.NumGoroutine()</code> 做运行时监控，或者在测试中引入 <code>go.uber.org/goleak</code> 来检测泄漏的 goroutine。</p>
+<p><strong>3. Goroutine vs 其他语言的协程</strong></p>
+<p>Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M</p><div></div> 调度和抢占机制，开发者几乎不需要关心底层调度细节。<p></p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先读官方文档</strong>：<a href="https://go.dev/doc/effective_go">Effective Go</a> 中关于 goroutine 和 channel 的章节是入门必读。</li>
+<li><strong>理解 GMP 调度器</strong>：推荐 Dmitry Vyukov 的 <a href="https://go.dev/src/runtime/proc.go">Go scheduler design doc</a>，以及 Morsing 的博客文章。</li>
+<li><strong>动手实验</strong>：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 <code>GODEBUG=gctrace=1</code> 查看 GC 表现。</li>
+<li><strong>阅读 runtime 源码</strong>：<code>runtime/proc.go</code> 是调度器的核心实现，结合 GDB 或 <code>dlv</code> 调试器跟踪 <code>schedule()</code> 函数。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://go.dev/doc/effective_go#goroutines">Go goroutine 官方文档</a></li>
+<li><a href="https://go.dev/src/runtime/proc.go">Go scheduler: M<div></div> scheduling and work stealing</a></li>
+<li><a href="https://morsmachine.dk/go-scheduler">Morsing - The Go Scheduler</a></li>
+<li><a href="https://go.dev/doc/go1.14#runtime">Go 1.14 Release Notes - Asynchronous Preemption</a></li>
+<li><a href="https://github.com/uber-go/goleak">uber-go/goleak - Goroutine leak detector</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：和线程到底有什么区别" data-astro-cid-gysqo7gh>面试笔记：Goroutine和线程到底有什么区别</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-56" data-astro-cid-gysqo7gh>**G（Goroutine）**：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-57" data-astro-cid-gysqo7gh>**M（Machine）**：对应一个 OS 线程，负责执行 G 中的代码。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-58" data-astro-cid-gysqo7gh>**P（Processor）**：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 `GOMAXPROCS` 控制。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-97" data-astro-cid-gysqo7gh>**只说&quot;轻量级&quot;不解释原因** —— 面试官追问&quot;为什么轻&quot;就卡住了。至少要能说出动态栈和用户态调度两点。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-98" data-astro-cid-gysqo7gh>**混淆协程和 goroutine** —— goroutine 是 Go 对协程的具体实现，不要笼统地说&quot;协程就是轻量级线程&quot;。不同语言的协程实现差异很大。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-99" data-astro-cid-gysqo7gh>**忽略线程复用** —— 很多人只记得&quot;goroutine 多路复用到少量线程上&quot;，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-100" data-astro-cid-gysqo7gh>**GOMAXPROCS 的容器陷阱** —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 `GOMAXPROCS`，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-104" data-astro-cid-gysqo7gh>**Goroutine**：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-105" data-astro-cid-gysqo7gh>**GMP 模型**：Go 的 M:N 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-106" data-astro-cid-gysqo7gh>**用户态调度**：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-107" data-astro-cid-gysqo7gh>**工作窃取**：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-108" data-astro-cid-gysqo7gh>**动态栈**：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-126" data-astro-cid-gysqo7gh>**先读官方文档**：[Effective Go](https://go.dev/doc/effective_go) 中关于 goroutine 和 channel 的章节是入门必读。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-127" data-astro-cid-gysqo7gh>**理解 GMP 调度器**：推荐 Dmitry Vyukov 的 [Go scheduler design doc](https://go.dev/src/runtime/proc.go)，以及 Morsing 的博客文章。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-128" data-astro-cid-gysqo7gh>**动手实验**：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 `GODEBUG=gctrace=1` 查看 GC 表现。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-129" data-astro-cid-gysqo7gh>**阅读 runtime 源码**：`runtime/proc.go` 是调度器的核心实现，结合 GDB 或 `dlv` 调试器跟踪 `schedule()` 函数。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>[Go goroutine 官方文档](https://go.dev/doc/effective_go#goroutines)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-134" data-astro-cid-gysqo7gh>[Go scheduler: M:N scheduling and work stealing](https://go.dev/src/runtime/proc.go)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-135" data-astro-cid-gysqo7gh>[Morsing - The Go Scheduler](https://morsmachine.dk/go-scheduler)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-136" data-astro-cid-gysqo7gh>[Go 1.14 Release Notes - Asynchronous Preemption](https://go.dev/doc/go1.14#runtime)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-137" data-astro-cid-gysqo7gh>[uber-go/goleak - Goroutine leak detector](https://github.com/uber-go/goleak)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

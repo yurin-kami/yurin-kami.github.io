@@ -1,0 +1,206 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Redis的RDB和AOF持久化怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Redis的RDB和AOF持久化怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/redis" class="tag-link" data-astro-cid-gysqo7gh>Redis</a><a href="/tags/%E6%8C%81%E4%B9%85%E5%8C%96" class="tag-link" data-astro-cid-gysqo7gh>持久化</a><a href="/tags/rdb" class="tag-link" data-astro-cid-gysqo7gh>RDB</a><a href="/tags/aof" class="tag-link" data-astro-cid-gysqo7gh>AOF</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>Redis 把数据放在内存里，读写极快，但进程一挂数据就没了。为了解决这个问题，Redis 提供了两种持久化机制：RDB 快照和 AOF 日志。面试中几乎必问”RDB 和 AOF 的区别”，而且经常追问到混合持久化和 Redis 7.0 的新变化。这篇笔记把两种持久化的原理、触发方式、优缺点一次理清，最后给出选型建议。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试官常见的问法：</p>
+<ul>
+<li>“Redis 的持久化机制有哪些？”</li>
+<li>“RDB 快照是怎么生成的，什么时候触发？”</li>
+<li>“AOF 的 fsync 策略有几种，分别什么场景用？”</li>
+<li>“RDB 和 AOF 能同时开吗？混合持久化是怎么回事？”</li>
+</ul>
+<p>考察的核心是：你是否理解 RDB 的 fork + COW 机制、AOF 追加日志与重写原理、两种策略在数据安全和性能之间的取舍，以及生产环境中如何做选择。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<h4 id="1-rdb--内存快照">1. RDB — 内存快照<a class="anchor-link" aria-label="Link to this section" href="#1-rdb--内存快照"><span class="icon icon-link"></span></a></h4>
+<p><strong>原理：</strong> RDB（Redis Database）是某一时刻内存数据的完整二进制快照。生成过程是：主进程调用 <code>fork()</code> 创建子进程，子进程将内存数据写入临时文件，写完后原子替换旧的 RDB 文件。fork 之后利用操作系统的 Copy-on-Write（写时复制）机制，父进程继续处理写入，子进程拿到的是 fork 瞬间的数据副本。</p>
+<p><strong>触发方式：</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># 自动触发（满足任一条件即触发）</span></span>
+<span class="line"><span>save 900 1      # 900 秒内至少 1 个 key 变化</span></span>
+<span class="line"><span>save 300 10     # 300 秒内至少 10 个 key 变化</span></span>
+<span class="line"><span>save 60 10000   # 60 秒内至少 10000 个 key 变化</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 文件配置</span></span>
+<span class="line"><span>dbfilename dump.rdb</span></span>
+<span class="line"><span>dir ./</span></span></code></pre>
+<p>除了自动触发，还可以手动执行 <code>SAVE</code>（阻塞主进程，生产慎用）或 <code>BGSAVE</code>（后台 fork 子进程，推荐）。</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>文件紧凑压缩，适合备份和灾难恢复</li>
+<li>恢复速度远快于 AOF，直接加载到内存</li>
+<li>对主进程性能影响小，写操作无需额外磁盘 IO</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>两次快照之间的数据可能丢失，最坏情况丢几分钟写入</li>
+<li><code>fork()</code> 在大数据量时会导致毫秒级阻塞，内存越大 fork 越慢</li>
+</ul>
+<h4 id="2-aof--追加写日志">2. AOF — 追加写日志<a class="anchor-link" aria-label="Link to this section" href="#2-aof--追加写日志"><span class="icon icon-link"></span></a></h4>
+<p><strong>原理：</strong> AOF（Append Only File）以 Redis 协议格式记录每一条写命令，追加到 AOF 文件末尾。重启时 Redis 重放这些命令来恢复数据。</p>
+<p><strong>fsync 策略：</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>appendonly yes</span></span>
+<span class="line"><span>appendfilename "appendonly.aof"</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span># 三种同步策略</span></span>
+<span class="line"><span># appendfsync always      # 每条写命令都 fsync，最安全，最慢</span></span>
+<span class="line"><span>appendfsync everysec       # 每秒 fsync 一次（推荐，最多丢 1 秒数据）</span></span>
+<span class="line"><span># appendfsync no           # 交给操作系统决定，最快，可能丢数据</span></span></code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>策略</th><th>数据安全性</th><th>性能</th><th>适用场景</th></tr></thead><tbody><tr><td>always</td><td>最高，不丢数据</td><td>最差</td><td>金融级数据</td></tr><tr><td>everysec</td><td>最多丢 1 秒</td><td>很好</td><td>绝大多数生产环境</td></tr><tr><td>no</td><td>可能丢较多</td><td>最好</td><td>允许丢数据的缓存场景</td></tr></tbody></table>
+<p><strong>AOF 重写（Rewrite）：</strong> AOF 文件会随写入不断增长。重写机制会 fork 子进程，根据当前内存数据生成一份等效的最小命令集，替换旧文件。可以手动 <code>BGREWRITEAOF</code>，也可以配置自动触发：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>auto-aof-rewrite-percentage 100   # AOF 文件比上次重写后增长 100% 时触发</span></span>
+<span class="line"><span>auto-aof-rewrite-min-size 64mb    # 且 AOF 文件至少 64MB</span></span></code></pre>
+<p><strong>优点：</strong></p>
+<ul>
+<li>数据安全，everysec 模式最多丢 1 秒数据</li>
+<li>文件是纯文本命令，可读性好，误操作时可手动编辑修复</li>
+<li>支持重写压缩，控制文件体积</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>文件通常比 RDB 大</li>
+<li>恢复速度慢于 RDB，需要逐条重放命令</li>
+<li>持续追加带来额外的磁盘 IO 开销</li>
+</ul>
+<h4 id="3-混合持久化redis-40">3. 混合持久化（Redis 4.0+）<a class="anchor-link" aria-label="Link to this section" href="#3-混合持久化redis-40"><span class="icon icon-link"></span></a></h4>
+<p>Redis 4.0 引入了混合持久化，把 RDB 和 AOF 结合起来：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>aof-use-rdb-preamble yes</span></span></code></pre>
+<p>原理：AOF 重写时，子进程先将当前内存数据以 RDB 格式写入文件开头，再将重写期间产生的增量写命令以 AOF 格式追加到文件末尾。重启时 Redis 先快速加载 RDB 部分，再重放少量 AOF 命令。兼顾了 RDB 的恢复速度和 AOF 的数据安全性。</p>
+<h4 id="4-对比总结">4. 对比总结<a class="anchor-link" aria-label="Link to this section" href="#4-对比总结"><span class="icon icon-link"></span></a></h4>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>维度</th><th>RDB</th><th>AOF</th><th>混合持久化</th></tr></thead><tbody><tr><td>数据文件</td><td>二进制快照</td><td>文本命令日志</td><td>RDB 头 + AOF 尾</td></tr><tr><td>文件大小</td><td>小</td><td>大</td><td>中等</td></tr><tr><td>恢复速度</td><td>快</td><td>慢</td><td>快</td></tr><tr><td>数据安全</td><td>可能丢分钟级数据</td><td>最多丢 1 秒</td><td>最多丢 1 秒</td></tr><tr><td>性能影响</td><td>fork 时短暂阻塞</td><td>持续磁盘 IO</td><td>重写时 fork</td></tr><tr><td>适合场景</td><td>备份、冷备、灾备</td><td>数据安全要求高</td><td>生产环境首选</td></tr></tbody></table>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>实际选型思路：</p>
+<ul>
+<li><strong>只做备份、不怕丢数据</strong>：单独开 RDB 就够了，<code>save</code> 规则按业务写入量配置。</li>
+<li><strong>数据安全优先</strong>：开 AOF + everysec，绝大多数生产环境的标准选择。</li>
+<li><strong>既要恢复快又要安全</strong>：开混合持久化（Redis 4.0+ 默认推荐方案），AOF 重写时自动嵌入 RDB 快照。</li>
+<li><strong>RDB + AOF 同时开</strong>：Redis 重启时优先用 AOF 恢复（因为 AOF 数据更完整），RDB 仅用于备份。</li>
+</ul>
+<p>一个常见误区是”RDB 完全没用”。实际上 RDB 在冷备份和灾难恢复场景仍然不可替代 — 一个压缩的二进制快照可以拷贝到任何机器快速恢复，而 AOF 文件大且重放慢。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>RDB 利用 fork + COW</strong> 生成内存快照，恢复快但可能丢数据</li>
+<li><strong>AOF 追加写命令</strong>，everysec 是最常用的 fsync 策略，平衡安全与性能</li>
+<li><strong>AOF 重写</strong>不是追加，而是根据当前内存重新生成最小命令集</li>
+<li><strong>混合持久化</strong>在 AOF 重写时先写 RDB 再追加 AOF，是当前生产环境首选</li>
+<li>Redis 重启恢复优先级：AOF > RDB（如果两者都有）</li>
+</ol>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>Redis 7.0 Multi Part AOF（MP-AOF）</strong></p>
+<p>Redis 7.0 对 AOF 做了一次重大重构。传统 AOF 是单个文件，重写时需要 fork 子进程生成完整的新文件，重写期间的增量命令需要额外的缓冲区，重写完成后还要做一次原子 rename。</p>
+<p>Multi Part AOF 将 AOF 拆分为多个文件，放在一个目录下，由一个 <code>manifest</code> 文件管理：</p>
+<ul>
+<li><strong>base 文件</strong>：相当于一次 RDB 快照或 AOF 重写的基础数据</li>
+<li><strong>incr 文件</strong>：增量追加的写命令，按时间段切分</li>
+</ul>
+<p>重写时不再 fork 子进程生成完整文件，而是直接开启一个新的 incr 文件继续追加，旧的 incr 文件可以后台异步压缩。这样做的好处是：重写期间不需要额外的内存缓冲区，也不会因为 fork 大进程导致阻塞。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>aof-use-rdb-preamble yes     # 仍然支持混合持久化</span></span>
+<span class="line"><span>aof-timestamp-enabled yes     # AOF 文件中记录时间戳，加速恢复</span></span></code></pre>
+<p>MP-AOF 让 AOF 的重写变得更轻量，也减少了磁盘 IO 的峰值。如果你的生产环境是 Redis 7.0+，建议直接开启 MP-AOF + 混合持久化。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先动手</strong>：本地起一个 Redis，分别配置纯 RDB、纯 AOF、混合持久化，用 <code>redis-cli</code> 写入数据后 <code>kill</code> 进程，观察恢复效果</li>
+<li><strong>读配置</strong>：把 <code>redis.conf</code> 里 <code>SNAPSHOTTING</code> 和 <code>APPEND ONLY MODE</code> 两节的注释读一遍，每个参数都有详细说明</li>
+<li><strong>关注 fork 开销</strong>：用 <code>info persistence</code> 查看 <code>latest_fork_usec</code>，了解你的环境 fork 耗时</li>
+<li><strong>面试表达</strong>：先说”两种机制的原理和区别”，再说”混合持久化是怎么结合的”，最后聊”Redis 7.0 的 MP-AOF 改进”，层层递进</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">Redis 官方文档 — Persistence</a></li>
+<li><a href="https://github.com/redis/redis/issues/9727">Redis 7.0 Multi Part AOF 设计文档</a></li>
+<li>《Redis 设计与实现》— 黄健宏，第 10 章持久化</li>
+<li><a href="https://developer.aliyun.com/article/redis-persistence">Redis 持久化方式对比 — 阿里云开发者社区</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>&quot;Redis 的持久化机制有哪些？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>&quot;RDB 快照是怎么生成的，什么时候触发？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>&quot;AOF 的 fsync 策略有几种，分别什么场景用？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-12" data-astro-cid-gysqo7gh>&quot;RDB 和 AOF 能同时开吗？混合持久化是怎么回事？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#自动触发（满足任一条件即触发）" data-astro-cid-gysqo7gh>自动触发（满足任一条件即触发）</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#文件配置" data-astro-cid-gysqo7gh>文件配置</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-38" data-astro-cid-gysqo7gh>文件紧凑压缩，适合备份和灾难恢复</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-39" data-astro-cid-gysqo7gh>恢复速度远快于 AOF，直接加载到内存</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-40" data-astro-cid-gysqo7gh>对主进程性能影响小，写操作无需额外磁盘 IO</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-43" data-astro-cid-gysqo7gh>两次快照之间的数据可能丢失，最坏情况丢几分钟写入</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-44" data-astro-cid-gysqo7gh>`fork()` 在大数据量时会导致毫秒级阻塞，内存越大 fork 越慢</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#三种同步策略" data-astro-cid-gysqo7gh>三种同步策略</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="##每条写命令都，最安全，最慢" data-astro-cid-gysqo7gh>appendfsync always      # 每条写命令都 fsync，最安全，最慢</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="##交给操作系统决定，最快，可能丢数据" data-astro-cid-gysqo7gh>appendfsync no           # 交给操作系统决定，最快，可能丢数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-76" data-astro-cid-gysqo7gh>数据安全，everysec 模式最多丢 1 秒数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-77" data-astro-cid-gysqo7gh>文件是纯文本命令，可读性好，误操作时可手动编辑修复</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-78" data-astro-cid-gysqo7gh>支持重写压缩，控制文件体积</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-81" data-astro-cid-gysqo7gh>文件通常比 RDB 大</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-82" data-astro-cid-gysqo7gh>恢复速度慢于 RDB，需要逐条重放命令</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-83" data-astro-cid-gysqo7gh>持续追加带来额外的磁盘 IO 开销</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-110" data-astro-cid-gysqo7gh>**只做备份、不怕丢数据**：单独开 RDB 就够了，`save` 规则按业务写入量配置。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**数据安全优先**：开 AOF + everysec，绝大多数生产环境的标准选择。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-112" data-astro-cid-gysqo7gh>**既要恢复快又要安全**：开混合持久化（Redis 4.0+ 默认推荐方案），AOF 重写时自动嵌入 RDB 快照。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-113" data-astro-cid-gysqo7gh>**RDB + AOF 同时开**：Redis 重启时优先用 AOF 恢复（因为 AOF 数据更完整），RDB 仅用于备份。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-119" data-astro-cid-gysqo7gh>**RDB 利用 fork + COW** 生成内存快照，恢复快但可能丢数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-120" data-astro-cid-gysqo7gh>**AOF 追加写命令**，everysec 是最常用的 fsync 策略，平衡安全与性能</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-121" data-astro-cid-gysqo7gh>**AOF 重写**不是追加，而是根据当前内存重新生成最小命令集</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-122" data-astro-cid-gysqo7gh>**混合持久化**在 AOF 重写时先写 RDB 再追加 AOF，是当前生产环境首选</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-123" data-astro-cid-gysqo7gh>Redis 重启恢复优先级：AOF &gt; RDB（如果两者都有）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>**base 文件**：相当于一次 RDB 快照或 AOF 重写的基础数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-134" data-astro-cid-gysqo7gh>**incr 文件**：增量追加的写命令，按时间段切分</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-147" data-astro-cid-gysqo7gh>**先动手**：本地起一个 Redis，分别配置纯 RDB、纯 AOF、混合持久化，用 `redis-cli` 写入数据后 `kill` 进程，观察恢复效果</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-148" data-astro-cid-gysqo7gh>**读配置**：把 `redis.conf` 里 `SNAPSHOTTING` 和 `APPEND ONLY MODE` 两节的注释读一遍，每个参数都有详细说明</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-149" data-astro-cid-gysqo7gh>**关注 fork 开销**：用 `info persistence` 查看 `latest_fork_usec`，了解你的环境 fork 耗时</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-150" data-astro-cid-gysqo7gh>**面试表达**：先说&quot;两种机制的原理和区别&quot;，再说&quot;混合持久化是怎么结合的&quot;，最后聊&quot;Redis 7.0 的 MP-AOF 改进&quot;，层层递进</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-154" data-astro-cid-gysqo7gh>[Redis 官方文档 — Persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-155" data-astro-cid-gysqo7gh>[Redis 7.0 Multi Part AOF 设计文档](https://github.com/redis/redis/issues/9727)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-156" data-astro-cid-gysqo7gh>《Redis 设计与实现》— 黄健宏，第 10 章持久化</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-157" data-astro-cid-gysqo7gh>[Redis 持久化方式对比 — 阿里云开发者社区](https://developer.aliyun.com/article/redis-persistence)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

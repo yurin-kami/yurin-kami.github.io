@@ -1,0 +1,409 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>Shoka 主题 Markdown 语法演示 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>Shoka 主题 Markdown 语法演示</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-02-07</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/shoka" class="tag-link" data-astro-cid-gysqo7gh>Shoka</a><a href="/tags/markdown" class="tag-link" data-astro-cid-gysqo7gh>Markdown</a><a href="/tags/%E6%B5%8B%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>测试</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <p>本文展示了从 Hexo Shoka 主题迁移的所有特殊 Markdown 语法。</p>
+<h2 id="文字特效">文字特效<a class="anchor-link" aria-label="Link to this section" href="#文字特效"><span class="icon icon-link"></span></a></h2>
+<h3 id="下划线-ins">下划线 (ins)<a class="anchor-link" aria-label="Link to this section" href="#下划线-ins"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">++这是下划线文字++</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">++波浪下划线++{.wavy}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">++着重点标记++{.dot}</span></span></code></pre>
+<p><ins>这是下划线文字</ins></p>
+<p><ins class="wavy">波浪下划线</ins></p>
+<p><ins class="dot">着重点标记</ins></p>
+<h3 id="下划线颜色">下划线颜色<a class="anchor-link" aria-label="Link to this section" href="#下划线颜色"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">++主色调++{.primary} ++成功++{.success} ++警告++{.warning} ++危险++{.danger} ++信息++{.info}</span></span></code></pre>
+<p><ins class="primary">主色调</ins> <ins class="success">成功</ins> <ins class="warning">警告</ins> <ins class="danger">危险</ins> <ins class="info">信息</ins></p>
+<h3 id="高亮-mark">高亮 (mark)<a class="anchor-link" aria-label="Link to this section" href="#高亮-mark"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">==这是高亮文字==</span></span></code></pre>
+<p><mark>这是高亮文字</mark></p>
+<h3 id="上下标">上下标<a class="anchor-link" aria-label="Link to this section" href="#上下标"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">H~2~O 是水的化学式</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">E = mc^2^ 是质能方程</span></span></code></pre>
+<p>H<sub>2</sub>O 是水的化学式</p>
+<p>E = mc<sup>2</sup> 是质能方程</p>
+<h3 id="颜色文字">颜色文字<a class="anchor-link" aria-label="Link to this section" href="#颜色文字"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">红色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.red} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">粉色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.pink} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">橙色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.orange} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">黄色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.yellow} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">绿色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.green} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">水色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.aqua} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">蓝色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.blue} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">紫色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.purple} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">灰色</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.grey}</span></span></code></pre>
+<p><span class="red">红色</span> <span class="pink">粉色</span> <span class="orange">橙色</span> <span class="yellow">黄色</span> <span class="green">绿色</span> <span class="aqua">水色</span> <span class="blue">蓝色</span> <span class="purple">紫色</span> <span class="grey">灰色</span></p>
+<h3 id="彩虹文字">彩虹文字<a class="anchor-link" aria-label="Link to this section" href="#彩虹文字"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">这段文字会有彩虹渐变效果</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.rainbow}</span></span></code></pre>
+<p><span class="rainbow">这段文字会有彩虹渐变效果</span></p>
+<h3 id="键盘键">键盘键<a class="anchor-link" aria-label="Link to this section" href="#键盘键"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">Ctrl</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.kbd} + [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">C</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.kbd} 复制，[</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">Ctrl</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.kbd} + [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">V</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.kbd} 粘贴</span></span></code></pre>
+<p><span class="kbd">Ctrl</span> + <span class="kbd">C</span> 复制，<span class="kbd">Ctrl</span> + <span class="kbd">V</span> 粘贴</p>
+<h2 id="隐藏文字-spoiler">隐藏文字 (Spoiler)<a class="anchor-link" aria-label="Link to this section" href="#隐藏文字-spoiler"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这里有一段!!隐藏文字，鼠标点击显示!!</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这里有一段!!模糊文字，鼠标悬停显示!!{.blur}</span></span></code></pre>
+<p>这里有一段<spoiler-span>隐藏文字，鼠标点击显示</spoiler-span></p>
+<p>这里有一段<span class="spoiler blur">模糊文字，鼠标悬停显示</span></p>
+<h2 id="标签块-labels">标签块 (Labels)<a class="anchor-link" aria-label="Link to this section" href="#标签块-labels"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">默认</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .default} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">主要</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .primary} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">信息</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .info} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">成功</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .success} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">警告</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .warning} [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">危险</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.label .danger}</span></span></code></pre>
+<p><span class="label default">默认</span> <span class="label primary">主要</span> <span class="label info">信息</span> <span class="label success">成功</span> <span class="label warning">警告</span> <span class="label danger">危险</span></p>
+<h2 id="提醒块-note-blocks">提醒块 (Note Blocks)<a class="anchor-link" aria-label="Link to this section" href="#提醒块-note-blocks"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::default</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是默认提醒块</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::primary</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是主要提醒块，用于重要提示</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::info</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是信息提醒块，用于提供额外信息</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::success</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是成功提醒块，用于正面反馈</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::warning</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是警告提醒块，请注意</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::danger</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是危险提醒块，务必谨慎</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::info no-icon</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这是没有图标的信息块</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span></code></pre>
+<div class="note-block note-default">
+<p>这是默认提醒块</p>
+</div>
+<div class="note-block note-primary">
+<p>这是主要提醒块，用于重要提示</p>
+</div>
+<div class="note-block note-info">
+<p>这是信息提醒块，用于提供额外信息</p>
+</div>
+<div class="note-block note-success">
+<p>这是成功提醒块，用于正面反馈</p>
+</div>
+<div class="note-block note-warning">
+<p>这是警告提醒块，请注意</p>
+</div>
+<div class="note-block note-danger">
+<p>这是危险提醒块，务必谨慎</p>
+</div>
+<div class="note-block note-info no-icon">
+<p>这是没有图标的信息块</p>
+</div>
+<h2 id="折叠块-collapse">折叠块 (Collapse)<a class="anchor-link" aria-label="Link to this section" href="#折叠块-collapse"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++primary 点击展开详细内容</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这里是折叠的内容，点击标题可以展开或收起。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">支持 </span><span style="color:#24292E;--shiki-light-font-weight:bold;--shiki-dark:#E1E4E8;--shiki-dark-font-weight:bold">**Markdown**</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 格式化。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 列表项 1</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 列表项 2</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++</span></span></code></pre>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++warning 注意事项</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这里列出一些需要注意的问题：</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">1.</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 注意事项一</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">2.</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 注意事项二</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++</span></span></code></pre>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++danger 危险操作</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">请确保你知道自己在做什么！</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```bash</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">rm</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -rf</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 请勿执行此命令</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">+++</span></span></code></pre>
+<details class="collapse-block collapse-primary">
+<summary>点击展开详细内容</summary>
+<div class="collapse-content">
+<p>这里是折叠的内容，点击标题可以展开或收起。</p>
+<p>支持 <strong>Markdown</strong> 格式化。</p>
+<ul>
+<li>列表项 1</li>
+<li>列表项 2</li>
+</ul>
+</div>
+</details>
+<details class="collapse-block collapse-warning">
+<summary>注意事项</summary>
+<div class="collapse-content">
+<p>这里列出一些需要注意的问题：</p>
+<ol>
+<li>注意事项一</li>
+<li>注意事项二</li>
+</ol>
+</div>
+</details>
+<details class="collapse-block collapse-danger">
+<summary>危险操作</summary>
+<div class="collapse-content">
+<p>请确保你知道自己在做什么！</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">rm</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -rf</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 请勿执行此命令</span></span></code></pre>
+</div>
+</details>
+<h2 id="标签卡-tabs">标签卡 (Tabs)<a class="anchor-link" aria-label="Link to this section" href="#标签卡-tabs"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;tab1 JavaScript</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```js</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'Hello, World!'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;tab1 Python</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```python</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'Hello, World!'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;tab1 Rust</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```rust</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">fn main() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    println!("Hello, World!");</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">;;;</span></span></code></pre>
+<div class="tab-group" data-tab-group="tab1">
+<div class="tab-headers" role="tablist">
+<button class="tab-header" role="tab" aria-selected="true" data-tab-index="0" data-tab-group="tab1">JavaScript</button>
+<button class="tab-header" role="tab" aria-selected="false" data-tab-index="1" data-tab-group="tab1">Python</button>
+<button class="tab-header" role="tab" aria-selected="false" data-tab-index="2" data-tab-group="tab1">Rust</button>
+</div>
+<div class="tab-panel active" role="tabpanel" data-tab-index="0">
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'Hello, World!'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span></code></pre>
+</div>
+<div class="tab-panel" role="tabpanel" data-tab-index="1">
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'Hello, World!'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
+</div>
+<div class="tab-panel" role="tabpanel" data-tab-index="2">
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">fn</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> main</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    println!</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Hello, World!"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+</div>
+</div>
+<h2 id="注音">注音<a class="anchor-link" aria-label="Link to this section" href="#注音"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{取り返す^とりかえす}是日语中"取回"的意思。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{漢字^かんじ}的注音示例。</span></span></code></pre>
+<p><ruby>取り返す<rp>(</rp><rt>とりかえす</rt><rp>)</rp></ruby>是日语中"取回"的意思。</p>
+<p><ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby>的注音示例。</p>
+<h2 id="代码块增强">代码块增强<a class="anchor-link" aria-label="Link to this section" href="#代码块增强"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```js title="hello.js" url="https://example.com" linkText="查看源码" mark:1,3</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> greeting</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'Hello'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> name</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'World'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">`${</span><span style="color:#24292E;--shiki-dark:#E1E4E8">greeting</span><span style="color:#032F62;--shiki-dark:#9ECBFF">}, ${</span><span style="color:#24292E;--shiki-dark:#E1E4E8">name</span><span style="color:#032F62;--shiki-dark:#9ECBFF">}!`</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```bash command:("$":1-3)</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> astro</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> run</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> dev</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> run</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> build</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span></code></pre>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js" data-title="hello.js" data-url="https://example.com" data-link-text="查看源码" data-mark="1,3"><code><span class="line line-highlight"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> greeting</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'Hello'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> name</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'World'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line line-highlight"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">`${</span><span style="color:#24292E;--shiki-dark:#E1E4E8">greeting</span><span style="color:#032F62;--shiki-dark:#9ECBFF">}, ${</span><span style="color:#24292E;--shiki-dark:#E1E4E8">name</span><span style="color:#032F62;--shiki-dark:#9ECBFF">}!`</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span></code></pre>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash" data-command="&#x22;$&#x22;:1-3"><code><span class="line has-prompt" data-prompt="$"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> astro</span></span>
+<span class="line has-prompt" data-prompt="$"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> run</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> dev</span></span>
+<span class="line has-prompt" data-prompt="$"><span style="color:#6F42C1;--shiki-dark:#B392F0">npm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> run</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> build</span></span></code></pre>
+<h2 id="数学公式">数学公式<a class="anchor-link" aria-label="Link to this section" href="#数学公式"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">行内公式：$E = mc^2$</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">块级公式：</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">$$</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">$$</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">$$</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">$$</span></span></code></pre>
+<p>行内公式：<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E = mc^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord mathnormal">m</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></p>
+<p>块级公式：</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msubsup><mo>∫</mo><mrow><mo>−</mo><mi mathvariant="normal">∞</mi></mrow><mi mathvariant="normal">∞</mi></msubsup><msup><mi>e</mi><mrow><mo>−</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></msup><mi>d</mi><mi>x</mi><mo>=</mo><msqrt><mi>π</mi></msqrt></mrow><annotation encoding="application/x-tex">\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.3846em;vertical-align:-0.9703em;"></span><span class="mop"><span class="mop op-symbol large-op" style="margin-right:0.4445em;position:relative;top:-0.0011em;">∫</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.4143em;"><span style="top:-1.7881em;margin-left:-0.4445em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">∞</span></span></span></span><span style="top:-3.8129em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">∞</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9703em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:1.0369em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight"><span class="mord mathnormal mtight">x</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-2.931em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="mord mathnormal">d</span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.04em;vertical-align:-0.1908em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8492em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span><span style="top:-2.8092em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"></path></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1908em;"><span></span></span></span></span></span></span></span></span></span>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><munderover><mo>∑</mo><mrow><mi>n</mi><mo>=</mo><mn>1</mn></mrow><mi mathvariant="normal">∞</mi></munderover><mfrac><mn>1</mn><msup><mi>n</mi><mn>2</mn></msup></mfrac><mo>=</mo><mfrac><msup><mi>π</mi><mn>2</mn></msup><mn>6</mn></mfrac></mrow><annotation encoding="application/x-tex">\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.9185em;vertical-align:-1.2671em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.6514em;"><span style="top:-1.8829em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span><span style="top:-4.3em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">∞</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.2671em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7401em;"><span style="top:-2.989em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.1771em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.4911em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">6</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span>
+<h2 id="友链卡">友链卡<a class="anchor-link" aria-label="Link to this section" href="#友链卡"><span class="icon icon-link"></span></a></h2>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% links %}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> site: 余弦の博客</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  url: https://blog.cosine.ren</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  owner: cos</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  desc: FE / ACG / 手工</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  image: https://blog.cosine.ren/img/avatar.webp</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  color: '#ed788b'</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> site: 示例博客</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  url: https://example.com</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  owner: Alice</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  desc: 一个热爱技术的博客</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  image: https://api.dicebear.com/7.x/avataaars/svg?seed=Alice</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  color: '#BEDCFF'</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% endlinks %}</span></span></code></pre>
+<div class="friend-links-grid" data-links="[{&#x22;site&#x22;:&#x22;余弦の博客&#x22;,&#x22;url&#x22;:&#x22;https://blog.cosine.ren&#x22;,&#x22;owner&#x22;:&#x22;cos&#x22;,&#x22;desc&#x22;:&#x22;FE / ACG / 手工&#x22;,&#x22;image&#x22;:&#x22;https://blog.cosine.ren/img/avatar.webp&#x22;,&#x22;color&#x22;:&#x22;#ed788b&#x22;},{&#x22;site&#x22;:&#x22;示例博客&#x22;,&#x22;url&#x22;:&#x22;https://example.com&#x22;,&#x22;owner&#x22;:&#x22;Alice&#x22;,&#x22;desc&#x22;:&#x22;一个热爱技术的博客&#x22;,&#x22;image&#x22;:&#x22;https://api.dicebear.com/7.x/avataaars/svg?seed=Alice&#x22;,&#x22;color&#x22;:&#x22;#BEDCFF&#x22;}]">
+<a class="friend-link-card" href="https://blog.cosine.ren" target="_blank" rel="noopener noreferrer" style="border-color: #ed788b"><img class="avatar" src="https://blog.cosine.ren/img/avatar.webp" alt="余弦の博客" loading="lazy"><div class="info"><div class="name">余弦の博客</div><div class="desc">FE / ACG / 手工</div></div></a>
+<a class="friend-link-card" href="https://example.com" target="_blank" rel="noopener noreferrer" style="border-color: #BEDCFF"><img class="avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" alt="示例博客" loading="lazy"><div class="info"><div class="name">示例博客</div><div class="desc">一个热爱技术的博客</div></div></a>
+</div>
+<h2 id="多媒体">多媒体<a class="anchor-link" aria-label="Link to this section" href="#多媒体"><span class="icon icon-link"></span></a></h2>
+<h3 id="音频">音频<a class="anchor-link" aria-label="Link to this section" href="#音频"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% media audio %}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> name: 示例音频</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  url: https://music.163.com/#/song?id=3339210292</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% endmedia %}</span></span></code></pre>
+<div data-audio-player="" data-src="[{&#x22;list&#x22;:[&#x22;https://music.163.com/#/song?id=3339210292&#x22;]}]"></div>
+<h3 id="音频歌单">音频歌单<a class="anchor-link" aria-label="Link to this section" href="#音频歌单"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% media audio %}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> title: 诗岸歌单 山山～全是山山～</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  list:</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> https://music.163.com/#/playlist?id=8676645748</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> title: 『诗岸』全是山山！</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  list:</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">    -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> https://music.163.com/#/playlist?id=17606384886</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% endmedia %}</span></span></code></pre>
+<div data-audio-player="" data-src="[{&#x22;title&#x22;:&#x22;诗岸歌单 山山～全是山山～&#x22;,&#x22;list&#x22;:[&#x22;https://music.163.com/#/playlist?id=8676645748&#x22;]},{&#x22;title&#x22;:&#x22;『诗岸』全是山山！&#x22;,&#x22;list&#x22;:[&#x22;https://music.163.com/#/playlist?id=17606384886&#x22;]}]"></div>
+<h3 id="视频">视频<a class="anchor-link" aria-label="Link to this section" href="#视频"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% media video %}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> name: "测试 1"</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  url: https://cdn.kastatic.org/ka-youtube-converted/O_nY1TM2RZM.mp4/O_nY1TM2RZM.mp4#t=0</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> name: "测试 2"</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  url: https://cdn.kastatic.org/ka-youtube-converted/O_nY1TM2RZM.mp4/O_nY1TM2RZM.mp4#t=0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">{% endmedia %}</span></span></code></pre>
+<div data-video-player="" data-src="[{&#x22;name&#x22;:&#x22;测试 1&#x22;,&#x22;url&#x22;:&#x22;https://cdn.kastatic.org/ka-youtube-converted/O_nY1TM2RZM.mp4/O_nY1TM2RZM.mp4#t=0&#x22;},{&#x22;name&#x22;:&#x22;测试 2&#x22;,&#x22;url&#x22;:&#x22;https://cdn.kastatic.org/ka-youtube-converted/O_nY1TM2RZM.mp4/O_nY1TM2RZM.mp4#t=0&#x22;}]"></div>
+<h2 id="练习题">练习题<a class="anchor-link" aria-label="Link to this section" href="#练习题"><span class="icon icon-link"></span></a></h2>
+<p>支持四种题型：<strong>单选题</strong>、<strong>多选题</strong>、<strong>判断题</strong>、<strong>填空题</strong>。</p>
+<h3 id="单选题">单选题<a class="anchor-link" aria-label="Link to this section" href="#单选题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 下列哪个是 JavaScript 的基本数据类型？{.quiz}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Object{.options}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Array{.options}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Symbol{.correct}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Function{.options}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">> 解析：Symbol 是 ES6 引入的基本数据类型，而 Object、Array、Function 都是引用类型。</span></span></code></pre>
+<ul>
+<li class="quiz">下列哪个是 JavaScript 的基本数据类型？
+<ul>
+<li class="options">Object</li>
+<li class="options">Array</li>
+<li class="correct">Symbol</li>
+<li class="options">Function</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>解析：Symbol 是 ES6 引入的基本数据类型，而 Object、Array、Function 都是引用类型。</p>
+</blockquote>
+<h3 id="多选题">多选题<a class="anchor-link" aria-label="Link to this section" href="#多选题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 以下哪些是 CSS 布局方式？{.quiz .multi}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Flexbox{.correct}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> jQuery{.options}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Grid{.correct}</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  -</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> Float{.correct}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">> 解析：Flexbox、Grid 和 Float 都是 CSS 布局方式。jQuery 是一个 JavaScript 库，不属于 CSS 布局。</span></span></code></pre>
+<ul>
+<li class="quiz multi">以下哪些是 CSS 布局方式？
+<ul>
+<li class="correct">Flexbox</li>
+<li class="options">jQuery</li>
+<li class="correct">Grid</li>
+<li class="correct">Float</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>解析：Flexbox、Grid 和 Float 都是 CSS 布局方式。jQuery 是一个 JavaScript 库，不属于 CSS 布局。</p>
+</blockquote>
+<h3 id="判断题">判断题<a class="anchor-link" aria-label="Link to this section" href="#判断题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> `const`</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 声明的变量不能重新赋值，但可以修改其属性。{.quiz .true}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">> 解析：</span><span style="color:#005CC5;--shiki-dark:#79B8FF">`const`</span><span style="color:#22863A;--shiki-dark:#85E89D"> 只保证变量绑定不可变，如果变量指向一个对象，其属性仍然可以修改。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> HTML 是一种编程语言。{.quiz}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">> 解析：HTML（超文本标记语言）是一种标记语言，不是编程语言。它没有逻辑控制能力。</span></span></code></pre>
+<ul>
+<li class="quiz true"><code>const</code> 声明的变量不能重新赋值，但可以修改其属性。</li>
+</ul>
+<blockquote>
+<p>解析：<code>const</code> 只保证变量绑定不可变，如果变量指向一个对象，其属性仍然可以修改。</p>
+</blockquote>
+<ul>
+<li class="quiz">HTML 是一种编程语言。</li>
+</ul>
+<blockquote>
+<p>解析：HTML（超文本标记语言）是一种标记语言，不是编程语言。它没有逻辑控制能力。</p>
+</blockquote>
+<h3 id="填空题">填空题<a class="anchor-link" aria-label="Link to this section" href="#填空题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 在 JavaScript 中，</span><span style="color:#005CC5;--shiki-dark:#79B8FF">`typeof null`</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 的结果是 [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">object</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]{.gap}。{.quiz .fill}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">> 解析：这是一个历史遗留 bug。</span><span style="color:#005CC5;--shiki-dark:#79B8FF">`null`</span><span style="color:#22863A;--shiki-dark:#85E89D"> 的类型标签与 object 相同，因此 </span><span style="color:#005CC5;--shiki-dark:#79B8FF">`typeof null`</span><span style="color:#22863A;--shiki-dark:#85E89D"> 返回 </span><span style="color:#005CC5;--shiki-dark:#79B8FF">`"object"`</span><span style="color:#22863A;--shiki-dark:#85E89D">。常见错误答案是 [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">null</span><span style="color:#22863A;--shiki-dark:#85E89D">]{.mistake}。</span></span></code></pre>
+<ul>
+<li class="quiz fill">在 JavaScript 中，<code>typeof null</code> 的结果是 <span class="gap">object</span>。</li>
+</ul>
+<blockquote>
+<p>解析：这是一个历史遗留 bug。<code>null</code> 的类型标签与 object 相同，因此 <code>typeof null</code> 返回 <code>"object"</code>。常见错误答案是 <span class="mistake">null</span>。</p>
+</blockquote>
+<ul>
+<li class="quiz fill">CSS 中，<span class="gap">Flexbox</span> 适合一维布局，<span class="gap">Grid</span> 适合二维布局，而 <span class="gap">Float</span> 是传统的布局方式。</li>
+</ul>
+<blockquote>
+<p>解析：Flexbox 是一维布局模型（行或列），Grid 是二维布局模型（行和列同时控制），Float 是 CSS2 时代的传统布局方式。</p>
+</blockquote>
+<h2 id="加密内容块-encrypted-block">加密内容块 (Encrypted Block)<a class="anchor-link" aria-label="Link to this section" href="#加密内容块-encrypted-block"><span class="icon icon-link"></span></a></h2>
+<p>使用 <code>:::encrypted{password="密码"}</code> 语法可以创建加密区块。区块内的内容在构建时使用 AES-256-GCM 进行真正加密，密码不会出现在最终的 HTML 中。读者需要输入正确密码才能解密查看。</p>
+<p><strong>适用场景</strong>：防止搜索引擎/爬虫收录敏感内容（如私人资源链接、付费内容片段等）。</p>
+<div class="note-block note-info">
+<p>前端无法实现真正意义上的加密：密码总需要在客户端输入，密文和算法都对用户可见，安全性完全取决于密码强度。本功能的目的不是对抗有针对性的破解，而是<strong>防止搜索引擎和爬虫直接收录明文内容</strong>。对于这个场景，AES-256-GCM 已经足够：构建产物中只有密文，不含密码和明文，搜索引擎无法索引加密区块的内容。</p>
+</div>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::encrypted{password="test"}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这里是加密的内容，支持完整的 Markdown 语法：</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-light-font-weight:bold;--shiki-dark:#E1E4E8;--shiki-dark-font-weight:bold"> **粗体**</span><span style="color:#24292E;--shiki-dark:#E1E4E8">、</span><span style="color:#24292E;--shiki-light-font-style:italic;--shiki-dark:#E1E4E8;--shiki-dark-font-style:italic">*斜体*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">、</span><span style="color:#24292E;--shiki-light-text-decoration:line-through;--shiki-dark:#E1E4E8;--shiki-dark-text-decoration:line-through">~~删除线~~</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> `行内代码`</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">-</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> [</span><span style="color:#032F62;--shiki-light-text-decoration:underline;--shiki-dark:#DBEDFF;--shiki-dark-text-decoration:underline">链接</span><span style="color:#24292E;--shiki-dark:#E1E4E8">](</span><span style="color:#24292E;--shiki-light-text-decoration:underline;--shiki-dark:#E1E4E8;--shiki-dark-text-decoration:underline">https://example.com</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```js</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'加密内容中的代码也有语法高亮！'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">行内公式 $E = mc^2$ 也可以正常渲染。</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::encrypted{password="another"}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">每个加密块可以设置独立的密码。</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span></code></pre>
+<p>:::encrypted{password="test"}
+这里是加密的内容，支持完整的 Markdown 语法：</p>
+<ul>
+<li><strong>粗体</strong>、<em>斜体</em>、<del>删除线</del></li>
+<li><code>行内代码</code></li>
+<li><a href="https://example.com">链接</a></li>
+</ul>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'加密内容中的代码也有语法高亮！'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span></code></pre>
+<p>行内公式 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E = mc^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord mathnormal">m</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> 也可以正常渲染。
+:::</p>
+<p>:::encrypted{password="another"}
+每个加密块可以设置独立的密码。
+:::</p> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#文字特效" data-astro-cid-gysqo7gh>文字特效</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#下划线()" data-astro-cid-gysqo7gh>下划线 (ins)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#下划线颜色" data-astro-cid-gysqo7gh>下划线颜色</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#高亮()" data-astro-cid-gysqo7gh>高亮 (mark)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#上下标" data-astro-cid-gysqo7gh>上下标</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#颜色文字" data-astro-cid-gysqo7gh>颜色文字</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#彩虹文字" data-astro-cid-gysqo7gh>彩虹文字</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#键盘键" data-astro-cid-gysqo7gh>键盘键</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#隐藏文字()" data-astro-cid-gysqo7gh>隐藏文字 (Spoiler)</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#标签块()" data-astro-cid-gysqo7gh>标签块 (Labels)</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#提醒块()" data-astro-cid-gysqo7gh>提醒块 (Note Blocks)</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#折叠块()" data-astro-cid-gysqo7gh>折叠块 (Collapse)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-160" data-astro-cid-gysqo7gh>列表项 1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-161" data-astro-cid-gysqo7gh>列表项 2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-169" data-astro-cid-gysqo7gh>注意事项一</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-170" data-astro-cid-gysqo7gh>注意事项二</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-189" data-astro-cid-gysqo7gh>列表项 1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-190" data-astro-cid-gysqo7gh>列表项 2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-196" data-astro-cid-gysqo7gh>注意事项一</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-197" data-astro-cid-gysqo7gh>注意事项二</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#标签卡()" data-astro-cid-gysqo7gh>标签卡 (Tabs)</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#注音" data-astro-cid-gysqo7gh>注音</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#代码块增强" data-astro-cid-gysqo7gh>代码块增强</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#数学公式" data-astro-cid-gysqo7gh>数学公式</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#友链卡" data-astro-cid-gysqo7gh>友链卡</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-324" data-astro-cid-gysqo7gh>site: 余弦の博客</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-330" data-astro-cid-gysqo7gh>site: 示例博客</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-340" data-astro-cid-gysqo7gh>site: 余弦の博客</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-346" data-astro-cid-gysqo7gh>site: 示例博客</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#多媒体" data-astro-cid-gysqo7gh>多媒体</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#音频" data-astro-cid-gysqo7gh>音频</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-360" data-astro-cid-gysqo7gh>name: 示例音频</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-366" data-astro-cid-gysqo7gh>name: 示例音频</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#音频歌单" data-astro-cid-gysqo7gh>音频歌单</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-374" data-astro-cid-gysqo7gh>title: 诗岸歌单 山山～全是山山～</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-376" data-astro-cid-gysqo7gh>https://music.163.com/#/playlist?id=8676645748</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-377" data-astro-cid-gysqo7gh>title: 『诗岸』全是山山！</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-379" data-astro-cid-gysqo7gh>https://music.163.com/#/playlist?id=17606384886</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-384" data-astro-cid-gysqo7gh>title: 诗岸歌单 山山～全是山山～</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-386" data-astro-cid-gysqo7gh>https://music.163.com/#/playlist?id=8676645748</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-387" data-astro-cid-gysqo7gh>title: 『诗岸』全是山山！</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-389" data-astro-cid-gysqo7gh>https://music.163.com/#/playlist?id=17606384886</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#视频" data-astro-cid-gysqo7gh>视频</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-396" data-astro-cid-gysqo7gh>name: &quot;测试 1&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-398" data-astro-cid-gysqo7gh>name: &quot;测试 2&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-404" data-astro-cid-gysqo7gh>name: &quot;测试 1&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-406" data-astro-cid-gysqo7gh>name: &quot;测试 2&quot;</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#练习题" data-astro-cid-gysqo7gh>练习题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#单选题" data-astro-cid-gysqo7gh>单选题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-417" data-astro-cid-gysqo7gh>下列哪个是 JavaScript 的基本数据类型？{.quiz}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-418" data-astro-cid-gysqo7gh>Object{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-419" data-astro-cid-gysqo7gh>Array{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-420" data-astro-cid-gysqo7gh>Symbol{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-421" data-astro-cid-gysqo7gh>Function{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-426" data-astro-cid-gysqo7gh>下列哪个是 JavaScript 的基本数据类型？{.quiz}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-427" data-astro-cid-gysqo7gh>Object{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-428" data-astro-cid-gysqo7gh>Array{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-429" data-astro-cid-gysqo7gh>Symbol{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-430" data-astro-cid-gysqo7gh>Function{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#多选题" data-astro-cid-gysqo7gh>多选题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-437" data-astro-cid-gysqo7gh>以下哪些是 CSS 布局方式？{.quiz .multi}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-438" data-astro-cid-gysqo7gh>Flexbox{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-439" data-astro-cid-gysqo7gh>jQuery{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-440" data-astro-cid-gysqo7gh>Grid{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-441" data-astro-cid-gysqo7gh>Float{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-446" data-astro-cid-gysqo7gh>以下哪些是 CSS 布局方式？{.quiz .multi}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-447" data-astro-cid-gysqo7gh>Flexbox{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-448" data-astro-cid-gysqo7gh>jQuery{.options}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-449" data-astro-cid-gysqo7gh>Grid{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-450" data-astro-cid-gysqo7gh>Float{.correct}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#判断题" data-astro-cid-gysqo7gh>判断题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-457" data-astro-cid-gysqo7gh>`const` 声明的变量不能重新赋值，但可以修改其属性。{.quiz .true}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-461" data-astro-cid-gysqo7gh>HTML 是一种编程语言。{.quiz}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-466" data-astro-cid-gysqo7gh>`const` 声明的变量不能重新赋值，但可以修改其属性。{.quiz .true}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-470" data-astro-cid-gysqo7gh>HTML 是一种编程语言。{.quiz}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#填空题" data-astro-cid-gysqo7gh>填空题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-477" data-astro-cid-gysqo7gh>在 JavaScript 中，`typeof null` 的结果是 [object]{.gap}。{.quiz .fill}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-482" data-astro-cid-gysqo7gh>在 JavaScript 中，`typeof null` 的结果是 [object]{.gap}。{.quiz .fill}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-486" data-astro-cid-gysqo7gh>CSS 中，[Flexbox]{.gap} 适合一维布局，[Grid]{.gap} 适合二维布局，而 [Float]{.gap} 是传统的布局方式。{.quiz .fill}</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#加密内容块()" data-astro-cid-gysqo7gh>加密内容块 (Encrypted Block)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-505" data-astro-cid-gysqo7gh>**粗体**、*斜体*、~~删除线~~</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-506" data-astro-cid-gysqo7gh>`行内代码`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-507" data-astro-cid-gysqo7gh>[链接](https://example.com)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-524" data-astro-cid-gysqo7gh>**粗体**、*斜体*、~~删除线~~</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-525" data-astro-cid-gysqo7gh>`行内代码`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-526" data-astro-cid-gysqo7gh>[链接](https://example.com)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

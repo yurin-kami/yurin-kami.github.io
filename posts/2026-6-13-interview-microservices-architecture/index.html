@@ -1,0 +1,149 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：微服务和单体架构怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：微服务和单体架构怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1" class="tag-link" data-astro-cid-gysqo7gh>微服务</a><a href="/tags/%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1" class="tag-link" data-astro-cid-gysqo7gh>架构设计</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h2 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h2>
+<p>最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。</p>
+<h2 id="问题微服务到底解决了什么问题">问题：微服务到底解决了什么问题？<a class="anchor-link" aria-label="Link to this section" href="#问题微服务到底解决了什么问题"><span class="icon icon-link"></span></a></h2>
+<p>面试官的经典问法是「微服务架构的优缺点」和「什么时候该用微服务」。这个问题看起来简单，但如果没有实际踩过坑，很容易答成教科书式的罗列。我觉得更好的回答方式是从<strong>痛点出发</strong>：单体架构在项目规模增长之后会遇到什么问题，微服务又是怎么解决这些问题的。</p>
+<h2 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h2>
+<h3 id="单体-vs-微服务-vs-模块化单体">单体 vs 微服务 vs 模块化单体<a class="anchor-link" aria-label="Link to this section" href="#单体-vs-微服务-vs-模块化单体"><span class="icon icon-link"></span></a></h3>
+<p><strong>单体架构（Monolith）</strong> 是最直觉的方式：所有功能模块跑在同一个进程里，共享同一个数据库。优点是开发简单、调试方便、部署也快，一个二进制文件丢上去就跑。缺点也很明显——代码膨胀之后编译变慢，模块之间耦合严重，改一行代码就得全量部署，某个模块的流量高峰也得整体扩容。</p>
+<p><strong>微服务架构</strong> 把系统拆成多个独立部署的服务，每个服务有自己的数据库和技术栈。核心优势：</p>
+<ul>
+<li>独立部署：一个服务发版不影响其他服务</li>
+<li>技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需</li>
+<li>按需扩展：热点服务单独水平扩容，不浪费资源</li>
+<li>故障隔离：订单服务挂了，用户服务还能正常响应</li>
+<li>团队自治：每个小团队全权负责自己的服务</li>
+</ul>
+<p>代价是复杂度飙升——分布式事务、网络延迟、运维成本、链路追踪，每一个都是硬骨头。</p>
+<p><strong>模块化单体（Modular Monolith）</strong> 是两者的折中：代码还在一个仓库里，但按业务域严格划分模块，模块之间通过接口通信，不能直接访问对方的数据库表。部署时是一个整体，但逻辑上已经具备了微服务的边界感。对于大多数中小团队，这其实是更务实的选择。</p>
+<h3 id="微服务拆分原则">微服务拆分原则<a class="anchor-link" aria-label="Link to this section" href="#微服务拆分原则"><span class="icon icon-link"></span></a></h3>
+<p>拆微服务最怕的是「拆得太细」或者「拆得不对」。几条核心原则：</p>
+<ol>
+<li><strong>单一职责</strong>：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好</li>
+<li><strong>高内聚低耦合</strong>：服务内部功能紧密相关，服务之间尽量通过事件或接口通信</li>
+<li><strong>按业务领域拆分（DDD）</strong>：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域</li>
+<li><strong>按团队拆分</strong>：Conway 定律告诉我们，系统架构会趋向于组织结构</li>
+</ol>
+<p>服务间通信方式的选择也很关键：REST 简单通用，gRPC 高性能适合内部通信，消息队列（Kafka/RabbitMQ）适合异步解耦，GraphQL 适合前端灵活查询。</p>
+<h3 id="服务注册与发现">服务注册与发现<a class="anchor-link" aria-label="Link to this section" href="#服务注册与发现"><span class="icon icon-link"></span></a></h3>
+<p>服务多了之后，手动维护地址列表不现实。服务注册发现就是解决这个问题的：服务启动时把自己注册到注册中心（Consul、etcd、Nacos），其他服务通过注册中心发现目标地址。客户端负载均衡配合健康检查，自动剔除不健康实例。</p>
+<h3 id="api-网关">API 网关<a class="anchor-link" aria-label="Link to this section" href="#api-网关"><span class="icon icon-link"></span></a></h3>
+<p>微服务对外暴露统一入口。网关承担的职责包括：路由转发、认证鉴权、限流、协议转换、日志聚合。常见方案有 Kong、Envoy、Go 自研网关等。好处是客户端不需要知道后面有多少个服务，也避免了跨域和安全策略分散的问题。</p>
+<h3 id="熔断限流与降级">熔断、限流与降级<a class="anchor-link" aria-label="Link to this section" href="#熔断限流与降级"><span class="icon icon-link"></span></a></h3>
+<p>这三个是微服务稳定性的三板斧，面试也经常考：</p>
+<p><strong>限流</strong>控制请求速率，常见算法有四种：</p>
+<ul>
+<li>固定窗口计数器：实现简单，但有边界突发问题</li>
+<li>滑动窗口：解决边界突发，实现略复杂</li>
+<li>漏桶算法：固定速率处理，平滑流量但无法应对突发</li>
+<li>令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）</li>
+</ul>
+<p>实际项目中 gRPC 拦截器用令牌桶限制单用户 QPS，Redis + Lua 脚本做分布式限流是比较常见的做法。</p>
+<p><strong>熔断</strong>的思路类似保险丝：当某个下游服务的错误率超过阈值，自动切断调用，快速失败，等一段时间后再尝试恢复（半开状态探测）。防止一个慢服务拖垮整个系统。</p>
+<p><strong>降级</strong>是主动放弃非核心功能来保核心链路。比如大促期间关闭评论功能，把资源让给下单和支付。</p>
+<h3 id="链路追踪">链路追踪<a class="anchor-link" aria-label="Link to this section" href="#链路追踪"><span class="icon icon-link"></span></a></h3>
+<p>一个请求可能经过五六个服务，出了问题怎么定位？分布式链路追踪的思路是给每个请求分配一个全局唯一的 <code>traceID</code>，在服务间透传，每个服务记录自己的 <code>span</code>（操作名、耗时、状态）。最终在 Jaeger 或 Zipkin 的 UI 里就能看到完整的调用链路和每段耗时。</p>
+<p>Rinne-IM 的做法是客户端生成 traceID 放进 gRPC Metadata，服务端拦截器提取后注入 context，下游的 DB 查询、Redis 操作、Kafka 发送都自动携带这个 traceID。配合结构化日志（<code>slog</code> JSON 输出），排查延迟瓶颈非常高效。</p>
+<h2 id="分析什么时候不该用微服务">分析：什么时候不该用微服务？<a class="anchor-link" aria-label="Link to this section" href="#分析什么时候不该用微服务"><span class="icon icon-link"></span></a></h2>
+<p>面试不能只说好处，面试官更想听你的判断力。以下场景建议<strong>不要</strong>上微服务：</p>
+<ul>
+<li>团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率</li>
+<li>业务边界不清晰——拆错了比不拆更痛苦</li>
+<li>没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑</li>
+<li>数据一致性要求极高——分布式事务的代价远比想象中高</li>
+</ul>
+<p>Martin Fowler 提过一个建议：先做单体，等团队规模和业务复杂度到了需要拆分的时候，再逐步拆。这就是所谓的「单体优先（Monolith First）」策略。</p>
+<h2 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>概念</th><th>一句话</th></tr></thead><tbody><tr><td>单体架构</td><td>简单直接，适合小团队和早期项目</td></tr><tr><td>微服务</td><td>独立部署和扩展，但运维复杂度高</td></tr><tr><td>模块化单体</td><td>逻辑拆分、物理合并，务实的中间路线</td></tr><tr><td>DDD 限界上下文</td><td>服务拆分的理论依据</td></tr><tr><td>服务注册发现</td><td>Consul/etcd/Nacos，解决服务地址管理</td></tr><tr><td>API 网关</td><td>统一入口，路由/认证/限流</td></tr><tr><td>限流</td><td>令牌桶最常用，控制请求速率</td></tr><tr><td>熔断</td><td>快速失败，防止级联故障</td></tr><tr><td>降级</td><td>牺牲非核心功能保核心链路</td></tr><tr><td>链路追踪</td><td>traceID 透传 + span 记录，Jaeger/Zipkin</td></tr></tbody></table>
+<h2 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h2>
+<h3 id="service-mesh服务网格">Service Mesh（服务网格）<a class="anchor-link" aria-label="Link to this section" href="#service-mesh服务网格"><span class="icon icon-link"></span></a></h3>
+<p>当服务数量多到一定程度，每个服务都要写熔断、限流、链路追踪的代码，太累了。Service Mesh 把这些横切关注点下沉到基础设施层：每个服务旁边挂一个 Sidecar Proxy（数据平面），由控制平面统一管理配置、路由、负载均衡和熔断降级。主流实现是 Istio 和 Linkerd。好处是业务代码完全不需要关心服务治理逻辑，缺点是引入了一层额外的复杂度和性能开销。</p>
+<h3 id="serverless">Serverless<a class="anchor-link" aria-label="Link to this section" href="#serverless"><span class="icon icon-link"></span></a></h3>
+<p>比微服务更极端的抽象——连服务都不需要管了，直接写函数。云厂商（AWS Lambda、阿里云函数计算）负责运行、扩缩容和计费。适合事件驱动、突发流量的场景，比如图片处理、定时任务。但冷启动延迟和厂商锁定是目前的主要限制。</p>
+<h2 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>先扎实单体</strong>：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础</li>
+<li><strong>理解 DDD</strong>：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道</li>
+<li><strong>动手拆一次</strong>：拿自己的项目试试按业务域拆分，体会拆分的边界感</li>
+<li><strong>学一个服务框架</strong>：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案</li>
+<li><strong>了解 Service Mesh</strong>：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理</li>
+<li><strong>监控先行</strong>：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花</li>
+</ol>
+<h2 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h2>
+<ul>
+<li>Martin Fowler - <a href="https://martinfowler.com/bliki/MonolithFirst.html">MonolithFirst</a></li>
+<li>Martin Fowler - <a href="https://martinfowler.com/microservices/">Microservices Resource Guide</a></li>
+<li>Sam Newman - <em>Building Microservices</em> (O’Reilly)</li>
+<li><a href="https://istio.io/latest/docs/">Istio 官方文档</a></li>
+<li><a href="https://go-zero.dev/">go-zero 微服务框架</a></li>
+<li><a href="https://www.domainlanguage.com/ddd/">DDD 领域驱动设计 - Eric Evans</a></li>
+<li>Google SRE Book - <a href="https://sre.google/sre-book/table-of-contents/">Managing Critical State</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#问题：微服务到底解决了什么问题？" data-astro-cid-gysqo7gh>问题：微服务到底解决了什么问题？</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#单体微服务模块化单体" data-astro-cid-gysqo7gh>单体 vs 微服务 vs 模块化单体</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-17" data-astro-cid-gysqo7gh>独立部署：一个服务发版不影响其他服务</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-18" data-astro-cid-gysqo7gh>技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-19" data-astro-cid-gysqo7gh>按需扩展：热点服务单独水平扩容，不浪费资源</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-20" data-astro-cid-gysqo7gh>故障隔离：订单服务挂了，用户服务还能正常响应</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-21" data-astro-cid-gysqo7gh>团队自治：每个小团队全权负责自己的服务</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#微服务拆分原则" data-astro-cid-gysqo7gh>微服务拆分原则</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-31" data-astro-cid-gysqo7gh>**单一职责**：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-32" data-astro-cid-gysqo7gh>**高内聚低耦合**：服务内部功能紧密相关，服务之间尽量通过事件或接口通信</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-33" data-astro-cid-gysqo7gh>**按业务领域拆分（DDD）**：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-34" data-astro-cid-gysqo7gh>**按团队拆分**：Conway 定律告诉我们，系统架构会趋向于组织结构</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#服务注册与发现" data-astro-cid-gysqo7gh>服务注册与发现</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#网关" data-astro-cid-gysqo7gh>API 网关</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#熔断、限流与降级" data-astro-cid-gysqo7gh>熔断、限流与降级</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-52" data-astro-cid-gysqo7gh>固定窗口计数器：实现简单，但有边界突发问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-53" data-astro-cid-gysqo7gh>滑动窗口：解决边界突发，实现略复杂</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-54" data-astro-cid-gysqo7gh>漏桶算法：固定速率处理，平滑流量但无法应对突发</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-55" data-astro-cid-gysqo7gh>令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#链路追踪" data-astro-cid-gysqo7gh>链路追踪</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#分析：什么时候不该用微服务？" data-astro-cid-gysqo7gh>分析：什么时候不该用微服务？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-73" data-astro-cid-gysqo7gh>团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-74" data-astro-cid-gysqo7gh>业务边界不清晰——拆错了比不拆更痛苦</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-75" data-astro-cid-gysqo7gh>没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-76" data-astro-cid-gysqo7gh>数据一致性要求极高——分布式事务的代价远比想象中高</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#（服务网格）" data-astro-cid-gysqo7gh>Service Mesh（服务网格）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>Serverless</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-107" data-astro-cid-gysqo7gh>**先扎实单体**：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-108" data-astro-cid-gysqo7gh>**理解 DDD**：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-109" data-astro-cid-gysqo7gh>**动手拆一次**：拿自己的项目试试按业务域拆分，体会拆分的边界感</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-110" data-astro-cid-gysqo7gh>**学一个服务框架**：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**了解 Service Mesh**：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-112" data-astro-cid-gysqo7gh>**监控先行**：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-116" data-astro-cid-gysqo7gh>Martin Fowler - [MonolithFirst](https://martinfowler.com/bliki/MonolithFirst.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-117" data-astro-cid-gysqo7gh>Martin Fowler - [Microservices Resource Guide](https://martinfowler.com/microservices/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-118" data-astro-cid-gysqo7gh>Sam Newman - *Building Microservices* (O&#39;Reilly)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-119" data-astro-cid-gysqo7gh>[Istio 官方文档](https://istio.io/latest/docs/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-120" data-astro-cid-gysqo7gh>[go-zero 微服务框架](https://go-zero.dev/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-121" data-astro-cid-gysqo7gh>[DDD 领域驱动设计 - Eric Evans](https://www.domainlanguage.com/ddd/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-122" data-astro-cid-gysqo7gh>Google SRE Book - [Managing Critical State](https://sre.google/sre-book/table-of-contents/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

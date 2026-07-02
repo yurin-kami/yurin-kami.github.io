@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>CentOS7部署双节点k8s集群作为云原生开发环境 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>CentOS7部署双节点k8s集群作为云原生开发环境</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2025-11-11</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/k8s" class="tag-link" data-astro-cid-gysqo7gh>k8s</a><a href="/tags/centos7" class="tag-link" data-astro-cid-gysqo7gh>centos7</a><a href="/tags/virtualmachine" class="tag-link" data-astro-cid-gysqo7gh>virtualmachine</a><a href="/tags/cloud%20native" class="tag-link" data-astro-cid-gysqo7gh>cloud native</a><a href="/tags/baseful" class="tag-link" data-astro-cid-gysqo7gh>baseful</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="centos7部署k8s双节点集群">CentOS7部署k8s双节点集群<a class="anchor-link" aria-label="Link to this section" href="#centos7部署k8s双节点集群"><span class="icon icon-link"></span></a></h1>
+<ol start="0">
+<li>预先准备</li>
+</ol>
+<ul>
+<li>
+<p><em>配置好网络与ssh服务，关闭防火墙</em></p>
+</li>
+<li>
+<p>配置selinux安全策略</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">setenforce</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sed</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -i</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 's/SELINUX=enforcing/SELINUX=disabled/g'</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/selinux/config</span></span></code></pre>
+</li>
+<li>
+<p>配置iptables规则</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">iptables</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -F</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">iptables</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -X</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">iptables</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -Z</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">iptables-save</span></span></code></pre>
+</li>
+<li>
+<p>配置主机名映射、ssh免密</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">hostnamectl</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> set-hostname</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> master/worker</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "masterIp master"</span><span style="color:#D73A49;--shiki-dark:#F97583"> >></span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/hosts</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "workerIp worker"</span><span style="color:#D73A49;--shiki-dark:#F97583"> >></span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/hosts</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ssh-keygen</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ssh-copy-id</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> worker</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">scp</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/hosts</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> worker:/etc</span></span></code></pre>
+</li>
+<li>
+<p>关闭交换分区</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">swapoff</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -a</span></span></code></pre>
+</li>
+<li>
+<p>加载内核模块、开启ipv4转发</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">tee</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/sysctl.d/k8s.conf</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#9ECBFF">EOF</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">net.bridge.brifge-nf-call-iptables = 1</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">net.bridge.brifge-nf-call-ip6tables = 1</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">net.ipv4.ip_forward = 1</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">EOF</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sysctl</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --system</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">modprobe</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> br_netfilter</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">scp</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/sysctl.d/k8s.conf</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> worker:/etc/sysctl.d/</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sysctl</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --system</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "modprobe br_netfilter"</span><span style="color:#D73A49;--shiki-dark:#F97583"> ></span><span style="color:#032F62;--shiki-dark:#9ECBFF">/etc/sysconfig/modules/br_netfilter.modules</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> &#x26;&#x26; </span><span style="color:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "modprobe ip_conntrack"</span><span style="color:#D73A49;--shiki-dark:#F97583"> ></span><span style="color:#032F62;--shiki-dark:#9ECBFF">/etc/sysconfig/modules/ip_conntrack.modules</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> &#x26;&#x26; </span><span style="color:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 755</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/sysconfig/modules/br_netfilter.modules</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> &#x26;&#x26; </span><span style="color:#6F42C1;--shiki-dark:#B392F0">chmod</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 755</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/sysconfig/modules/ip_conntrack.modules</span></span></code></pre>
+</li>
+<li>
+<p>配置yum源</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">	cd</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/yum.repo.d/</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> &#x26;&#x26; </span><span style="color:#6F42C1;--shiki-dark:#B392F0">curl</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -O</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> http://mirrors.aliyun.com/repo/Centos-7.repo</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> &#x26;&#x26; </span><span style="color:#005CC5;--shiki-dark:#79B8FF">cd</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">	yum</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -y</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> wget</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> vim</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> bash-completion</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> yum-utils</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">	yum-config-manager</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --add-repo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">	cat</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#9ECBFF">EOF</span><span style="color:#D73A49;--shiki-dark:#F97583"> |</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> tee</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/yum.repos.d/kubernetes.repo</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	[kubernetes]</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	name=Kubernetes</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	baseurl=https://mirrors.aliyun.com/kubernetes-new/core/stable/v1.30/rpm/</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	enabled=1</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	gpgcheck=1</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">	gpgkey=https://mirrors.aliyun.com/kubernetes-new/core/stable/v1.30/rpm/repodata/repomd.xml.key</span></span></code></pre>
+</li>
+<li>
+<p>安装kubelet kubeadm kubectl containerd.io</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">yum</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -y</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> install</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> containerd.io</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> kubelet</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> kubectl</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> kubeadm</span></span></code></pre>
+</li>
+<li>
+<p>配置containerd</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">containerd</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> config</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> default</span><span style="color:#D73A49;--shiki-dark:#F97583"> ></span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/containerd/config.toml</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sed</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -i</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 's/pause\:3\.6/pause\:3\.9/g'</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/containerd/config.toml</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">vim /etc/containerd/config.toml</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">plugins.</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"io.containerd.runtime.v1.linux"</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">no_shim</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> false</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">runtime</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "runc"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">runtime_root</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ""</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">shim</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "containerd-shim"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">shim_debug</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> false</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">cgroup_manager</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "systemd"</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # ✅ 添加这一行</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">scp</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/containerd/config.toml</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> worker:/etc/containerd</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">systemctl</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> enable</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --now</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> containerd</span></span></code></pre>
+</li>
+</ul>
+<ol>
+<li>
+<p>安装集群</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">kubeadm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> init</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --apiserver-advertise-address=masterIp</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --image-repository=registry.aliyuncs.com/google_containers</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --kubernetes-version=v1.30.14</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --service-cidr=10.96.0.0/12</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --pod-network-cidr=10.244.0.0/16</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -v</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">#成功会输出：</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">mkdir</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -p</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> $HOME</span><span style="color:#032F62;--shiki-dark:#9ECBFF">/.kube</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> cp</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -i</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/kubernetes/admin.conf</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> $HOME</span><span style="color:#032F62;--shiki-dark:#9ECBFF">/.kube/config</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">sudo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> chown</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> $(</span><span style="color:#6F42C1;--shiki-dark:#B392F0">id</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -u</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span><span style="color:#032F62;--shiki-dark:#9ECBFF">:</span><span style="color:#24292E;--shiki-dark:#E1E4E8">$(</span><span style="color:#6F42C1;--shiki-dark:#B392F0">id</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -g</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) $HOME</span><span style="color:#032F62;--shiki-dark:#9ECBFF">/.kube/config</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">kubectl</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> apply</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> -f</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">kubeadm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> join</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> masterIp:6443</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --token</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> `</span><span style="color:#6F42C1;--shiki-dark:#B392F0">token</span><span style="color:#032F62;--shiki-dark:#9ECBFF">`</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> --discovery-token-ca-cert-hash</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> `</span><span style="color:#005CC5;--shiki-dark:#79B8FF">hash</span><span style="color:#032F62;--shiki-dark:#9ECBFF">`</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">kubectl</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> completion</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> bash</span><span style="color:#D73A49;--shiki-dark:#F97583"> ></span><span style="color:#032F62;--shiki-dark:#9ECBFF"> /etc/bash_completion.d/kubectl</span></span></code></pre>
+</li>
+<li>
+<p>展示</p>
+<figure class="markdown-image-wrapper"><img src="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/image-20251111231148913.png" alt="image-20251111231148913" loading="lazy" decoding="async" class="markdown-image"><figcaption class="markdown-image-caption">image-20251111231148913</figcaption></figure>
+</li>
+</ol> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#部署双节点集群" data-astro-cid-gysqo7gh>CentOS7部署k8s双节点集群</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-3" data-astro-cid-gysqo7gh>预先准备</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-5" data-astro-cid-gysqo7gh>*配置好网络与ssh服务，关闭防火墙*</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-7" data-astro-cid-gysqo7gh>配置selinux安全策略</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-13" data-astro-cid-gysqo7gh>配置iptables规则</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-21" data-astro-cid-gysqo7gh>配置主机名映射、ssh免密</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-31" data-astro-cid-gysqo7gh>关闭交换分区</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-36" data-astro-cid-gysqo7gh>加载内核模块、开启ipv4转发</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-49" data-astro-cid-gysqo7gh>配置yum源</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-62" data-astro-cid-gysqo7gh>安装kubelet kubeadm kubectl containerd.io</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-67" data-astro-cid-gysqo7gh>配置containerd</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-84" data-astro-cid-gysqo7gh>安装集群</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-95" data-astro-cid-gysqo7gh>展示</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

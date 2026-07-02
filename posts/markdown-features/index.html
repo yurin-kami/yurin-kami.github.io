@@ -1,0 +1,301 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>Markdown 增强功能演示 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>Markdown 增强功能演示</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2024-01-02</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/markdown" class="tag-link" data-astro-cid-gysqo7gh>Markdown</a><a href="/tags/%E6%95%99%E7%A8%8B" class="tag-link" data-astro-cid-gysqo7gh>教程</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <p>本文展示 astro-koharu 支持的所有 Markdown 增强功能。</p>
+<h2 id="链接嵌入功能">链接嵌入功能<a class="anchor-link" aria-label="Link to this section" href="#链接嵌入功能"><span class="icon icon-link"></span></a></h2>
+<p>astro-koharu 支持自动嵌入独行链接，包括 Tweet 和通用链接预览。</p>
+<h3 id="tweet-嵌入测试">Tweet 嵌入测试<a class="anchor-link" aria-label="Link to this section" href="#tweet-嵌入测试"><span class="icon icon-link"></span></a></h3>
+<p>下面是一条独行的 Twitter 链接，应该自动转换为 Tweet 组件：</p>
+<div data-tweet-embed="" data-tweet-id="1997059920936775706"></div>
+<p>这是普通段落中的链接 <a href="https://twitter.com/vercel_dev/status/1997059920936775706">Vercel Tweet</a>，不应该被嵌入。</p>
+<p>使用新域名 x.com 的 Tweet：</p>
+<div data-tweet-embed="" data-tweet-id="1997059920936775706"></div>
+<h3 id="通用链接预览测试">通用链接预览测试<a class="anchor-link" aria-label="Link to this section" href="#通用链接预览测试"><span class="icon icon-link"></span></a></h3>
+<p>这是段落中的链接 <a href="https://github.com/vercel/react-tweet">react-tweet</a>，不应该被嵌入。</p>
+<p>下面是一个独行的普通链接，应该显示 OG 预览卡片：</p>
+<div class="link-preview-block not-prose" data-state="success">
+  <a href="https://github.com/vercel/react-tweet" target="_blank" class="group block overflow-hidden rounded-lg border border-border transition-all hover:border-primary/50 hover:shadow-md" aria-label="GitHub - vercel/react-tweet: Embed tweets in your React application. - github.com">
+    <div class="bg-card flex md:flex-col flex-row">
+      <div class="flex-1 p-4">
+        <div class="mb-2 flex items-center gap-2">
+          <img src="https://github.com/fluidicon.png" alt="" class="h-4 w-4 shrink-0" loading="lazy" aria-hidden="true" referrerpolicy="no-referrer">
+          <span class="text-muted-foreground truncate text-xs font-medium">github.com</span>
+        </div>
+        <h3 class="text-foreground mb-2 line-clamp-2 font-semibold leading-tight">GitHub - vercel/react-tweet: Embed tweets in your React application.</h3>
+        <p class="text-muted-foreground mb-3 line-clamp-2 text-sm">Embed tweets in your React application. Contribute to vercel/react-tweet development by creating an account on GitHub.</p>
+        <div class="text-primary flex items-center gap-1 text-xs">
+          <span class="truncate">https://github.com/vercel/react-tweet</span>
+          <svg class="h-3 w-3 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" viewBox="0 0 12 12"><path fill="currentColor" d="M4 3.5a.5.5 0 0 0-.5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-.25a.75.75 0 0 1 1.5 0V8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h.25a.75.75 0 0 1 0 1.5zm2.75 0a.75.75 0 0 1 0-1.5h2.5a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-1.5 0v-.69L7.28 5.78a.75.75 0 0 1-1.06-1.06L7.44 3.5z"></path></svg> 
+        </div>
+      </div>
+      <div class="bg-muted relative md:w-full shrink-0 aspect-1200/630 md:aspect-auto md:max-h-48 w-80"><img src="https://opengraph.githubassets.com/1eaf0026908ef2f68bd058eed533a182f5db1795a45a3030d7ead58ac1225f3f/vercel/react-tweet" alt="GitHub - vercel/react-tweet: Embed tweets in your React application." class="link-preview-image h-full md:h-full w-full object-cover" loading="lazy" referrerpolicy="no-referrer" data-fallback-title="GitHub - vercel/react-tweet: Embed tweets in your React application."></div>
+    </div>
+  </a>
+</div>
+<p>这是没有 OG 图的链接</p>
+<div class="link-preview-block not-prose" data-state="success">
+  <a href="https://react-tweet.vercel.app/" target="_blank" class="group block overflow-hidden rounded-lg border border-border transition-all hover:border-primary/50 hover:shadow-md" aria-label="Introduction - react-tweet.vercel.app">
+    <div class="bg-card flex md:flex-col flex-row">
+      <div class="flex-1 p-4">
+        <div class="mb-2 flex items-center gap-2">
+          <img src="https://react-tweet.vercel.app/#fff" alt="" class="h-4 w-4 shrink-0" loading="lazy" aria-hidden="true" referrerpolicy="no-referrer">
+          <span class="text-muted-foreground truncate text-xs font-medium">react-tweet.vercel.app</span>
+        </div>
+        <h3 class="text-foreground mb-2 line-clamp-2 font-semibold leading-tight">Introduction</h3>
+        <p class="text-muted-foreground mb-3 line-clamp-2 text-sm">Embed tweets in your React application.</p>
+        <div class="text-primary flex items-center gap-1 text-xs">
+          <span class="truncate">https://react-tweet.vercel.app/</span>
+          <svg class="h-3 w-3 shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" viewBox="0 0 12 12"><path fill="currentColor" d="M4 3.5a.5.5 0 0 0-.5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-.25a.75.75 0 0 1 1.5 0V8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h.25a.75.75 0 0 1 0 1.5zm2.75 0a.75.75 0 0 1 0-1.5h2.5a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-1.5 0v-.69L7.28 5.78a.75.75 0 0 1-1.06-1.06L7.44 3.5z"></path></svg> 
+        </div>
+      </div>
+      
+    </div>
+  </a>
+</div>
+<p>这是获取不到 OG 信息的链接</p>
+<div class="link-preview-block not-prose" data-state="error">
+  <a href="https://zhuanlan.zhihu.com/p/1900483903984243480" target="_blank" class="hover:border-primary/50 group block rounded-lg border border-border bg-card p-4 transition-all hover:shadow-md" aria-label="https://zhuanlan.zhihu.com/p/1900483903984243480">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <div class="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-dasharray="28" stroke-dashoffset="28" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 6l2 -2c1 -1 3 -1 4 0l1 1c1 1 1 3 0 4l-5 5c-1 1 -3 1 -4 0M11 18l-2 2c-1 1 -3 1 -4 0l-1 -1c-1 -1 -1 -3 0 -4l5 -5c1 -1 3 -1 4 0"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="28;0"></animate></path></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-foreground font-medium truncate">https://zhuanlan.zhihu.com/p/1900483903984243480</div>
+          <div class="text-muted-foreground text-xs truncate mt-0.5">zhuanlan.zhihu.com</div>
+        </div>
+      </div>
+      <svg class="text-primary h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+      </svg>
+    </div>
+  </a>
+</div>
+<h3 id="codepen-链接嵌入">Codepen 链接嵌入<a class="anchor-link" aria-label="Link to this section" href="#codepen-链接嵌入"><span class="icon icon-link"></span></a></h3>
+<p class="codepen" data-height="400" data-default-tab="result" data-slug-hash="YPKBrJX" data-user="botteu">
+  <span>See the Pen <a href="https://codepen.io/botteu/pen/YPKBrJX/">YPKBrJX</a> by botteu (<a href="https://codepen.io/botteu">@botteu</a>) on <a href="https://codepen.io">CodePen</a>.</span>
+</p>
+<h3 id="链接嵌入规则">链接嵌入规则<a class="anchor-link" aria-label="Link to this section" href="#链接嵌入规则"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li>独行的 Twitter/X 链接自动转换为 Tweet 组件</li>
+<li>独行的其他链接显示 OG 预览卡片</li>
+<li>段落内的链接保持原样</li>
+<li>支持深色/浅色主题切换</li>
+</ul>
+<h2 id="代码高亮">代码高亮<a class="anchor-link" aria-label="Link to this section" href="#代码高亮"><span class="icon icon-link"></span></a></h2>
+<p>支持多种编程语言的语法高亮，并自动跟随主题切换。</p>
+<h3 id="javascript">JavaScript<a class="anchor-link" aria-label="Link to this section" href="#javascript"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">function</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> greet</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">name</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  console.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">log</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">`Hello, ${</span><span style="color:#24292E;--shiki-dark:#E1E4E8">name</span><span style="color:#032F62;--shiki-dark:#9ECBFF">}!`</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">  return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    message: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Welcome to astro-koharu"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    timestamp: Date.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">now</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(),</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  };</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">greet</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"World"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span></code></pre>
+<h3 id="typescript">TypeScript<a class="anchor-link" aria-label="Link to this section" href="#typescript"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">interface</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> BlogPost</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  title</span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  date</span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Date</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  tags</span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[];</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  content</span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> post</span><span style="color:#D73A49;--shiki-dark:#F97583">:</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> BlogPost</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  title: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"My First Post"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  date: </span><span style="color:#D73A49;--shiki-dark:#F97583">new</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Date</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(),</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  tags: [</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"astro"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"blog"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">],</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  content: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Hello World!"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span></code></pre>
+<h3 id="python">Python<a class="anchor-link" aria-label="Link to this section" href="#python"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">def</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> fibonacci</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(n: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">int</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) -> list[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">int</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]:</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">    """Generate Fibonacci sequence"""</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> n </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> []</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    elif</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> n </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> [</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    fib </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> [</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="color:#D73A49;--shiki-dark:#F97583">in</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> range</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, n):</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        fib.append(fib[i</span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> fib[i</span><span style="color:#D73A49;--shiki-dark:#F97583">-</span><span style="color:#005CC5;--shiki-dark:#79B8FF">2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> fib</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(fibonacci(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">))</span></span></code></pre>
+<h3 id="bash">Bash<a class="anchor-link" aria-label="Link to this section" href="#bash"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">#!/bin/bash</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># Start development server</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">pnpm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> install</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">pnpm</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> dev</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">echo</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Server is running at http://localhost:4321"</span></span></code></pre>
+<h2 id="gfm-表格">GFM 表格<a class="anchor-link" aria-label="Link to this section" href="#gfm-表格"><span class="icon icon-link"></span></a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th align="left">功能</th><th align="center">支持状态</th><th align="right">说明</th></tr></thead><tbody><tr><td align="left">表格</td><td align="center">✅</td><td align="right">支持对齐</td></tr><tr><td align="left">任务列表</td><td align="center">✅</td><td align="right">复选框</td></tr><tr><td align="left">删除线</td><td align="center">✅</td><td align="right"><del>删除文本</del></td></tr><tr><td align="left">自动链接</td><td align="center">✅</td><td align="right">自动识别 URL</td></tr></tbody></table>
+<h2 id="任务列表">任务列表<a class="anchor-link" aria-label="Link to this section" href="#任务列表"><span class="icon icon-link"></span></a></h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> 安装 astro-koharu</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 配置站点信息</li>
+<li class="task-list-item"><input type="checkbox" disabled> 写第一篇文章</li>
+<li class="task-list-item"><input type="checkbox" disabled> 部署到 Vercel</li>
+</ul>
+<h2 id="mermaid-图表">Mermaid 图表<a class="anchor-link" aria-label="Link to this section" href="#mermaid-图表"><span class="icon icon-link"></span></a></h2>
+<h3 id="流程图">流程图<a class="anchor-link" aria-label="Link to this section" href="#流程图"><span class="icon icon-link"></span></a></h3>
+<pre class="mermaid">flowchart LR
+    A[编写文章] --> B[本地预览]
+    B --> C{满意吗?}
+    C -->|是| D[推送代码]
+    C -->|否| A
+    D --> E[自动部署]
+    E --> F[上线成功]</pre>
+<h3 id="时序图">时序图<a class="anchor-link" aria-label="Link to this section" href="#时序图"><span class="icon icon-link"></span></a></h3>
+<pre class="mermaid">sequenceDiagram
+    participant U as 用户
+    participant B as 浏览器
+    participant S as 服务器
+
+    U->>B: 访问博客
+    B->>S: 请求页面
+    S-->>B: 返回 HTML
+    B-->>U: 渲染页面</pre>
+<h3 id="饼图">饼图<a class="anchor-link" aria-label="Link to this section" href="#饼图"><span class="icon icon-link"></span></a></h3>
+<pre class="mermaid">pie title 博客内容分布
+    "技术笔记" : 45
+    "生活随笔" : 25
+    "项目分享" : 20
+    "其他" : 10</pre>
+<h2 id="文本样式">文本样式<a class="anchor-link" aria-label="Link to this section" href="#文本样式"><span class="icon icon-link"></span></a></h2>
+<ul>
+<li><strong>粗体文本</strong></li>
+<li><em>斜体文本</em></li>
+<li><del>删除线</del></li>
+<li><code>行内代码</code></li>
+<li><a href="https://github.com/cosZone/astro-koharu">链接文本</a></li>
+</ul>
+<h2 id="引用">引用<a class="anchor-link" aria-label="Link to this section" href="#引用"><span class="icon icon-link"></span></a></h2>
+<blockquote>
+<p>这是一段引用文本。</p>
+<p>astro-koharu 让博客搭建变得简单而优雅。</p>
+</blockquote>
+<h2 id="标题层级">标题层级<a class="anchor-link" aria-label="Link to this section" href="#标题层级"><span class="icon icon-link"></span></a></h2>
+<p>本文展示了 h2-h6 各级标题，它们都会自动生成锚点链接，方便分享和引用。</p>
+<h3 id="三级标题">三级标题<a class="anchor-link" aria-label="Link to this section" href="#三级标题"><span class="icon icon-link"></span></a></h3>
+<h4 id="四级标题">四级标题<a class="anchor-link" aria-label="Link to this section" href="#四级标题"><span class="icon icon-link"></span></a></h4>
+<h5 id="五级标题">五级标题<a class="anchor-link" aria-label="Link to this section" href="#五级标题"><span class="icon icon-link"></span></a></h5>
+<h6 id="六级标题">六级标题<a class="anchor-link" aria-label="Link to this section" href="#六级标题"><span class="icon icon-link"></span></a></h6>
+<h2 id="分割线">分割线<a class="anchor-link" aria-label="Link to this section" href="#分割线"><span class="icon icon-link"></span></a></h2>
+<hr>
+<h2 id="列表">列表<a class="anchor-link" aria-label="Link to this section" href="#列表"><span class="icon icon-link"></span></a></h2>
+<h3 id="无序列表">无序列表<a class="anchor-link" aria-label="Link to this section" href="#无序列表"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li>项目一
+<ul>
+<li>子项目 A</li>
+<li>子项目 B</li>
+</ul>
+</li>
+<li>项目二</li>
+<li>项目三</li>
+</ul>
+<h3 id="有序列表">有序列表<a class="anchor-link" aria-label="Link to this section" href="#有序列表"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li>第一步</li>
+<li>第二步
+<ol>
+<li>子步骤 A</li>
+<li>子步骤 B
+<ol>
+<li>子步骤 C</li>
+</ol>
+</li>
+</ol>
+</li>
+<li>第三步</li>
+</ol>
+<h2 id="图片">图片<a class="anchor-link" aria-label="Link to this section" href="#图片"><span class="icon icon-link"></span></a></h2>
+<p>图片会自动应用 LQIP（低质量图片占位符）效果：</p>
+<figure class="markdown-image-wrapper"><img src="/img/cover/3.webp" alt="示例图片" loading="lazy" decoding="async" class="markdown-image"><figcaption class="markdown-image-caption">示例图片</figcaption></figure>
+<h2 id="shoka-兼容-markdown-语法">Shoka 兼容 Markdown 语法<a class="anchor-link" aria-label="Link to this section" href="#shoka-兼容-markdown-语法"><span class="icon icon-link"></span></a></h2>
+<p>除了上述标准 Markdown 增强外，astro-koharu 还支持从 Hexo Shoka 主题迁移的丰富扩展语法，包括：</p>
+<ul>
+<li><strong>文字特效</strong> — 下划线 <ins>ins</ins>、高亮 <mark>mark</mark>、上下标 <sub>sub</sub> / <sup>sup</sup>、颜色文字</li>
+<li><strong>隐藏文字</strong> — Spoiler 粒子动画 <spoiler-span>隐藏文字</spoiler-span> 和 <span class="spoiler blur">模糊效果</span></li>
+<li><strong>注音标注</strong> — Ruby <ruby>漢字<rp>(</rp><rt>かんじ</rt><rp>)</rp></ruby></li>
+<li><strong>容器块</strong> — 提醒块 <code>:::info</code>、折叠块 <code>+++primary 标题</code>、标签卡 <code>;;;tab</code></li>
+<li><strong>友链卡片</strong> — <code></code> YAML 数据渲染为交互卡片</li>
+<li><strong>音视频播放器</strong> — <code></code> 支持网易云/QQ 音乐歌单</li>
+<li><strong>数学公式</strong> — KaTeX 行内 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E=mc^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord mathnormal">m</span><span class="mord"><span class="mord mathnormal">c</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> 和块级 <code>$$...$$</code></li>
+<li><strong>代码块增强</strong> — title、mark 行高亮、command 提示符</li>
+<li><strong>练习题系统</strong> — 单选、多选、判断、填空四种题型</li>
+<li password="..."><strong>加密内容块</strong> — <code>:::encrypted</code> AES-256-GCM 加密，防止爬虫收录</li>
+</ul>
+<p>所有功能均可在 <code>config/site.yaml</code> 中独立开关。完整语法演示和用法请参阅 <a href="/post/note/shoka-features">Shoka 主题 Markdown 语法演示</a>。</p>
+<h2 id="加密内容块">加密内容块<a class="anchor-link" aria-label="Link to this section" href="#加密内容块"><span class="icon icon-link"></span></a></h2>
+<p>使用 <code>:::encrypted{password="密码"}</code> 语法创建加密区块。内容在构建时使用 AES-256-GCM 真正加密，密码不会出现在最终 HTML 中，有效防止搜索引擎和爬虫收录敏感内容。</p>
+<p>加密块内的 Markdown 会获得与普通内容完全相同的渲染处理（Shiki 代码高亮、KaTeX 公式等），解密后直接展示。</p>
+<blockquote>
+<p>前端无法实现真正意义上的加密，因为密码需在客户端输入，密文和算法对用户可见，安全性完全取决于密码强度。本功能的目的是<strong>防止搜索引擎和爬虫直接收录明文内容</strong>，而非对抗有针对性的破解。</p>
+</blockquote>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::encrypted{password="demo"}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">这段内容已加密，输入密码 </span><span style="color:#005CC5;--shiki-dark:#79B8FF">`demo`</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 即可查看。</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">支持 </span><span style="color:#24292E;--shiki-light-font-weight:bold;--shiki-dark:#E1E4E8;--shiki-dark-font-weight:bold">**完整 Markdown 语法**</span><span style="color:#24292E;--shiki-dark:#E1E4E8">，包括代码块：</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```python</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Hello from encrypted block!"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">:::</span></span></code></pre>
+<p>:::encrypted{password="demo"}
+这段内容已加密，输入密码 <code>demo</code> 即可查看。</p>
+<p>支持 <strong>完整 Markdown 语法</strong>，包括代码块：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">print</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Hello from encrypted block!"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span></code></pre>
+<p>:::</p>
+<h2 id="总结">总结<a class="anchor-link" aria-label="Link to this section" href="#总结"><span class="icon icon-link"></span></a></h2>
+<p>以上展示了 astro-koharu 支持的主要 Markdown 功能。更多功能请参考 <a href="/post/astro-koharu-guide">使用指南</a>。</p> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#链接嵌入功能" data-astro-cid-gysqo7gh>链接嵌入功能</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#嵌入测试" data-astro-cid-gysqo7gh>Tweet 嵌入测试</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#通用链接预览测试" data-astro-cid-gysqo7gh>通用链接预览测试</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#链接嵌入" data-astro-cid-gysqo7gh>Codepen 链接嵌入</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#链接嵌入规则" data-astro-cid-gysqo7gh>链接嵌入规则</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-41" data-astro-cid-gysqo7gh>独行的 Twitter/X 链接自动转换为 Tweet 组件</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-42" data-astro-cid-gysqo7gh>独行的其他链接显示 OG 预览卡片</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-43" data-astro-cid-gysqo7gh>段落内的链接保持原样</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-44" data-astro-cid-gysqo7gh>支持深色/浅色主题切换</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#代码高亮" data-astro-cid-gysqo7gh>代码高亮</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>JavaScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>TypeScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>Python</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>Bash</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#" data-astro-cid-gysqo7gh>Start development server</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#表格" data-astro-cid-gysqo7gh>GFM 表格</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#任务列表" data-astro-cid-gysqo7gh>任务列表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-122" data-astro-cid-gysqo7gh>[x] 安装 astro-koharu</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-123" data-astro-cid-gysqo7gh>[x] 配置站点信息</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-124" data-astro-cid-gysqo7gh>[ ] 写第一篇文章</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-125" data-astro-cid-gysqo7gh>[ ] 部署到 Vercel</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#图表" data-astro-cid-gysqo7gh>Mermaid 图表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#流程图" data-astro-cid-gysqo7gh>流程图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#时序图" data-astro-cid-gysqo7gh>时序图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#饼图" data-astro-cid-gysqo7gh>饼图</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#文本样式" data-astro-cid-gysqo7gh>文本样式</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>**粗体文本**</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-168" data-astro-cid-gysqo7gh>_斜体文本_</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-169" data-astro-cid-gysqo7gh>~~删除线~~</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-170" data-astro-cid-gysqo7gh>`行内代码`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-171" data-astro-cid-gysqo7gh>[链接文本](https://github.com/cosZone/astro-koharu)</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#引用" data-astro-cid-gysqo7gh>引用</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#标题层级" data-astro-cid-gysqo7gh>标题层级</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#三级标题" data-astro-cid-gysqo7gh>三级标题</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#分割线" data-astro-cid-gysqo7gh>分割线</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#列表" data-astro-cid-gysqo7gh>列表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#无序列表" data-astro-cid-gysqo7gh>无序列表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-199" data-astro-cid-gysqo7gh>项目一</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-200" data-astro-cid-gysqo7gh>子项目 A</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-201" data-astro-cid-gysqo7gh>子项目 B</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-202" data-astro-cid-gysqo7gh>项目二</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-203" data-astro-cid-gysqo7gh>项目三</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#有序列表" data-astro-cid-gysqo7gh>有序列表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-207" data-astro-cid-gysqo7gh>第一步</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-208" data-astro-cid-gysqo7gh>第二步</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-209" data-astro-cid-gysqo7gh>子步骤 A</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-210" data-astro-cid-gysqo7gh>子步骤 B</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-211" data-astro-cid-gysqo7gh>子步骤 C</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-212" data-astro-cid-gysqo7gh>第三步</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#图片" data-astro-cid-gysqo7gh>图片</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#兼容语法" data-astro-cid-gysqo7gh>Shoka 兼容 Markdown 语法</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-224" data-astro-cid-gysqo7gh>**文字特效** — 下划线 ++ins++、高亮 ==mark==、上下标 ~sub~ / ^sup^、颜色文字</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-225" data-astro-cid-gysqo7gh>**隐藏文字** — Spoiler 粒子动画 !!隐藏文字!! 和 !!模糊效果!!{.blur}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-226" data-astro-cid-gysqo7gh>**注音标注** — Ruby {漢字^かんじ}</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-227" data-astro-cid-gysqo7gh>**容器块** — 提醒块 `:::info`、折叠块 `+++primary 标题`、标签卡 `;;;tab`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-228" data-astro-cid-gysqo7gh>**友链卡片** — `{% links %}` YAML 数据渲染为交互卡片</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-229" data-astro-cid-gysqo7gh>**音视频播放器** — `{% media audio/video %}` 支持网易云/QQ 音乐歌单</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-230" data-astro-cid-gysqo7gh>**数学公式** — KaTeX 行内 $E=mc^2$ 和块级 `$$...$$`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-231" data-astro-cid-gysqo7gh>**代码块增强** — title、mark 行高亮、command 提示符</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-232" data-astro-cid-gysqo7gh>**练习题系统** — 单选、多选、判断、填空四种题型</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-233" data-astro-cid-gysqo7gh>**加密内容块** — `:::encrypted{password=&quot;...&quot;}` AES-256-GCM 加密，防止爬虫收录</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#加密内容块" data-astro-cid-gysqo7gh>加密内容块</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#总结" data-astro-cid-gysqo7gh>总结</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

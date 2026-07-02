@@ -1,0 +1,88 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：JWT和Session认证到底怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：JWT和Session认证到底怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/jwt" class="tag-link" data-astro-cid-gysqo7gh>JWT</a><a href="/tags/session" class="tag-link" data-astro-cid-gysqo7gh>Session</a><a href="/tags/%E8%AE%A4%E8%AF%81" class="tag-link" data-astro-cid-gysqo7gh>认证</a><a href="/tags/oauth2" class="tag-link" data-astro-cid-gysqo7gh>OAuth2</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记jwt-和-session-认证到底怎么选">面试笔记：JWT 和 Session 认证到底怎么选<a class="anchor-link" aria-label="Link to this section" href="#面试笔记jwt-和-session-认证到底怎么选"><span class="icon icon-link"></span></a></h1>
+<blockquote>
+<p>准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完 CRUD 想搞清楚”登录到底发生了什么”的同学。</p>
+</blockquote>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>认证（Authentication）解决的是”你是谁”的问题，授权（Authorization）解决的是”你能干什么”的问题。面试中这两块经常绑在一起问，但底层逻辑完全不同。Session 是最经典的方案，JWT 是前后端分离时代的宠儿，OAuth2 则是第三方登录的行业标准。理解它们的演进关系，比死记硬背强得多。</p>
+<hr>
+<h3 id="问题-1session-是怎么工作的有什么优缺点">问题 1：Session 是怎么工作的？有什么优缺点？<a class="anchor-link" aria-label="Link to this section" href="#问题-1session-是怎么工作的有什么优缺点"><span class="icon icon-link"></span></a></h3>
+<p>最早做 Web 应用的时候，用户登录成功后服务端会在内存或 Redis 中创建一个 Session 对象，包含用户 ID、登录时间等信息，然后把 Session ID 通过 <code>Set-Cookie</code> 响应头塞给浏览器。之后浏览器每次请求都会自动携带这个 Cookie，服务端拿着 Session ID 去查对应的 Session 数据，确认身份。</p>
+<p><strong>优点很明确</strong>：服务端掌控一切。想注销？直接删掉 Session 就行。想限制同时在线设备数？数一下 Session 个数就好。安全性方面，配合 Cookie 的 <code>HttpOnly</code>（防 XSS 读取）、<code>Secure</code>（仅 HTTPS 传输）、<code>SameSite</code>（防 CSRF）属性，防御体系比较完善。</p>
+<p><strong>问题也很明显</strong>：Session 存在服务端，横向扩展就麻烦了。你部署了三个服务节点，用户的 Session 在节点 A 上，请求被负载均衡到节点 B，B 查不到 Session 就会拒绝。解决办法要么搞 Sticky Session（绑定用户到固定节点），要么搞 Session 共享（Redis 集中存储），都增加了运维复杂度。另外 Cookie 有跨域限制，前后端分离部署在不同域名下就很头疼。</p>
+<hr>
+<h3 id="问题-2jwt-的三段结构和无状态验证是怎么回事">问题 2：JWT 的三段结构和无状态验证是怎么回事？<a class="anchor-link" aria-label="Link to this section" href="#问题-2jwt-的三段结构和无状态验证是怎么回事"><span class="icon icon-link"></span></a></h3>
+<p>JWT（JSON Web Token）由三部分组成，用 <code>.</code> 分隔：</p>
+<p><strong>Header</strong>：声明算法类型，比如 <code>{"alg": "HS256", "typ": "JWT"}</code>，Base64URL 编码。</p>
+<p><strong>Payload</strong>：存放声明（Claims），包括标准字段（<code>iss</code> 签发者、<code>exp</code> 过期时间、<code>sub</code> 用户标识）和自定义字段（userId、role 等）。同样 Base64URL 编码。这里有个关键点：<strong>Payload 不是加密的</strong>，任何人拿到 token 都能解码看到内容，所以绝对不能放密码之类的敏感信息。</p>
+<p><strong>Signature</strong>：对 Header 和 Payload 的签名。服务端用密钥计算 <code>HMACSHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload), secret)</code>，后续验证时重新计算并比对，判断 token 是否被篡改。</p>
+<p>验证流程非常简洁：客户端在请求头中带上 <code>Authorization: Bearer &#x3C;token></code>，服务端提取 token，验证签名，检查过期时间，解析 Payload 拿到用户信息。全程不查数据库，所以叫<strong>无状态</strong>。这让它在微服务和多节点部署中如鱼得水——任意节点拿到 token 都能独立验证。</p>
+<hr>
+<h3 id="问题-3jwt-的致命伤是什么怎么解决">问题 3：JWT 的致命伤是什么？怎么解决？<a class="anchor-link" aria-label="Link to this section" href="#问题-3jwt-的致命伤是什么怎么解决"><span class="icon icon-link"></span></a></h3>
+<p>JWT 最大的问题是<strong>无法主动失效</strong>。token 一旦签发，在过期之前就一直有效。你点了”退出登录”，客户端删掉了本地存储的 token，但如果有人在这之前截获了那个 token，他依然可以用到过期为止。</p>
+<p>这引出了一个设计上的矛盾：过期时间设短了，用户频繁被踢出要重新登录，体验极差；设长了，token 泄露后的攻击窗口就很大。</p>
+<p><strong>双 Token 机制</strong>是目前的主流方案。Access Token 短命（15 分钟到 2 小时），用于日常 API 调用；Refresh Token 长寿（7 到 30 天），用于换取新的 Access Token。流程是这样的：客户端用 Access Token 请求，服务端返回 401 表示过期，客户端自动拿 Refresh Token 去 <code>/auth/refresh</code> 接口换新 token，然后重试原请求。整个过程对用户透明。</p>
+<p>Refresh Token 和 Access Token 不同，它是<strong>有状态</strong>的——存在数据库里，可以主动删除（实现真正的注销）。更安全的做法是加上<strong>旋转机制（Rotation）</strong>：每次用 Refresh Token 换新 token 时，同时签发新的 Refresh Token 并作废旧的。如果检测到旧 Refresh Token 被重复使用，说明可能被盗用，立刻注销该用户的所有 token。</p>
+<hr>
+<h3 id="问题-4oauth2-的四种模式和授权码流程">问题 4：OAuth2 的四种模式和授权码流程？<a class="anchor-link" aria-label="Link to this section" href="#问题-4oauth2-的四种模式和授权码流程"><span class="icon icon-link"></span></a></h3>
+<p>OAuth2 解决的是”第三方应用如何安全地获取用户资源访问权限”。它和 JWT 不冲突——OAuth2 定义获取 token 的流程，JWT 可以作为 token 的格式。</p>
+<p>四种授权模式中，<strong>授权码模式（Authorization Code）</strong> 最安全也最常用，面试必问：</p>
+<ol>
+<li>用户点击”用 GitHub 登录”，跳转到 GitHub 授权页面</li>
+<li>用户同意授权，GitHub 回调你的应用并附带一个 authorization code</li>
+<li>你的后端拿 code + client_secret 向 GitHub 换取 Access Token</li>
+<li>用 Access Token 调 GitHub API 拿到用户信息</li>
+</ol>
+<p>code 只能用一次且有效期很短（通常 10 分钟），client_secret 始终在后端使用不暴露给前端。这就是为什么授权码模式最安全——敏感凭证全程不经过浏览器。</p>
+<p>其他三种：<strong>简化模式（Implicit）</strong> 直接在 URL fragment 返回 token，已不推荐；<strong>密码模式（Password）</strong> 让用户把密码交给第三方应用，仅适用于高度信任的官方应用；<strong>客户端凭证模式（Client Credentials）</strong> 应用以自己的身份获取 token，用于服务间通信，不涉及用户。</p>
+<hr>
+<h3 id="分析实际项目中怎么选">分析：实际项目中怎么选？<a class="anchor-link" aria-label="Link to this section" href="#分析实际项目中怎么选"><span class="icon icon-link"></span></a></h3>
+<p>我的理解是：没有绝对的好坏，只有适不适合。<strong>传统 Web 应用、需要即时注销的管理后台</strong>用 Session 更省心。<strong>前后端分离、微服务架构、移动端</strong>用 JWT 更灵活。实际上很多项目两者结合——用 Session 管理登录态，用 JWT 做 API 间的无状态鉴权。</p>
+<p>OAuth2 则是另一个维度的问题。只要涉及第三方登录或开放平台，就必须用它。而 OAuth2 颁发的 Access Token 完全可以采用 JWT 格式，兼得授权流程的安全性和无状态验证的性能优势。</p>
+<hr>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>Session</strong> 有状态，服务端存储，注销方便，但横向扩展需要额外方案</li>
+<li><strong>JWT</strong> 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效</li>
+<li><strong>双 Token 机制</strong>（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践</li>
+<li><strong>OAuth2 授权码模式</strong>是第三方登录的标准流程，code 一次性 + client_secret 后端保密</li>
+<li>JWT 常见攻击包括 alg<div></div> 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期</li>
+<li>Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段</li>
+</ol>
+<hr>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>双 Token 的工程实现细节</strong>：Access Token 过期后前端自动刷新需要处理并发请求的竞态问题。多个请求同时收到 401，不应该同时发起多次刷新。常见做法是用一个 Promise 或锁机制，让第一个 401 触发刷新，其他请求排队等待新 token。</p>
+<p><strong>OpenID Connect（OIDC）</strong>：在 OAuth2 之上加了一层身份认证。OAuth2 只解决”授权”，不告诉你用户是谁；OIDC 新增了 ID Token（也是 JWT 格式），包含用户身份信息， standardized 了 <code>/userinfo</code> 端点。简单说，OAuth2 + OIDC = 认证 + 授权。</p>
+<p><strong>JWT 安全最佳实践</strong>：使用 RS256 非对称签名（私钥签发、公钥验证），避免 HS256 的密钥分发问题；密钥足够长（256 位以上）并定期轮换，存在 Vault 等密钥管理服务中而非硬编码；敏感操作（如修改密码、转账）要求二次验证，不单纯依赖 token。</p>
+<hr>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<p>如果你是初学者，建议按这个顺序理解：先搞懂 HTTP 是无状态的 -> 为什么需要 Cookie/Session -> Session 的扩展性问题 -> JWT 如何解决 -> JWT 自身的问题 -> 双 Token 方案 -> OAuth2 的授权流程。这条线串下来，面试中不管怎么追问都能接住。</p>
+<p>动手实践比看十遍文章有用。试着自己用 Go 的 <code>golang-jwt</code> 库实现一个登录签发 + 刷新 + 注销的完整流程，或者接入 GitHub OAuth2 做一次第三方登录。写完之后你会发现很多细节问题（token 存哪里、并发刷新怎么处理、密钥怎么管理）是看文档时根本想不到的。</p>
+<hr>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://jwt.io/introduction">JWT.io - Introduction to JSON Web Tokens</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc6749">OAuth 2.0 授权框架 - RFC 6749</a></li>
+<li><a href="https://openid.net/specs/openid-connect-core-1_0.html">OpenID Connect Core 1.0</a></li>
+<li><a href="https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/">Auth0 Blog - Refresh Tokens: What Are They and When to Use Them</a></li>
+<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html">OWASP JWT Cheat Sheet</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：和认证到底怎么选" data-astro-cid-gysqo7gh>面试笔记：JWT 和 Session 认证到底怎么选</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题：是怎么工作的？有什么优缺点？" data-astro-cid-gysqo7gh>问题 1：Session 是怎么工作的？有什么优缺点？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题：的三段结构和无状态验证是怎么回事？" data-astro-cid-gysqo7gh>问题 2：JWT 的三段结构和无状态验证是怎么回事？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题：的致命伤是什么？怎么解决？" data-astro-cid-gysqo7gh>问题 3：JWT 的致命伤是什么？怎么解决？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题：的四种模式和授权码流程？" data-astro-cid-gysqo7gh>问题 4：OAuth2 的四种模式和授权码流程？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-53" data-astro-cid-gysqo7gh>用户点击&quot;用 GitHub 登录&quot;，跳转到 GitHub 授权页面</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-54" data-astro-cid-gysqo7gh>用户同意授权，GitHub 回调你的应用并附带一个 authorization code</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-55" data-astro-cid-gysqo7gh>你的后端拿 code + client_secret 向 GitHub 换取 Access Token</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-56" data-astro-cid-gysqo7gh>用 Access Token 调 GitHub API 拿到用户信息</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析：实际项目中怎么选？" data-astro-cid-gysqo7gh>分析：实际项目中怎么选？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-74" data-astro-cid-gysqo7gh>**Session** 有状态，服务端存储，注销方便，但横向扩展需要额外方案</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-75" data-astro-cid-gysqo7gh>**JWT** 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-76" data-astro-cid-gysqo7gh>**双 Token 机制**（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-77" data-astro-cid-gysqo7gh>**OAuth2 授权码模式**是第三方登录的标准流程，code 一次性 + client_secret 后端保密</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-78" data-astro-cid-gysqo7gh>JWT 常见攻击包括 alg:none 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-79" data-astro-cid-gysqo7gh>Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-103" data-astro-cid-gysqo7gh>[JWT.io - Introduction to JSON Web Tokens](https://jwt.io/introduction)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-104" data-astro-cid-gysqo7gh>[OAuth 2.0 授权框架 - RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-105" data-astro-cid-gysqo7gh>[OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-106" data-astro-cid-gysqo7gh>[Auth0 Blog - Refresh Tokens: What Are They and When to Use Them](https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-107" data-astro-cid-gysqo7gh>[OWASP JWT Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>週間ダイジェスト Vol.1 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>週間ダイジェスト Vol.1</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2024-01-04</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/%E5%91%A8%E5%88%8A" class="tag-link" data-astro-cid-gysqo7gh>周刊</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <p>これは週間/シリーズ機能の動作を紹介するサンプルです。</p>
+<h2 id="週間機能について">週間機能について<a class="anchor-link" aria-label="Link to this section" href="#週間機能について"><span class="icon icon-link"></span></a></h2>
+<p>週間機能は astro-koharu の特色ある機能のひとつで、定期的に更新される連載コンテンツの公開に最適です：</p>
+<ul>
+<li>テックニュースレター</li>
+<li>読書ノートシリーズ</li>
+<li>学習ジャーナル</li>
+<li>プロジェクトの進捗報告</li>
+</ul>
+<h2 id="週間の設定">週間の設定<a class="anchor-link" aria-label="Link to this section" href="#週間の設定"><span class="icon icon-link"></span></a></h2>
+<p><code>config/site.yaml</code> で設定：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">featuredSeries</span><span style="color:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  categoryName</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">周刊</span><span style="color:#6A737D;--shiki-dark:#6A737D">       # カテゴリー名</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  label</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">週間ダイジェスト</span><span style="color:#6A737D;--shiki-dark:#6A737D">    # 表示ラベル</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  fullName</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">テック週間ダイジェスト</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  description</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">週間の説明...</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  cover</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">/img/weekly_header.webp</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">  enabled</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#6A737D;--shiki-dark:#6A737D">            # false で無効化</span></span></code></pre>
+<h2 id="週間の特徴">週間の特徴<a class="anchor-link" aria-label="Link to this section" href="#週間の特徴"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>専用ページ</strong> - 各シリーズは <code>/weekly</code> に専用ページがあります</li>
+<li><strong>ホームページ表示</strong> - 最新号がホームページにピン留めされます</li>
+<li><strong>分離されたリスト</strong> - 週間投稿は通常の投稿リストには表示されません</li>
+<li><strong>シリーズナビゲーション</strong> - 前号/次号のナビゲーション</li>
+</ol>
+<h2 id="今週のコンテンツ">今週のコンテンツ<a class="anchor-link" aria-label="Link to this section" href="#今週のコンテンツ"><span class="icon icon-link"></span></a></h2>
+<h3 id="おすすめ記事">おすすめ記事<a class="anchor-link" aria-label="Link to this section" href="#おすすめ記事"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://astro.build">Astro 5.0 の新機能</a></li>
+<li><a href="https://tailwindcss.com">Tailwind CSS 4.0 リリース</a></li>
+</ul>
+<h3 id="ツール紹介">ツール紹介<a class="anchor-link" aria-label="Link to this section" href="#ツール紹介"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ツール</th><th>用途</th><th>リンク</th></tr></thead><tbody><tr><td>Biome</td><td>コードリンティング</td><td>biome.dev</td></tr><tr><td>Motion</td><td>アニメーション</td><td>motion.dev</td></tr></tbody></table>
+<h3 id="今週の学び">今週の学び<a class="anchor-link" aria-label="Link to this section" href="#今週の学び"><span class="icon icon-link"></span></a></h3>
+<p>今週学んだこと：</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> Astro Content Collections</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> Tailwind テーマ設定</li>
+<li class="task-list-item"><input type="checkbox" disabled> Motion の高度なアニメーション</li>
+</ul>
+<h2 id="次号の予告">次号の予告<a class="anchor-link" aria-label="Link to this section" href="#次号の予告"><span class="icon icon-link"></span></a></h2>
+<p>次号ではさらに高度な機能を取り上げます — お楽しみに！</p>
+<hr>
+<p>今週のニュースレターをお読みいただきありがとうございました！</p> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#週間機能について" data-astro-cid-gysqo7gh>週間機能について</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-7" data-astro-cid-gysqo7gh>テックニュースレター</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-8" data-astro-cid-gysqo7gh>読書ノートシリーズ</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>学習ジャーナル</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>プロジェクトの進捗報告</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#週間の設定" data-astro-cid-gysqo7gh>週間の設定</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#週間の特徴" data-astro-cid-gysqo7gh>週間の特徴</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-28" data-astro-cid-gysqo7gh>**専用ページ** - 各シリーズは `/weekly` に専用ページがあります</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-29" data-astro-cid-gysqo7gh>**ホームページ表示** - 最新号がホームページにピン留めされます</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-30" data-astro-cid-gysqo7gh>**分離されたリスト** - 週間投稿は通常の投稿リストには表示されません</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-31" data-astro-cid-gysqo7gh>**シリーズナビゲーション** - 前号/次号のナビゲーション</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#今週のコンテンツ" data-astro-cid-gysqo7gh>今週のコンテンツ</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#おすすめ記事" data-astro-cid-gysqo7gh>おすすめ記事</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-37" data-astro-cid-gysqo7gh>[Astro 5.0 の新機能](https://astro.build)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-38" data-astro-cid-gysqo7gh>[Tailwind CSS 4.0 リリース](https://tailwindcss.com)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#ツール紹介" data-astro-cid-gysqo7gh>ツール紹介</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#今週の学び" data-astro-cid-gysqo7gh>今週の学び</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-51" data-astro-cid-gysqo7gh>[x] Astro Content Collections</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-52" data-astro-cid-gysqo7gh>[x] Tailwind テーマ設定</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-53" data-astro-cid-gysqo7gh>[ ] Motion の高度なアニメーション</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#次号の予告" data-astro-cid-gysqo7gh>次号の予告</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

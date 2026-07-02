@@ -1,0 +1,169 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>项目笔记：C++的\x转义是贪婪匹配的 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>项目笔记：C++的\x转义是贪婪匹配的</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/c%2B%2B" class="tag-link" data-astro-cid-gysqo7gh>C++</a><a href="/tags/%E5%AD%97%E7%AC%A6%E4%B8%B2" class="tag-link" data-astro-cid-gysqo7gh>字符串</a><a href="/tags/msvc" class="tag-link" data-astro-cid-gysqo7gh>MSVC</a><a href="/tags/%E7%BC%96%E7%A0%81" class="tag-link" data-astro-cid-gysqo7gh>编码</a><a href="/tags/%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98" class="tag-link" data-astro-cid-gysqo7gh>项目实战</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="项目笔记c的x转义是贪婪匹配的">项目笔记：C++的\x转义是贪婪匹配的<a class="anchor-link" aria-label="Link to this section" href="#项目笔记c的x转义是贪婪匹配的"><span class="icon icon-link"></span></a></h1>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>OptiScaler 是一个 C++ DLL 注入式工具，替换游戏中的 DLSS / FSR / XeSS 上采样器，通过 ImGui 覆盖菜单提供实时参数调节。在中文国际化过程中，有一段自动生成的翻译代码使用了 <code>\x</code> 转义序列来表示 UTF-8 编码的中文字符。这段代码在 GCC 下侥幸编译通过，但在 MSVC 下报了一个令人困惑的错误。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>自动生成的翻译代码长这样：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Settings"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe8\xae\xbe\xe7\xbd\xae</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>意图是将”设置”的 UTF-8 字节序列（E8 AE BE E7 BD AE）逐个用 <code>\x</code> 转义写入。但 MSVC 报了编译错误：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>error C2022: '2264': character is too big for 'char'</span></span></code></pre>
+<p>2264？这个数字从哪来的？</p>
+<p>仔细一看，问题出在最后一个转义序列 <code>\xbd\xae</code> 上。更准确地说，出在 <code>\xbd</code> 之后的 <code>\xae</code> 上——等等，实际出问题的是另一个类似字符串中的 <code>\x8d8</code>。</p>
+<p>假设我们有这样一个字符串：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic">\x8d8</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe5\x9d\x87</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>这里 <code>\x8d8</code> 的意图是 <code>\x8d</code> 后跟字符 <code>'8'</code>。但 C++ 编译器不这么理解。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<h4 id="c-标准中-x-转义的贪婪行为">C++ 标准中 \x 转义的贪婪行为<a class="anchor-link" aria-label="Link to this section" href="#c-标准中-x-转义的贪婪行为"><span class="icon icon-link"></span></a></h4>
+<p>C++ 标准（[lex.ccon]）规定：<code>\x</code> 转义序列会<strong>贪婪地消费后续所有十六进制字符</strong>（0-9, a-f, A-F），直到遇到第一个非十六进制字符为止。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic">\x8d8</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 编译器解析：\x8D8 = 0x8D8 = 2264</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 程序员意图：\x8D 后跟字符 '8'</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic">\x8d8</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 的含义：</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  \x  → 开始十六进制转义</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  8</span><span style="color:#24292E;--shiki-dark:#E1E4E8">   → 十六进制数字</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  d   → 十六进制数字</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  8</span><span style="color:#24292E;--shiki-dark:#E1E4E8">   → 十六进制数字！贪婪匹配！</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  结果: </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">8D8</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2264</span></span></code></pre>
+<p><code>char</code> 类型在 MSVC 中是 8 位有符号（范围 -128 到 127）或无符号（范围 0 到 255）。2264 远超这个范围，所以编译器报错 “character is too big for char”。</p>
+<p><strong>这不是 MSVC 特有的行为——GCC 和 Clang 也遵循相同的标准。</strong> 只不过 GCC 默认只给一个警告（<code>warning: hex escape sequence out of range</code>），而 MSVC 在 <code>/W4</code> 下将其视为错误。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>同一个字符串在不同编译器下的行为：</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>"\x8d8"</span></span>
+<span class="line"><span>  MSVC /W4 /WX  → error C2022: '2264': character is too big</span></span>
+<span class="line"><span>  GCC           → warning: hex escape sequence out of range</span></span>
+<span class="line"><span>                  (仍然编译，但截断为 char 后值不正确)</span></span>
+<span class="line"><span>  Clang         → warning: hex escape sequence out of range</span></span></code></pre>
+<h4 id="十六进制字符的范围">十六进制字符的范围<a class="anchor-link" aria-label="Link to this section" href="#十六进制字符的范围"><span class="icon icon-link"></span></a></h4>
+<p>贪婪匹配之所以危险，是因为十六进制字符集 <code>[0-9a-fA-F]</code> 包含了大量常见字符：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>0 1 2 3 4 5 6 7 8 9   ← 所有数字都是十六进制字符</span></span>
+<span class="line"><span>a b c d e f           ← 小写字母的前 6 个</span></span>
+<span class="line"><span>A B C D E F           ← 大写字母的前 6 个</span></span></code></pre>
+<p>这意味着 <code>\x</code> 后面如果紧跟任何数字或 a-f 字母，都会被”吞噬”：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xAB</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">     → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">AB</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 171</span><span style="color:#24292E;--shiki-dark:#E1E4E8">     ✓ 预期行为</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic">\xAB1</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">    → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">AB1</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2737</span><span style="color:#24292E;--shiki-dark:#E1E4E8">   ✗ </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'1'</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 被吞噬</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#B31D28;--shiki-light-font-style:italic;--shiki-dark:#FDAEB7;--shiki-dark-font-style:italic">\xABcd</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">   → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">ABCD</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 43981</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ✗ </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'cd'</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 被吞噬</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xAB</span><span style="color:#032F62;--shiki-dark:#9ECBFF">g"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">    → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">AB</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 后跟 </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'g'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">  ✓ </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'g'</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 不是十六进制字符，停止</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xAB</span><span style="color:#032F62;--shiki-dark:#9ECBFF">_test"</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">AB</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 后跟 </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'_'</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ✓ </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'_'</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 不是十六进制字符，停止</span></span></code></pre>
+<h3 id="解决">解决<a class="anchor-link" aria-label="Link to this section" href="#解决"><span class="icon icon-link"></span></a></h3>
+<h4 id="方案1放弃-x-转义直接写-utf-8-字符推荐">方案1：放弃 \x 转义，直接写 UTF-8 字符（推荐）<a class="anchor-link" aria-label="Link to this section" href="#方案1放弃-x-转义直接写-utf-8-字符推荐"><span class="icon icon-link"></span></a></h4>
+<p>既然已经有了 <code>/utf-8</code> 编译选项，源文件可以正确解析 UTF-8，完全没有理由再使用 <code>\x</code> 转义：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 错误做法：用 \x 转义表示中文</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Settings"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]    </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe8\xae\xbe\xe7\xbd\xae</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Quality"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]     </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe8\xb4\xa8\xe9\x87\x8f</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Performance"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe6\x80\xa7\xe8\x83\xbd</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 正确做法：直接写 UTF-8 字符，清晰可读</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Settings"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]    </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "设置"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Quality"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]     </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "质量"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Performance"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "性能"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>直接写 UTF-8 字符的优势：</p>
+<ul>
+<li>可读性强，不需要查码表就知道内容</li>
+<li>不存在贪婪匹配风险</li>
+<li>Git diff 友好，代码审查时一目了然</li>
+<li>配合 <code>/utf-8</code> 编译选项，编码行为完全确定</li>
+</ul>
+<h4 id="方案2字符串字面量拼接如果必须用-x">方案2：字符串字面量拼接（如果必须用 \x）<a class="anchor-link" aria-label="Link to this section" href="#方案2字符串字面量拼接如果必须用-x"><span class="icon icon-link"></span></a></h4>
+<p>C++ 支持相邻字符串字面量的自动拼接，利用这个特性可以隔离 <code>\x</code> 转义的作用范围：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 用字符串拼接隔离贪婪匹配</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\x8d</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "8</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xe5\x9d\x87</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">//                       ^^^^^  ^^^^^^^^^^^^^^</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">//                       两个字面量在编译期拼接</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">//                       "\x8d" 只解析到引号结束</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 更多例子</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"hello"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "world"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">        → </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"helloworld"</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\xAB</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "12"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">           → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">AB</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 后跟 </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"12"</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\x8d</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "8"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">             → </span><span style="color:#D73A49;--shiki-dark:#F97583">0x</span><span style="color:#005CC5;--shiki-dark:#79B8FF">8D</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> 后跟 </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"8"</span></span></code></pre>
+<p>字符串拼接发生在翻译阶段（translation phase 6），在词法分析之后，因此 <code>\x</code> 的贪婪匹配已经被引号终止。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>C++ <code>\x</code> 转义贪婪匹配</strong>：<code>\x</code> 后紧跟的所有十六进制字符（<code>[0-9a-fA-F]</code>）都会被纳入转义序列，直到遇到非十六进制字符。这是 C++ 标准规定的行为，所有编译器一致。</li>
+<li><strong><code>char</code> 的范围限制</strong>：MSVC 中 <code>char</code> 为 8 位，无符号范围 0–255，有符号范围 -128–127。<code>\x</code> 转义的值超出此范围会导致编译错误。</li>
+<li><strong>字符串字面量拼接</strong>：<code>"abc" "def"</code> 在编译期拼接为 <code>"abcdef"</code>。利用引号边界可以精确控制 <code>\x</code> 的解析范围。</li>
+<li><strong>UTF-8 字符串的最佳实践</strong>：在有 <code>/utf-8</code> 编译选项的前提下，直接书写 UTF-8 字符比使用 <code>\x</code> 转义更安全、更可读。</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<h4 id="c-raw-string-literal">C++ Raw String Literal<a class="anchor-link" aria-label="Link to this section" href="#c-raw-string-literal"><span class="icon icon-link"></span></a></h4>
+<p>C++11 引入的 raw string literal <code>R"(...)"</code> 可以完全禁用转义序列：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char*</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> s </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> R"(\x8d8 不会被转义)"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 等价于 "\\x8d8 不会被转义"</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 常用于正则表达式、文件路径等包含大量反斜杠的场景</span></span></code></pre>
+<p>Raw string 对于国际化翻译的场景意义不大，但在处理 JSON 模板、正则表达式时非常实用。</p>
+<h4 id="char8_t-与-utf-8-安全性">char8_t 与 UTF-8 安全性<a class="anchor-link" aria-label="Link to this section" href="#char8_t-与-utf-8-安全性"><span class="icon icon-link"></span></a></h4>
+<p>C++20 的 <code>char8_t</code> 类型在编译期保证了 UTF-8 字符串的类型安全。使用 <code>u8""</code> 前缀的字符串字面量会被编译器验证为合法的 UTF-8 序列：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// C++20</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> char8_t</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> s </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> u8"设置"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span><span style="color:#6A737D;--shiki-dark:#6A737D">  // 编译器验证 UTF-8 合法性</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// const char* s2 = u8"设置"; // C++20: 编译错误，不允许隐式转换</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 需要显式转换才能传给接受 const char* 的 API</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ImGui</span><span style="color:#24292E;--shiki-dark:#E1E4E8">::</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Text</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">reinterpret_cast&#x3C;const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char*></span><span style="color:#24292E;--shiki-dark:#E1E4E8">(s));</span></span></code></pre>
+<p>虽然 <code>char8_t</code> 目前在实际项目中的采用率不高（API 兼容性问题），但它代表了 C++ 在字符串编码安全性方面的演进方向。</p>
+<h4 id="其他转义序列的行为对比">其他转义序列的行为对比<a class="anchor-link" aria-label="Link to this section" href="#其他转义序列的行为对比"><span class="icon icon-link"></span></a></h4>
+<p>C++ 中的转义序列并非都是贪婪匹配的：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>转义序列</th><th>匹配行为</th><th>示例</th></tr></thead><tbody><tr><td><code>\x</code> (十六进制)</td><td><strong>贪婪</strong>：消费所有后续十六进制字符</td><td><code>\xAB1</code> = 0xAB1</td></tr><tr><td><code>\0</code>–<code>\7</code> (八进制)</td><td><strong>最多3位</strong>：消费最多3个八进制字符</td><td><code>\78</code> = <code>\07</code> 后跟 <code>'8'</code></td></tr><tr><td><code>\u</code> (通用字符名)</td><td><strong>固定4位</strong>：严格消费4个十六进制字符</td><td><code>\u00E9</code> = é</td></tr><tr><td><code>\U</code> (通用字符名)</td><td><strong>固定8位</strong>：严格消费8个十六进制字符</td><td><code>\U0001F600</code> = 😀</td></tr></tbody></table>
+<p>八进制转义也有类似的陷阱，但因为它最多只消费 3 位，且八进制字符只有 <code>[0-7]</code>，实际出问题的概率较低。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>入门</strong>：牢记 <code>\x</code> 的贪婪行为，这是 C/C++ 面试和实际开发中的经典陷阱。</li>
+<li><strong>实践</strong>：在项目中禁止使用 <code>\x</code> 转义表示非 ASCII 字符，统一使用 UTF-8 直接书写或 <code>\u</code> 通用字符名（固定位数，不贪婪）。</li>
+<li><strong>工具</strong>：编写或使用脚本将项目中现有的 <code>\x</code> 转义自动转换为 UTF-8 字符，消除潜在隐患。</li>
+<li><strong>深入</strong>：阅读 C++ 标准的 Lexical Conventions 章节（[lex.ccon]），理解所有转义序列的精确行为。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://eel.is/c++draft/lex.ccon">C++ 标准 [lex.ccon] - 字符转义序列</a></li>
+<li><a href="https://en.cppreference.com/w/cpp/language/escape">cppreference - Escape sequences</a></li>
+<li><a href="https://learn.microsoft.com/en-us/cpp/error-messages/compiler-errors-1/compiler-error-c2022">MSVC 编译错误 C2022</a></li>
+<li><a href="https://utf8-chartable.de/">UTF-8 编码表</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#项目笔记：++的\转义是贪婪匹配的" data-astro-cid-gysqo7gh>项目笔记：C++的\x转义是贪婪匹配的</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#解决" data-astro-cid-gysqo7gh>解决</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-105" data-astro-cid-gysqo7gh>可读性强，不需要查码表就知道内容</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-106" data-astro-cid-gysqo7gh>不存在贪婪匹配风险</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-107" data-astro-cid-gysqo7gh>Git diff 友好，代码审查时一目了然</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-108" data-astro-cid-gysqo7gh>配合 `/utf-8` 编译选项，编码行为完全确定</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-131" data-astro-cid-gysqo7gh>**C++ `\x` 转义贪婪匹配**：`\x` 后紧跟的所有十六进制字符（`[0-9a-fA-F]`）都会被纳入转义序列，直到遇到非十六进制字符。这是 C++ 标准规定的行为，所有编译器一致。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-132" data-astro-cid-gysqo7gh>**`char` 的范围限制**：MSVC 中 `char` 为 8 位，无符号范围 0–255，有符号范围 -128–127。`\x` 转义的值超出此范围会导致编译错误。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>**字符串字面量拼接**：`&quot;abc&quot; &quot;def&quot;` 在编译期拼接为 `&quot;abcdef&quot;`。利用引号边界可以精确控制 `\x` 的解析范围。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-134" data-astro-cid-gysqo7gh>**UTF-8 字符串的最佳实践**：在有 `/utf-8` 编译选项的前提下，直接书写 UTF-8 字符比使用 `\x` 转义更安全、更可读。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-180" data-astro-cid-gysqo7gh>**入门**：牢记 `\x` 的贪婪行为，这是 C/C++ 面试和实际开发中的经典陷阱。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-181" data-astro-cid-gysqo7gh>**实践**：在项目中禁止使用 `\x` 转义表示非 ASCII 字符，统一使用 UTF-8 直接书写或 `\u` 通用字符名（固定位数，不贪婪）。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-182" data-astro-cid-gysqo7gh>**工具**：编写或使用脚本将项目中现有的 `\x` 转义自动转换为 UTF-8 字符，消除潜在隐患。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-183" data-astro-cid-gysqo7gh>**深入**：阅读 C++ 标准的 Lexical Conventions 章节（[lex.ccon]），理解所有转义序列的精确行为。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-187" data-astro-cid-gysqo7gh>[C++ 标准 [lex.ccon] - 字符转义序列](https://eel.is/c++draft/lex.ccon)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-188" data-astro-cid-gysqo7gh>[cppreference - Escape sequences](https://en.cppreference.com/w/cpp/language/escape)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-189" data-astro-cid-gysqo7gh>[MSVC 编译错误 C2022](https://learn.microsoft.com/en-us/cpp/error-messages/compiler-errors-1/compiler-error-c2022)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-190" data-astro-cid-gysqo7gh>[UTF-8 编码表](https://utf8-chartable.de/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

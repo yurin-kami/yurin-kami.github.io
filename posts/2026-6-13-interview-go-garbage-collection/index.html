@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Go的GC垃圾回收是怎么工作的 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Go的GC垃圾回收是怎么工作的</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/go" class="tag-link" data-astro-cid-gysqo7gh>Go</a><a href="/tags/gc" class="tag-link" data-astro-cid-gysqo7gh>GC</a><a href="/tags/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86" class="tag-link" data-astro-cid-gysqo7gh>内存管理</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试官常见的问法：</p>
+<ul>
+<li>“Go 的垃圾回收是怎么工作的？”</li>
+<li>“讲讲三色标记算法”</li>
+<li>“GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？”</li>
+<li>“Go 为什么选择并发 GC 而不是 Stop The World？”</li>
+</ul>
+<p>考察的核心是：你是否理解 Go 运行时的垃圾回收算法原理、GC 的四个阶段如何衔接、写屏障解决什么问题，以及生产环境中如何通过参数控制 GC 行为。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p>Go 使用的是<strong>三色标记清除算法（Tri-color Mark and Sweep）</strong>，配合<strong>并发标记</strong>和<strong>写屏障</strong>，在保证正确性的前提下尽量降低 STW（Stop The World）时间。</p>
+<p><strong>三色标记</strong></p>
+<p>GC 把堆上的每个对象看作三种颜色之一：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>白色 — 未被标记，GC 结束时仍为白色的对象将被回收</span></span>
+<span class="line"><span>灰色 — 自身已被标记，但引用的子对象还没扫描完</span></span>
+<span class="line"><span>黑色 — 自身和所有子对象都已扫描完毕，不会再被回收</span></span></code></pre>
+<p>可以这样理解：白色是”还没查到”，灰色是”查了一半”，黑色是”查完了，确认存活”。</p>
+<p><strong>GC 的四个阶段</strong></p>
+<p>整个 GC 周期分为四步，其中只有短暂的 STW，大部分时间和用户程序并发执行：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>阶段 1: 标记准备（Mark Setup）</span></span>
+<span class="line"><span>  - 开启写屏障</span></span>
+<span class="line"><span>  - 将 GC 阶段切换到 _GCmark</span></span>
+<span class="line"><span>  - STW：暂停所有 Goroutine（极短）</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>阶段 2: 并发标记（Concurrent Mark）</span></span>
+<span class="line"><span>  - GC Goroutine 和用户 Goroutine 并发执行</span></span>
+<span class="line"><span>  - 从根对象（全局变量、栈上的局部变量等）出发</span></span>
+<span class="line"><span>  - 白色 → 灰色 → 黑色，逐步扫描整个对象图</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>阶段 3: 标记终止（Mark Termination）</span></span>
+<span class="line"><span>  - STW：再次暂停所有 Goroutine</span></span>
+<span class="line"><span>  - 处理剩余的灰色对象，确保标记完整</span></span>
+<span class="line"><span>  - 关闭写屏障，切换到清除阶段</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>阶段 4: 并发清除（Concurrent Sweep）</span></span>
+<span class="line"><span>  - 回收所有仍为白色的对象</span></span>
+<span class="line"><span>  - 与用户程序并发执行，不影响业务逻辑</span></span></code></pre>
+<p>用伪代码表示并发标记的核心循环：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> gcMark</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    markRoots</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()  </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 从根对象开始标记</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        obj </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> getGreyObject</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()  </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 取一个灰色对象</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> obj </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">            break</span><span style="color:#6A737D;--shiki-dark:#6A737D">               // 没有灰色对象了，标记完成</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">        scanObject</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(obj)         </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 扫描它的子对象，标灰，自身标黑</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p><strong>写屏障（Write Barrier）</strong></p>
+<p>并发标记阶段有个棘手问题：GC 和用户程序同时跑，用户程序可能修改指针引用，导致对象漏标或错标。Dijkstra 提出的写屏障方案解决了这个问题——每次程序修改指针时，先把旧值”着色”（放入灰色队列），保证不会被误回收。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 混合写屏障：赋值时自动触发</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> writeBarrier</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">slot</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#6F42C1;--shiki-dark:#B392F0">unsafe</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Pointer</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">ptr</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> unsafe</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Pointer</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    shade</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">slot)   </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 将旧值标记为灰色，保护它不被回收</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    *</span><span style="color:#24292E;--shiki-dark:#E1E4E8">slot </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ptr    </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 然后写入新值</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>Go 1.8+ 使用的是<strong>混合写屏障（Hybrid Write Barrier）</strong>，结合了 Dijkstra 插入屏障和 Yuasa 删除屏障的优点，消除了重新扫描栈的需要，进一步缩短了 STW 时间。</p>
+<p><strong>GC 触发条件</strong></p>
+<p>GC 不是随便触发的，有三种触发方式：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. 内存分配达到阈值 — 由 GOGC 控制，默认 100%</span></span>
+<span class="line"><span>2. 定时触发         — 默认 2 分钟没有 GC 则强制触发</span></span>
+<span class="line"><span>3. 手动触发         — 调用 runtime.GC()</span></span></code></pre>
+<p><strong>GOGC 与 GOMEMLIMIT 调优</strong></p>
+<p><code>GOGC</code> 控制 GC 触发的激进程度，含义是”堆内存增长到上次 GC 后存活对象大小的多少百分比时触发下一次 GC”：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">GOGC</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">100</span><span style="color:#6A737D;--shiki-dark:#6A737D">   # 默认值，堆增长到存活对象的 2 倍时触发</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">GOGC</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">50</span><span style="color:#6A737D;--shiki-dark:#6A737D">    # 更频繁回收，CPU 开销增大，内存占用降低</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">GOGC</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">200</span><span style="color:#6A737D;--shiki-dark:#6A737D">   # 更少触发，CPU 开销降低，内存占用增大</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">GOGC</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">off</span><span style="color:#6A737D;--shiki-dark:#6A737D">   # 关闭 GC（危险，仅用于特殊场景）</span></span></code></pre>
+<p>Go 1.19 引入了 <code>GOMEMLIMIT</code>，这是一个<strong>软性内存上限</strong>。当堆内存接近这个值时，GC 会更积极地触发，避免 OOM。相比 GOGC 只控制比率，GOMEMLIMIT 直接约束绝对值，在容器环境中尤其有用：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 代码中设置</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">debug.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">SetMemoryLimit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#D73A49;--shiki-dark:#F97583"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 30</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)  </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 1GB 软上限</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 或环境变量</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// GOMEMLIMIT=1GiB</span></span></code></pre>
+<p>生产环境调优的一般建议：先用 GOMEMLIMIT 兜底防止 OOM，再用 GOGC 微调 CPU 与内存的平衡。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p><strong>为什么 Go 选择并发 GC 而非纯 STW？</strong></p>
+<p>纯 STW 的 GC 实现简单，但暂停时间和堆大小成正比——堆越大，暂停越久。对于追求低延迟的服务端程序（Web 服务、RPC 服务等），几百毫秒的 STW 是不可接受的。Go 的设计目标是让 GC 暂停控制在亚毫秒级别，因此选择了并发标记的方案：大部分标记工作和用户程序并行，只在关键的切换点做极短的 STW。</p>
+<p>代价是并发 GC 会消耗一部分 CPU 资源（默认约 25%），并且需要写屏障来保证正确性。Go 团队认为这个取舍是值得的——大多数服务对延迟的敏感度远高于对吞吐的敏感度。</p>
+<p><strong>GC 对延迟的影响</strong></p>
+<p>GC 对延迟的影响主要来自三个方面：短暂的 STW 暂停、并发标记期间的 CPU 竞争、以及写屏障带来的赋值开销。Go 1.5 以来 GC 暂停时间从几十毫秒逐步降到亚毫秒，Go 1.19 的 GOMEMLIMIT 进一步减少了”突发大量 GC”的概率。在延迟敏感的场景下，合理设置 GOGC（比如降低到 50）和 GOMEMLIMIT 可以有效减少 GC 引起的毛刺。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>三色标记</strong>：白色（待回收）、灰色（扫描中）、黑色（存活确认）</li>
+<li><strong>四个阶段</strong>：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除</li>
+<li><strong>写屏障</strong>：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障</li>
+<li><strong>触发条件</strong>：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）</li>
+<li><strong>GOGC</strong>：控制 GC 触发比率，默认 100%</li>
+<li><strong>GOMEMLIMIT</strong>：Go 1.19 引入，软性内存上限，防止 OOM</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>逃逸分析（Escape Analysis）</strong></p>
+<p>Go 编译器在编译期分析变量的生命周期：如果一个变量的引用不会”逃逸”出当前函数，就直接分配在栈上而非堆上。栈上的变量随函数返回自动回收，不经过 GC。减少堆分配是降低 GC 压力的根本手段。可以用 <code>go build -gcflags="-m"</code> 查看逃逸分析结果。</p>
+<p><strong>pprof 内存分析</strong></p>
+<p><code>runtime/pprof</code> 和 <code>net/http/pprof</code> 是 Go 自带的性能分析工具。通过 heap profile 可以看到当前堆上的内存分配情况，找出哪些函数分配了最多的内存，从而针对性地优化：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 采集堆内存 profile</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">go</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> tool</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> pprof</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> http://localhost:6060/debug/pprof/heap</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 查看 GC 暂停时间统计</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">go</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> tool</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> pprof</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> http://localhost:6060/debug/pprof/gc</span></span></code></pre>
+<p><strong>GC 的 25% CPU 目标</strong></p>
+<p>Go 的 GC 调度器会尽量把 GC 的 CPU 占用控制在 25% 以内。当分配速率过高、GC 来不及回收时，运行时会插入辅助标记（mark assist），让正在分配内存的 Goroutine 帮忙做一些标记工作，防止堆无限增长。这也是为什么高分配速率的服务有时会观察到吞吐下降。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先搞懂三色标记</strong>：这是 GC 的理论基础，理解白/灰/黑的状态转换</li>
+<li><strong>记住四个阶段</strong>：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW</li>
+<li><strong>理解写屏障</strong>：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题</li>
+<li><strong>动手调优</strong>：用 <code>GODEBUG=gctrace=1</code> 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果</li>
+<li><strong>面试表达</strong>：按”算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段”的顺序讲，层次分明</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/">Go 语言设计与实现 - 垃圾回收</a></li>
+<li><a href="https://go.dev/design/1750-gc-elimination">Go 1.5 并发 GC 设计文档</a></li>
+<li><a href="https://go.dev/blog/ismmkeynote">Getting to Go: The Journey of Go’s Garbage Collector</a></li>
+<li><a href="https://github.com/golang/go/blob/master/src/runtime/mgc.go">Go runtime 源码 - runtime/mgc.go</a></li>
+<li><a href="https://go.dev/doc/go1.19#runtime">Go 1.19 Release Notes - GOMEMLIMIT</a></li>
+<li><a href="https://tip.golang.org/doc/gc-guide">A Guide to the Go Language Garbage Collector</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>&quot;Go 的垃圾回收是怎么工作的？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>&quot;讲讲三色标记算法&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>&quot;GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-12" data-astro-cid-gysqo7gh>&quot;Go 为什么选择并发 GC 而不是 Stop The World？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-38" data-astro-cid-gysqo7gh>开启写屏障</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-39" data-astro-cid-gysqo7gh>将 GC 阶段切换到 _GCmark</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-40" data-astro-cid-gysqo7gh>STW：暂停所有 Goroutine（极短）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-43" data-astro-cid-gysqo7gh>GC Goroutine 和用户 Goroutine 并发执行</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-44" data-astro-cid-gysqo7gh>从根对象（全局变量、栈上的局部变量等）出发</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-45" data-astro-cid-gysqo7gh>白色 → 灰色 → 黑色，逐步扫描整个对象图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-48" data-astro-cid-gysqo7gh>STW：再次暂停所有 Goroutine</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-49" data-astro-cid-gysqo7gh>处理剩余的灰色对象，确保标记完整</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-50" data-astro-cid-gysqo7gh>关闭写屏障，切换到清除阶段</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-53" data-astro-cid-gysqo7gh>回收所有仍为白色的对象</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-54" data-astro-cid-gysqo7gh>与用户程序并发执行，不影响业务逻辑</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-91" data-astro-cid-gysqo7gh>内存分配达到阈值 — 由 GOGC 控制，默认 100%</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-92" data-astro-cid-gysqo7gh>定时触发         — 默认 2 分钟没有 GC 则强制触发</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-93" data-astro-cid-gysqo7gh>手动触发         — 调用 runtime.GC()</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>**三色标记**：白色（待回收）、灰色（扫描中）、黑色（存活确认）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-134" data-astro-cid-gysqo7gh>**四个阶段**：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-135" data-astro-cid-gysqo7gh>**写屏障**：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-136" data-astro-cid-gysqo7gh>**触发条件**：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-137" data-astro-cid-gysqo7gh>**GOGC**：控制 GC 触发比率，默认 100%</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-138" data-astro-cid-gysqo7gh>**GOMEMLIMIT**：Go 1.19 引入，软性内存上限，防止 OOM</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#采集堆内存" data-astro-cid-gysqo7gh>采集堆内存 profile</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#查看暂停时间统计" data-astro-cid-gysqo7gh>查看 GC 暂停时间统计</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-164" data-astro-cid-gysqo7gh>**先搞懂三色标记**：这是 GC 的理论基础，理解白/灰/黑的状态转换</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-165" data-astro-cid-gysqo7gh>**记住四个阶段**：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-166" data-astro-cid-gysqo7gh>**理解写屏障**：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>**动手调优**：用 `GODEBUG=gctrace=1` 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-168" data-astro-cid-gysqo7gh>**面试表达**：按&quot;算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段&quot;的顺序讲，层次分明</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-172" data-astro-cid-gysqo7gh>[Go 语言设计与实现 - 垃圾回收](https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-173" data-astro-cid-gysqo7gh>[Go 1.5 并发 GC 设计文档](https://go.dev/design/1750-gc-elimination)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-174" data-astro-cid-gysqo7gh>[Getting to Go: The Journey of Go&#39;s Garbage Collector](https://go.dev/blog/ismmkeynote)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-175" data-astro-cid-gysqo7gh>[Go runtime 源码 - runtime/mgc.go](https://github.com/golang/go/blob/master/src/runtime/mgc.go)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-176" data-astro-cid-gysqo7gh>[Go 1.19 Release Notes - GOMEMLIMIT](https://go.dev/doc/go1.19#runtime)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-177" data-astro-cid-gysqo7gh>[A Guide to the Go Language Garbage Collector](https://tip.golang.org/doc/gc-guide)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

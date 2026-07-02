@@ -1,0 +1,187 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Redis主从、哨兵和Cluster集群怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/redis" class="tag-link" data-astro-cid-gysqo7gh>Redis</a><a href="/tags/%E9%9B%86%E7%BE%A4" class="tag-link" data-astro-cid-gysqo7gh>集群</a><a href="/tags/%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6" class="tag-link" data-astro-cid-gysqo7gh>主从复制</a><a href="/tags/%E5%93%A8%E5%85%B5" class="tag-link" data-astro-cid-gysqo7gh>哨兵</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster 集群，分别解决数据冗余、自动故障转移和水平扩展三个层次的问题。面试中经常一轮追问到底：“主从怎么同步数据的？哨兵怎么选主？Cluster 的 16384 个槽什么意思？“这篇笔记把三种方案一次打通。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试官常见的问法：</p>
+<ul>
+<li>“Redis 的集群方案有哪些，各有什么优缺点？”</li>
+<li>“主从复制的全量同步和增量同步是怎么工作的？”</li>
+<li>“哨兵是怎么检测故障并完成选举的？”</li>
+<li>“Cluster 模式为什么要用 16384 个哈希槽，而不是直接 hash 到节点？”</li>
+</ul>
+<p>考察的核心是：你是否理解数据同步机制、故障转移流程、以及 Cluster 分片路由的设计思路。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<h4 id="1-主从复制replication">1. 主从复制（Replication）<a class="anchor-link" aria-label="Link to this section" href="#1-主从复制replication"><span class="icon icon-link"></span></a></h4>
+<p>最基础的集群形态。一个 Master 负责读写，多个 Slave 从 Master 同步数据，Slave 可以提供读服务。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># Slave 配置</span></span>
+<span class="line"><span>replicaof 192.168.1.100 6379</span></span>
+<span class="line"><span>masterauth password</span></span></code></pre>
+<p><strong>全量同步（SYNC）：</strong> Slave 第一次连接 Master 时触发。Master 执行 <code>BGSAVE</code> 在后台生成 RDB 快照，快照期间新的写命令写入 replication buffer。RDB 生成完毕后发送给 Slave，Slave 加载后再重放 buffer 中的增量命令，完成数据对齐。</p>
+<p><strong>增量同步（PSYNC）：</strong> 全量同步完成后进入增量阶段。Master 把每条写命令的 offset 记录在 repl_backlog（一个环形缓冲区）里，Slave 断线重连时发送自己的 offset，Master 判断这个 offset 之后的数据是否还在 backlog 中：在就只补发增量（部分重同步），不在就只能重新全量同步。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Master ──写命令──→ repl_backlog（环形缓冲区，默认 1MB）</span></span>
+<span class="line"><span>                    ↑</span></span>
+<span class="line"><span>Slave 断线重连，带上 offset</span></span>
+<span class="line"><span>                    ↓</span></span>
+<span class="line"><span>          offset 还在 → PSYNC 增量补发</span></span>
+<span class="line"><span>          offset 已过 → SYNC 全量重来</span></span></code></pre>
+<p><strong>特点：</strong></p>
+<ul>
+<li>读写分离，Slave 分担读压力</li>
+<li>数据有副本，可以做灾备</li>
+<li>不能自动故障转移，Master 挂了需要人工介入</li>
+</ul>
+<h4 id="2-哨兵模式sentinel">2. 哨兵模式（Sentinel）<a class="anchor-link" aria-label="Link to this section" href="#2-哨兵模式sentinel"><span class="icon icon-link"></span></a></h4>
+<p>在主从复制的基础上加一组 Sentinel 进程，解决”Master 挂了谁来接管”的问题。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># sentinel.conf</span></span>
+<span class="line"><span>sentinel monitor mymaster 192.168.1.100 6379 2</span></span>
+<span class="line"><span>sentinel down-after-milliseconds mymaster 5000</span></span>
+<span class="line"><span>sentinel failover-timeout mymaster 60000</span></span></code></pre>
+<p><strong>故障检测：</strong> 每个 Sentinel 每秒向 Master、Slave 和其他 Sentinel 发 PING。如果某个 Sentinel 在 <code>down-after-milliseconds</code> 内没收到 Master 的有效回复，就标记为主观下线（SDOWN）。当足够数量（配置中的 quorum）的 Sentinel 都报告 SDOWN，就升级为客观下线（ODOWN）。</p>
+<p><strong>选举与故障转移：</strong> ODL 触发后，Sentinel 之间通过 Raft 类似的方式选举出一个 Leader Sentinel 来执行故障转移。Leader 从 Slave 中选一个提升为新 Master，依据是：优先级 > 复制偏移量最大（数据最新）> runid 字典序最小。选完之后通知其他 Slave 切换到新 Master，旧 Master 恢复后降级为 Slave。</p>
+<p><strong>特点：</strong></p>
+<ul>
+<li>自动故障转移，不需要人工干预</li>
+<li>客户端先连 Sentinel 获取当前 Master 地址，Master 切换后客户端自动感知</li>
+<li>适合中小规模，一般 3-5 个 Sentinel 节点</li>
+</ul>
+<h4 id="3-cluster-模式">3. Cluster 模式<a class="anchor-link" aria-label="Link to this section" href="#3-cluster-模式"><span class="icon icon-link"></span></a></h4>
+<p>哨兵解决了高可用，但数据还是全量存在每个节点上，内存和写入能力受限于单机。Cluster 模式引入了数据分片。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 创建集群（至少 3 主 3 从，6 个节点）</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">redis-cli</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --cluster</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> create</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">  192.168.1.101:6379</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 192.168.1.102:6379</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 192.168.1.103:6379</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#9ECBFF">  192.168.1.104:6379</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 192.168.1.105:6379</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 192.168.1.106:6379</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">  --cluster-replicas</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span></span></code></pre>
+<p><strong>哈希槽（Hash Slot）：</strong> Cluster 把整个 keyspace 分成 16384 个 slot，每个 Master 负责一部分。写入时先对 key 计算 <code>CRC16(key) % 16384</code> 得到 slot 编号，再路由到负责该 slot 的节点。如果客户端发到了错误的节点，该节点返回 <code>MOVED</code> 重定向，客户端据此更新本地的 slot 映射表。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// key 的 slot 计算</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> keyHashSlot</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#D73A49;--shiki-dark:#F97583"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">int</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    // 如果 key 包含 {}，只对 {} 内的内容计算 hash（hash tag）</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> start </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> strings.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Index</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"{"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">); start </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#D73A49;--shiki-dark:#F97583"> -</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> end </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> strings.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Index</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key[start:], </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"}"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">); end </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#D73A49;--shiki-dark:#F97583"> -</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">            key </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> key[start</span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> : start</span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#24292E;--shiki-dark:#E1E4E8">end]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> crc16</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key) </span><span style="color:#D73A49;--shiki-dark:#F97583">%</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 16384</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p><strong>为什么是 16384 个 slot 而不是更多？</strong> Redis 作者 antirez 给过解释：节点间的心跳包需要携带 slot 分配信息，65536 个 slot 的心跳包会占用 8KB，而 16384 个只需要 2KB。在节点数不超过 1000 的场景下，16384 个 slot 完全够用，且压缩后心跳包开销极小。</p>
+<p><strong>特点：</strong></p>
+<ul>
+<li>数据分片，突破单机内存和写入瓶颈</li>
+<li>自动故障转移，Slave 在 Master 宕机后自动晋升</li>
+<li>支持水平扩展，加节点迁移 slot 即可</li>
+<li>适合大规模生产环境</li>
+</ul>
+<h4 id="4-三种方案对比">4. 三种方案对比<a class="anchor-link" aria-label="Link to this section" href="#4-三种方案对比"><span class="icon icon-link"></span></a></h4>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>维度</th><th>主从复制</th><th>哨兵模式</th><th>Cluster</th></tr></thead><tbody><tr><td>数据分布</td><td>全量副本</td><td>全量副本</td><td>分片（16384 slot）</td></tr><tr><td>故障转移</td><td>手动</td><td>自动</td><td>自动</td></tr><tr><td>写入能力</td><td>受限于单 Master</td><td>受限于单 Master</td><td>多 Master 并行写入</td></tr><tr><td>内存利用率</td><td>每个 Slave 存全量</td><td>每个 Slave 存全量</td><td>各节点只存分片</td></tr><tr><td>扩展性</td><td>加 Slave 分担读</td><td>加 Slave 分担读</td><td>加 Master 分担读写</td></tr><tr><td>复杂度</td><td>低</td><td>中</td><td>高</td></tr><tr><td>适合规模</td><td>小，数据量不大</td><td>中小，高可用需求</td><td>大，海量数据和高吞吐</td></tr></tbody></table>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>选型思路其实很清晰：</p>
+<ul>
+<li><strong>数据量不大、需要简单备份</strong>：主从复制就够了，一个 Master 两三个 Slave，配置简单运维成本低。</li>
+<li><strong>需要高可用但不想太复杂</strong>：哨兵模式，自动故障转移，客户端用 Sentinel 客户端库就能透明切换。大多数中小型业务用哨兵就够了。</li>
+<li><strong>数据量大、写入要求高</strong>：Cluster，多 Master 分片是真正解决扩展性问题的方案。代价是运维复杂度高，multi-key 操作有限制。</li>
+</ul>
+<p>一个容易踩的坑：哨兵和主从都是全量数据复制，意味着每个节点都要能装下全部数据。如果单个 key 的数据量已经超过单机内存上限，哨兵也救不了你，只能上 Cluster 做分片。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>主从复制分两步</strong>：首次全量同步（RDB + buffer），后续增量同步（PSYNC + repl_backlog）</li>
+<li><strong>哨兵通过主观下线 + 客观下线</strong>确认故障，选举 Leader 后执行自动故障转移</li>
+<li><strong>Cluster 用 16384 个哈希槽</strong>做数据分片，CRC16 计算 slot，MOVED 重定向路由</li>
+<li><strong>Hash Tag</strong>（<code>{}</code>）可以让多个 key 落到同一个 slot，解决 multi-key 操作的跨槽问题</li>
+<li>三种方案是递进关系：主从解决数据冗余，哨兵解决高可用，Cluster 解决扩展性</li>
+</ol>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>Cluster 扩容与缩容</strong></p>
+<p>扩容时新增一个 Master 节点，Cluster 会将部分 slot 从现有节点迁移到新节点。迁移是逐个 slot 进行的：先给目标节点发 <code>CLUSTER SETSLOT &#x3C;slot> IMPORTING</code>，再给源节点发 <code>CLUSTER SETSLOT &#x3C;slot> MIGRATING</code>，然后用 <code>MIGRATE</code> 命令把该 slot 下的 key 逐个迁移，迁移完成后通知所有节点更新 slot 映射。整个过程在线进行，不影响服务。</p>
+<p>缩容是反向操作：把待下线节点的 slot 迁移到其他节点，数据搬完后移除该节点。</p>
+<p><strong>跨槽 multi-key 问题</strong></p>
+<p>Cluster 模式下，<code>MGET</code>、<code>DEL</code> 多个 key、<code>SUNION</code> 等涉及多个 key 的命令，要求所有 key 必须在同一个 slot 里，否则返回 <code>CROSSSLOT</code> 错误。解决方法是用 Hash Tag：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># 这两个 key 的 slot 由 {user} 决定，而不是整个 key</span></span>
+<span class="line"><span>SET {user}:name "Alice"</span></span>
+<span class="line"><span>SET {user}:age 25</span></span>
+<span class="line"><span>MGET {user}:name {user}:age   # 同一个 slot，OK</span></span></code></pre>
+<p>业务设计 key 时提前规划好 Hash Tag，把需要一起操作的 key 路由到同一个 slot，是 Cluster 模式下最常见的实践。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>从主从开始</strong>：本地起一主两从，观察 <code>info replication</code> 里的 offset 和 backlog 信息，手动 kill Master 看 Slave 的状态变化</li>
+<li><strong>加哨兵</strong>：配三个 Sentinel 节点，kill 掉 Master，观察哨兵的日志输出和 Slave 晋升过程</li>
+<li><strong>上 Cluster</strong>：用 <code>redis-cli --cluster create</code> 搭一个六节点集群，用 <code>CLUSTER NODES</code> 和 <code>CLUSTER SLOTS</code> 看 slot 分配</li>
+<li><strong>面试表达</strong>：按”主从同步原理 → 哨兵故障转移流程 → Cluster 分片路由”的顺序讲，最后提一句扩容和跨槽问题，体现深度</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/cluster-tutorial/">Redis 官方文档 — Cluster Tutorial</a></li>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">Redis 官方文档 — Sentinel</a></li>
+<li><a href="http://antirez.com/news/122">Redis Cluster 16384 slots 设计讨论 — antirez 博客</a></li>
+<li>《Redis 设计与实现》— 黄健宏，第 17 章复制、第 22 章集群</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>&quot;Redis 的集群方案有哪些，各有什么优缺点？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>&quot;主从复制的全量同步和增量同步是怎么工作的？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>&quot;哨兵是怎么检测故障并完成选举的？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-12" data-astro-cid-gysqo7gh>&quot;Cluster 模式为什么要用 16384 个哈希槽，而不是直接 hash 到节点？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#配置" data-astro-cid-gysqo7gh>Slave 配置</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-42" data-astro-cid-gysqo7gh>读写分离，Slave 分担读压力</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-43" data-astro-cid-gysqo7gh>数据有副本，可以做灾备</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-44" data-astro-cid-gysqo7gh>不能自动故障转移，Master 挂了需要人工介入</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#." data-astro-cid-gysqo7gh>sentinel.conf</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-62" data-astro-cid-gysqo7gh>自动故障转移，不需要人工干预</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-63" data-astro-cid-gysqo7gh>客户端先连 Sentinel 获取当前 Master 地址，Master 切换后客户端自动感知</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-64" data-astro-cid-gysqo7gh>适合中小规模，一般 3-5 个 Sentinel 节点</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#创建集群（至少主从，个节点）" data-astro-cid-gysqo7gh>创建集群（至少 3 主 3 从，6 个节点）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-96" data-astro-cid-gysqo7gh>数据分片，突破单机内存和写入瓶颈</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-97" data-astro-cid-gysqo7gh>自动故障转移，Slave 在 Master 宕机后自动晋升</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-98" data-astro-cid-gysqo7gh>支持水平扩展，加节点迁移 slot 即可</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-99" data-astro-cid-gysqo7gh>适合大规模生产环境</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-117" data-astro-cid-gysqo7gh>**数据量不大、需要简单备份**：主从复制就够了，一个 Master 两三个 Slave，配置简单运维成本低。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-118" data-astro-cid-gysqo7gh>**需要高可用但不想太复杂**：哨兵模式，自动故障转移，客户端用 Sentinel 客户端库就能透明切换。大多数中小型业务用哨兵就够了。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-119" data-astro-cid-gysqo7gh>**数据量大、写入要求高**：Cluster，多 Master 分片是真正解决扩展性问题的方案。代价是运维复杂度高，multi-key 操作有限制。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-125" data-astro-cid-gysqo7gh>**主从复制分两步**：首次全量同步（RDB + buffer），后续增量同步（PSYNC + repl_backlog）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-126" data-astro-cid-gysqo7gh>**哨兵通过主观下线 + 客观下线**确认故障，选举 Leader 后执行自动故障转移</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-127" data-astro-cid-gysqo7gh>**Cluster 用 16384 个哈希槽**做数据分片，CRC16 计算 slot，MOVED 重定向路由</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-128" data-astro-cid-gysqo7gh>**Hash Tag**（`{}`）可以让多个 key 落到同一个 slot，解决 multi-key 操作的跨槽问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-129" data-astro-cid-gysqo7gh>三种方案是递进关系：主从解决数据冗余，哨兵解决高可用，Cluster 解决扩展性</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#这两个的由{}决定，而不是整个" data-astro-cid-gysqo7gh>这两个 key 的 slot 由 {user} 决定，而不是整个 key</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-154" data-astro-cid-gysqo7gh>**从主从开始**：本地起一主两从，观察 `info replication` 里的 offset 和 backlog 信息，手动 kill Master 看 Slave 的状态变化</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-155" data-astro-cid-gysqo7gh>**加哨兵**：配三个 Sentinel 节点，kill 掉 Master，观察哨兵的日志输出和 Slave 晋升过程</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-156" data-astro-cid-gysqo7gh>**上 Cluster**：用 `redis-cli --cluster create` 搭一个六节点集群，用 `CLUSTER NODES` 和 `CLUSTER SLOTS` 看 slot 分配</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-157" data-astro-cid-gysqo7gh>**面试表达**：按&quot;主从同步原理 → 哨兵故障转移流程 → Cluster 分片路由&quot;的顺序讲，最后提一句扩容和跨槽问题，体现深度</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-161" data-astro-cid-gysqo7gh>[Redis 官方文档 — Cluster Tutorial](https://redis.io/docs/latest/operate/oss_and_stack/management/cluster-tutorial/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-162" data-astro-cid-gysqo7gh>[Redis 官方文档 — Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-163" data-astro-cid-gysqo7gh>[Redis Cluster 16384 slots 设计讨论 — antirez 博客](http://antirez.com/news/122)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-164" data-astro-cid-gysqo7gh>《Redis 设计与实现》-- 黄健宏，第 17 章复制、第 22 章集群</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

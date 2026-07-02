@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/mysql" class="tag-link" data-astro-cid-gysqo7gh>MySQL</a><a href="/tags/%E8%A1%8C%E9%94%81" class="tag-link" data-astro-cid-gysqo7gh>行锁</a><a href="/tags/%E9%97%B4%E9%9A%99%E9%94%81" class="tag-link" data-astro-cid-gysqo7gh>间隙锁</a><a href="/tags/%E6%AD%BB%E9%94%81" class="tag-link" data-astro-cid-gysqo7gh>死锁</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记mysql-的行锁间隙锁和死锁怎么处理">面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理<a class="anchor-link" aria-label="Link to this section" href="#面试笔记mysql-的行锁间隙锁和死锁怎么处理"><span class="icon icon-link"></span></a></h1>
+<blockquote>
+<p>上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 <code>FOR UPDATE</code> 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。</p>
+</blockquote>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>在之前的 MVCC 笔记中，我梳理了 RR 级别下 InnoDB 如何通过 Read View 实现无锁快照读。但面试官不会止步于此——“那 <code>SELECT ... FOR UPDATE</code> 加的是什么锁？""间隙锁在什么隔离级别下才会出现？""两个事务互相等对方的锁怎么办？“这些问题都指向同一个核心：<strong>InnoDB 的锁机制</strong>。</p>
+<p>MVCC 解决的是”读不加锁”的问题，而锁解决的是”写要排队”的问题。两者配合，才构成 InnoDB 完整的并发控制体系。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中关于锁的常见问法：</p>
+<ul>
+<li>“InnoDB 有哪些行锁类型？Record Lock、Gap Lock、Next-Key Lock 分别锁什么？”</li>
+<li>“间隙锁的作用是什么？为什么 RC 级别下没有间隙锁？”</li>
+<li>“什么是死锁？MySQL 怎么检测和处理的？”</li>
+<li>“实际项目中你是怎么避免死锁的？”</li>
+</ul>
+<p>这些问题的底层逻辑是一条线：<strong>锁的粒度从行到间隙再到范围，粒度越大冲突越多，死锁风险越高</strong>。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p><strong>InnoDB 的锁粒度与类型</strong></p>
+<p>按粒度分，MySQL 有表锁和行锁。表锁锁整张表（<code>LOCK TABLES</code>），行锁只锁涉及的行。InnoDB 默认使用行锁，但如果没有走索引，行锁会退化成表锁——因为 InnoDB 的行锁是加在索引记录上的，没有索引就只能全表扫描并锁住所有行。</p>
+<p>按类型分，行锁又分为共享锁（S Lock）和排他锁（X Lock）：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 共享锁：允许其他事务读，不允许写</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#D73A49;--shiki-dark:#F97583"> FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> LOCK </span><span style="color:#D73A49;--shiki-dark:#F97583">IN</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> SHARE MODE;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 排他锁：不允许其他事务读和写</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#D73A49;--shiki-dark:#F97583"> FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> FOR</span><span style="color:#D73A49;--shiki-dark:#F97583"> UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p><strong>Record Lock（记录锁）</strong></p>
+<p>Record Lock 锁定索引上的单行记录。<code>SELECT ... WHERE id = 1 FOR UPDATE</code> 锁住 <code>id=1</code> 这一行，其他事务无法修改这行数据，直到当前事务提交或回滚。Record Lock 是最基础的行锁，在所有隔离级别下都存在。</p>
+<p><strong>Gap Lock（间隙锁）</strong></p>
+<p>Gap Lock 锁定索引记录之间的间隙，不锁记录本身，只锁”空隙”。假设索引中有 <code>id=5</code> 和 <code>id=10</code> 两条记录，间隙锁会锁住 <code>(5, 10)</code> 这个开区间，阻止其他事务在这个区间内插入新行。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 锁定 (10, 20) 的间隙，阻止在此区间插入</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#D73A49;--shiki-dark:#F97583"> FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">></span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#D73A49;--shiki-dark:#F97583"> AND</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 20</span><span style="color:#D73A49;--shiki-dark:#F97583"> FOR</span><span style="color:#D73A49;--shiki-dark:#F97583"> UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>间隙锁存在的唯一目的就是<strong>防止幻读</strong>。正因为如此，间隙锁只在 RR（可重复读）级别下生效。降到 RC 后间隙锁自动消失，这也是为什么 RC 下无法阻止幻读。</p>
+<p><strong>Next-Key Lock（临键锁）</strong></p>
+<p>Next-Key Lock 是 Record Lock + Gap Lock 的组合，锁定一个左开右闭区间 <code>(prev, current]</code>。InnoDB 在 RR 级别下对索引扫描范围加 Next-Key Lock，既锁住已有记录，又锁住记录之间的间隙。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 对 id=1 加 Record Lock，同时对 (-∞, 1] 的范围加 Gap Lock</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#D73A49;--shiki-dark:#F97583"> FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> FOR</span><span style="color:#D73A49;--shiki-dark:#F97583"> UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>简单总结：Record Lock 锁”已有的行”，Gap Lock 锁”行之间的空”，Next-Key Lock 两个一起锁。</p>
+<p><strong>死锁的产生与检测</strong></p>
+<p>死锁的经典场景：两个事务互相持有对方需要的锁。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 事务 A</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">BEGIN</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> accounts </span><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> balance </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 100</span><span style="color:#D73A49;--shiki-dark:#F97583"> WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;  </span><span style="color:#6A737D;--shiki-dark:#6A737D">-- 锁住 id=1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> accounts </span><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> balance </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 200</span><span style="color:#D73A49;--shiki-dark:#F97583"> WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;  </span><span style="color:#6A737D;--shiki-dark:#6A737D">-- 等待 id=2 的锁</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 事务 B</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">BEGIN</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> accounts </span><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> balance </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 300</span><span style="color:#D73A49;--shiki-dark:#F97583"> WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;  </span><span style="color:#6A737D;--shiki-dark:#6A737D">-- 锁住 id=2</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> accounts </span><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> balance </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 400</span><span style="color:#D73A49;--shiki-dark:#F97583"> WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;  </span><span style="color:#6A737D;--shiki-dark:#6A737D">-- 等待 id=1 的锁</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 死锁！A 等 B 释放 id=2，B 等 A 释放 id=1</span></span></code></pre>
+<p>死锁产生的四个必要条件：互斥、持有并等待、不可剥夺、循环等待。四个同时满足才会死锁。</p>
+<p>InnoDB 通过 <strong>wait-for graph（等待图）</strong> 检测死锁。每个事务是图中的一个节点，当事务 A 等待事务 B 持有的锁时，就画一条从 A 到 B 的边。如果图中出现了环，就判定为死锁。检测到死锁后，InnoDB 会选择持有锁最少、回滚代价最小的事务作为”牺牲者”，将其回滚并抛出 <code>Deadlock found</code> 错误，让其他事务继续执行。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 查看最近的死锁信息</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">SHOW ENGINE INNODB </span><span style="color:#D73A49;--shiki-dark:#F97583">STATUS</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 锁等待超时时间（默认 50 秒，非死锁场景下的等待上限）</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> innodb_lock_wait_timeout </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 50</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p><strong>死锁预防策略</strong></p>
+<ol>
+<li><strong>固定加锁顺序</strong>：所有事务按相同顺序访问资源。先锁用户表再锁订单表，所有事务都这么做，就不会出现交叉等待。</li>
+<li><strong>缩短事务持有时间</strong>：事务越短，锁持有时间越短，死锁概率越低。把非数据库操作（调外部 API、发消息、写日志文件）移到事务外面。</li>
+<li><strong>降低隔离级别</strong>：RC 比 RR 的锁范围小（没有间隙锁），死锁概率低。但要权衡幻读问题。</li>
+<li><strong>合理使用索引</strong>：没有索引时 InnoDB 会锁全表，死锁概率暴增。确保 UPDATE/DELETE 语句走索引，只锁必要的行。</li>
+</ol>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>面试官问锁，真正想考察的是三个层面：你是否理解锁的类型和适用场景、能否解释死锁的成因、有没有在项目中实际处理过锁问题。</p>
+<p>一个容易踩的坑：<strong>乐观锁 vs 悲观锁的选择</strong>。悲观锁（<code>FOR UPDATE</code>）假设冲突一定发生，适合写密集场景。乐观锁（version 字段）假设冲突很少，适合读多写少场景。选错了不是功能出错，而是性能雪崩。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 乐观锁：通过 version 字段做更新检查</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">UPDATE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> files </span><span style="color:#D73A49;--shiki-dark:#F97583">SET</span><span style="color:#D73A49;--shiki-dark:#F97583"> name</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ?, </span><span style="color:#D73A49;--shiki-dark:#F97583">version</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#D73A49;--shiki-dark:#F97583"> version</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ? </span><span style="color:#D73A49;--shiki-dark:#F97583">AND</span><span style="color:#D73A49;--shiki-dark:#F97583"> version</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ?;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 如果 affected rows = 0，说明被其他事务改了，需要重试</span></span></code></pre>
+<p>另一个常见追问：<strong>为什么没有索引会导致锁升级？</strong> 因为 InnoDB 的行锁是加在索引记录上的。如果 <code>WHERE</code> 条件没有索引，InnoDB 必须扫描全表，对扫描到的每一行都尝试加锁。虽然最终只修改符合条件的行，但锁已经加到了所有行上，效果和表锁差不多。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>概念</th><th>一句话</th></tr></thead><tbody><tr><td>Record Lock</td><td>锁索引上的单行记录，所有隔离级别都有</td></tr><tr><td>Gap Lock</td><td>锁索引记录之间的间隙，只在 RR 级别存在，用于防幻读</td></tr><tr><td>Next-Key Lock</td><td>Record Lock + Gap Lock，锁 <code>(prev, current]</code> 区间</td></tr><tr><td>共享锁 / 排他锁</td><td>S Lock 允许并发读，X Lock 独占读写</td></tr><tr><td>死锁</td><td>两个事务互相等待对方持有的锁，形成循环依赖</td></tr><tr><td>wait-for graph</td><td>InnoDB 用等待图检测死锁，发现环就回滚代价最小的事务</td></tr><tr><td>锁升级</td><td>没有索引时行锁退化为表锁，大幅增加冲突和死锁概率</td></tr><tr><td>乐观锁 vs 悲观锁</td><td>读多写少用 version 字段，写密集用 FOR UPDATE</td></tr></tbody></table>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>意向锁（Intention Lock）</strong></p>
+<p>InnoDB 在加行锁之前，会先给表加上意向锁。意向共享锁（IS）表示”我要给某些行加 S 锁”，意向排他锁（IX）表示”我要给某些行加 X 锁”。意向锁的作用是让表锁和行锁可以共存——当事务想对表加表锁时，只需要检查意向锁是否存在，不需要逐行检查行锁，大大提高了效率。<code>SHOW ENGINE INNODB STATUS</code> 中可以看到 <code>IX</code> 和 <code>IS</code> 锁的信息。</p>
+<p><strong>自增锁（AUTO-INC Lock）</strong></p>
+<p><code>AUTO_INCREMENT</code> 列在插入时会获取自增锁。MySQL 5.1 之后默认使用 <code>innodb_autoinc_lock_mode = 1</code>（连续锁模式）：简单的 <code>INSERT</code> 语句使用轻量级互斥量分配自增值，不需要持有锁到语句结束；但 <code>INSERT ... SELECT</code> 这类不确定插入行数的语句仍然需要传统的 AUTO-INC 表锁。高并发批量插入场景下，自增锁可能成为瓶颈，值得关注。</p>
+<p><strong>锁监控</strong></p>
+<p>生产环境排查锁问题，常用的几个手段：<code>SHOW ENGINE INNODB STATUS</code> 查看最近的死锁信息和当前锁等待；<code>information_schema.INNODB_LOCKS</code>（MySQL 8.0 改为 <code>performance_schema.data_locks</code>）查看当前持有的锁；<code>information_schema.INNODB_LOCK_WAITS</code> 查看锁等待关系。配合慢查询日志和 <code>SHOW PROCESSLIST</code>，可以快速定位锁竞争的根源。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先搞清锁的分类体系</strong>：表锁 vs 行锁、S Lock vs X Lock、Record Lock vs Gap Lock vs Next-Key Lock。画出层级关系图，面试时能清晰表述。</li>
+<li><strong>动手复现死锁</strong>：开两个 MySQL 客户端，按上面的示例交叉 UPDATE，观察 <code>Deadlock found</code> 错误，再用 <code>SHOW ENGINE INNODB STATUS</code> 看死锁日志。亲手操作一次比看十遍文章都记得牢。</li>
+<li><strong>理解索引与锁的关系</strong>：同一个 UPDATE 语句，有索引和没索引时加锁范围完全不同。用 <code>EXPLAIN</code> 确认走索引，再结合 <code>performance_schema.data_locks</code> 看实际加了哪些锁。</li>
+<li><strong>掌握乐观锁和悲观锁的选择依据</strong>：不要只背概念，结合自己项目想想哪些场景适合乐观锁（读多写少、冲突概率低）、哪些适合悲观锁（高并发写入、强一致性）。</li>
+<li><strong>关注 MySQL 8.0 的锁变化</strong>：<code>INNODB_LOCKS</code> 表被移到了 <code>performance_schema</code>，RC 级别的锁行为也有优化。面试中提到这些细节会加分。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html">MySQL 官方文档 - InnoDB Locks and Locking Reads</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlocks.html">MySQL 官方文档 - InnoDB Deadlock Detection</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html">MySQL 官方文档 - InnoDB Transaction Model and Locking</a></li>
+<li>《高性能 MySQL》第 4 版，O’Reilly</li>
+<li>《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：的行锁、间隙锁和死锁怎么处理" data-astro-cid-gysqo7gh>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-15" data-astro-cid-gysqo7gh>&quot;InnoDB 有哪些行锁类型？Record Lock、Gap Lock、Next-Key Lock 分别锁什么？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-16" data-astro-cid-gysqo7gh>&quot;间隙锁的作用是什么？为什么 RC 级别下没有间隙锁？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-17" data-astro-cid-gysqo7gh>&quot;什么是死锁？MySQL 怎么检测和处理的？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-18" data-astro-cid-gysqo7gh>&quot;实际项目中你是怎么避免死锁的？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-95" data-astro-cid-gysqo7gh>**固定加锁顺序**：所有事务按相同顺序访问资源。先锁用户表再锁订单表，所有事务都这么做，就不会出现交叉等待。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-96" data-astro-cid-gysqo7gh>**缩短事务持有时间**：事务越短，锁持有时间越短，死锁概率越低。把非数据库操作（调外部 API、发消息、写日志文件）移到事务外面。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-97" data-astro-cid-gysqo7gh>**降低隔离级别**：RC 比 RR 的锁范围小（没有间隙锁），死锁概率低。但要权衡幻读问题。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-98" data-astro-cid-gysqo7gh>**合理使用索引**：没有索引时 InnoDB 会锁全表，死锁概率暴增。确保 UPDATE/DELETE 语句走索引，只锁必要的行。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-144" data-astro-cid-gysqo7gh>**先搞清锁的分类体系**：表锁 vs 行锁、S Lock vs X Lock、Record Lock vs Gap Lock vs Next-Key Lock。画出层级关系图，面试时能清晰表述。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-145" data-astro-cid-gysqo7gh>**动手复现死锁**：开两个 MySQL 客户端，按上面的示例交叉 UPDATE，观察 `Deadlock found` 错误，再用 `SHOW ENGINE INNODB STATUS` 看死锁日志。亲手操作一次比看十遍文章都记得牢。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-146" data-astro-cid-gysqo7gh>**理解索引与锁的关系**：同一个 UPDATE 语句，有索引和没索引时加锁范围完全不同。用 `EXPLAIN` 确认走索引，再结合 `performance_schema.data_locks` 看实际加了哪些锁。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-147" data-astro-cid-gysqo7gh>**掌握乐观锁和悲观锁的选择依据**：不要只背概念，结合自己项目想想哪些场景适合乐观锁（读多写少、冲突概率低）、哪些适合悲观锁（高并发写入、强一致性）。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-148" data-astro-cid-gysqo7gh>**关注 MySQL 8.0 的锁变化**：`INNODB_LOCKS` 表被移到了 `performance_schema`，RC 级别的锁行为也有优化。面试中提到这些细节会加分。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-152" data-astro-cid-gysqo7gh>[MySQL 官方文档 - InnoDB Locks and Locking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-153" data-astro-cid-gysqo7gh>[MySQL 官方文档 - InnoDB Deadlock Detection](https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlocks.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-154" data-astro-cid-gysqo7gh>[MySQL 官方文档 - InnoDB Transaction Model and Locking](https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-155" data-astro-cid-gysqo7gh>《高性能 MySQL》第 4 版，O&#39;Reilly</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-156" data-astro-cid-gysqo7gh>《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

@@ -1,0 +1,124 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>主题定制指南 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>主题定制指南</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2024-01-03</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/%E5%AE%9A%E5%88%B6" class="tag-link" data-astro-cid-gysqo7gh>定制</a><a href="/tags/css" class="tag-link" data-astro-cid-gysqo7gh>CSS</a><a href="/tags/tailwind" class="tag-link" data-astro-cid-gysqo7gh>Tailwind</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <p>本文介绍如何定制 astro-koharu 的外观和样式。</p>
+<h2 id="嵌套分类说明">嵌套分类说明<a class="anchor-link" aria-label="Link to this section" href="#嵌套分类说明"><span class="icon icon-link"></span></a></h2>
+<p>本文使用了嵌套分类 <code>[笔记, 前端]</code>，这会创建层级关系：</p>
+<ul>
+<li>URL: <code>/categories/note/front-end</code></li>
+<li>面包屑: 笔记 → 前端</li>
+</ul>
+<p>在 frontmatter 中这样配置：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">categories</span><span style="color:#24292E;--shiki-dark:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  - [</span><span style="color:#032F62;--shiki-dark:#9ECBFF">笔记</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">前端</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span></span></code></pre>
+<h2 id="配色定制">配色定制<a class="anchor-link" aria-label="Link to this section" href="#配色定制"><span class="icon icon-link"></span></a></h2>
+<h3 id="css-变量">CSS 变量<a class="anchor-link" aria-label="Link to this section" href="#css-变量"><span class="icon icon-link"></span></a></h3>
+<p>主题颜色通过 CSS 变量定义，位于 <code>src/styles/index.css</code>：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="css"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">:root</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  --primary-color</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">#ff6b9d</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  --secondary-color</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">#7dd3fc</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">  /* ...更多变量 */</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">.dark</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  --primary-color</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">#f472b6</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#FFAB70">  --secondary-color</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">#38bdf8</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<h3 id="tailwind-配置">Tailwind 配置<a class="anchor-link" aria-label="Link to this section" href="#tailwind-配置"><span class="icon icon-link"></span></a></h3>
+<p>编辑 <code>tailwind.config.ts</code> 自定义主题：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> default</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  theme: {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    extend: {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">      colors: {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        primary: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'var(--primary-color)'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        secondary: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'var(--secondary-color)'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">      },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span></code></pre>
+<h2 id="布局调整">布局调整<a class="anchor-link" aria-label="Link to this section" href="#布局调整"><span class="icon icon-link"></span></a></h2>
+<h3 id="内容宽度">内容宽度<a class="anchor-link" aria-label="Link to this section" href="#内容宽度"><span class="icon icon-link"></span></a></h3>
+<p>在 <code>src/constants/layout.ts</code> 中调整布局常量：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> LAYOUT</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  maxWidth: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'1200px'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  sidebarWidth: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'300px'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  contentPadding: </span><span style="color:#032F62;--shiki-dark:#9ECBFF">'1.5rem'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span></code></pre>
+<h3 id="响应式断点">响应式断点<a class="anchor-link" aria-label="Link to this section" href="#响应式断点"><span class="icon icon-link"></span></a></h3>
+<p>主题使用 Tailwind 的默认断点：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>断点</th><th>宽度</th><th>用途</th></tr></thead><tbody><tr><td>sm</td><td>640px</td><td>小型手机</td></tr><tr><td>md</td><td>768px</td><td>平板</td></tr><tr><td>lg</td><td>1024px</td><td>桌面</td></tr><tr><td>xl</td><td>1280px</td><td>大屏幕</td></tr></tbody></table>
+<h2 id="动画效果">动画效果<a class="anchor-link" aria-label="Link to this section" href="#动画效果"><span class="icon icon-link"></span></a></h2>
+<h3 id="motion-配置">Motion 配置<a class="anchor-link" aria-label="Link to this section" href="#motion-配置"><span class="icon icon-link"></span></a></h3>
+<p>动画使用 Motion 库，配置位于 <code>src/constants/anim/</code>：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// spring.ts - 弹簧动画</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> springConfig</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  stiffness: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">100</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  damping: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// variants.ts - 动画变体</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> fadeIn</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  hidden: { opacity: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  visible: { opacity: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span></code></pre>
+<h3 id="禁用动画">禁用动画<a class="anchor-link" aria-label="Link to this section" href="#禁用动画"><span class="icon icon-link"></span></a></h3>
+<p>对于偏好减少动画的用户，主题会自动响应 <code>prefers-reduced-motion</code> 媒体查询。</p>
+<h2 id="圣诞特效">圣诞特效<a class="anchor-link" aria-label="Link to this section" href="#圣诞特效"><span class="icon icon-link"></span></a></h2>
+<p>主题内置可选的圣诞特效，在 <code>site-config.ts</code> 中配置：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">export</span><span style="color:#D73A49;--shiki-dark:#F97583"> const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> christmasConfig</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  enabled: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">false</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,  </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 设为 true 启用</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  features: {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    snowfall: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,        </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 雪花飘落</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    christmasColorScheme: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,  </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 圣诞配色</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    christmasHat: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">true</span><span style="color:#24292E;--shiki-dark:#E1E4E8">,    </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 圣诞帽</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">};</span></span></code></pre>
+<h2 id="总结">总结<a class="anchor-link" aria-label="Link to this section" href="#总结"><span class="icon icon-link"></span></a></h2>
+<p>通过修改以上配置，你可以轻松打造属于自己风格的博客。如有问题，欢迎在 GitHub 提 Issue。</p> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#嵌套分类说明" data-astro-cid-gysqo7gh>嵌套分类说明</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-7" data-astro-cid-gysqo7gh>URL: `/categories/note/front-end`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-8" data-astro-cid-gysqo7gh>面包屑: 笔记 → 前端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-14" data-astro-cid-gysqo7gh>[笔记, 前端]</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#配色定制" data-astro-cid-gysqo7gh>配色定制</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#变量" data-astro-cid-gysqo7gh>CSS 变量</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#配置" data-astro-cid-gysqo7gh>Tailwind 配置</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#布局调整" data-astro-cid-gysqo7gh>布局调整</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#内容宽度" data-astro-cid-gysqo7gh>内容宽度</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#响应式断点" data-astro-cid-gysqo7gh>响应式断点</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#动画效果" data-astro-cid-gysqo7gh>动画效果</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#配置" data-astro-cid-gysqo7gh>Motion 配置</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#禁用动画" data-astro-cid-gysqo7gh>禁用动画</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#圣诞特效" data-astro-cid-gysqo7gh>圣诞特效</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#总结" data-astro-cid-gysqo7gh>总结</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

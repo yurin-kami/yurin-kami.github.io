@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/go" class="tag-link" data-astro-cid-gysqo7gh>Go</a><a href="/tags/sync" class="tag-link" data-astro-cid-gysqo7gh>sync</a><a href="/tags/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B" class="tag-link" data-astro-cid-gysqo7gh>并发编程</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记go的sync包怎么用mutex和rwmutex怎么选">面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选<a class="anchor-link" aria-label="Link to this section" href="#面试笔记go的sync包怎么用mutex和rwmutex怎么选"><span class="icon icon-link"></span></a></h1>
+<p>准备面试的时候发现，Go 的 <code>sync</code> 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
+这篇文章是我对 sync 包相关知识的系统梳理，把 Mutex、RWMutex、WaitGroup、Once、Pool、Map 这些组件的用法和原理串一遍，顺便聊聊面试中容易踩坑的地方。</p>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>上一篇文章整理了 Goroutine 和 Channel 的底层原理，这篇聚焦更贴近日常编码的 <code>sync</code> 包。
+实际项目里，多个 Goroutine 共享数据是家常便饭——缓存读写、计数器累加、单例初始化……这些场景都离不开 sync 包提供的同步原语。
+面试中被问到 sync 的频率非常高，而且问题往往很具体，比如”Mutex 的饥饿模式是什么”、“RWMutex 为什么会导致写饥饿”、“WaitGroup 的 Add 能不能放在 goroutine 里面调”。
+如果没有系统学过，临场很容易答不清楚。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中关于 sync 包的典型问法：</p>
+<ol>
+<li>sync.Mutex 的正常模式和饥饿模式有什么区别？什么时候会切换？</li>
+<li>sync.RWMutex 和 Mutex 的区别？什么场景下用 RWMutex 更合适？</li>
+<li>WaitGroup 的 Add、Done、Wait 分别做了什么？有什么注意事项？</li>
+<li>sync.Once 怎么保证只执行一次？用在什么场景？</li>
+<li>sync.Pool 的作用是什么？什么时候会清空？</li>
+<li>sync.Map 和普通 map 加锁有什么区别？</li>
+<li>Mutex 和 Channel 怎么选？什么情况下用锁，什么情况下用 channel？</li>
+</ol>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p><strong>sync.Mutex —— 互斥锁</strong></p>
+<p>最基础的同步原语，用法很简单：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> mu </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Mutex</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> count </span><span style="color:#D73A49;--shiki-dark:#F97583">int</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> increment</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>底层结构是 <code>state int32</code> + <code>sema uint32</code>。state 的 bit 0 表示 locked，bit 1 表示 woken，bit 2 表示 starving，bit 3-31 是 waiter count。Mutex 有两种模式：<strong>正常模式</strong>下新来的 goroutine 会尝试自旋竞争锁，性能好但可能导致等待者饥饿；当某个 goroutine 等待超过 1ms 还没拿到锁，就切换到<strong>饥饿模式</strong>——新来的 goroutine 不再竞争，直接排到队列尾部，保证先来先得的公平性。拿到锁后如果队列空了，再切回正常模式。</p>
+<p><strong>sync.RWMutex —— 读写锁</strong></p>
+<p>读多写少场景的利器，读读之间不互斥：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> rwMu </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">RWMutex</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> cache </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> make</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">map</span><span style="color:#24292E;--shiki-dark:#E1E4E8">[</span><span style="color:#D73A49;--shiki-dark:#F97583">string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]</span><span style="color:#D73A49;--shiki-dark:#F97583">string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#D73A49;--shiki-dark:#F97583"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">string</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    rwMu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">RLock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> rwMu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">RUnlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> cache[key]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">value</span><span style="color:#D73A49;--shiki-dark:#F97583"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    rwMu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> rwMu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    cache[key] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> value</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>底层实现上，RWMutex 内部嵌了一个 Mutex 作为写锁，加上 <code>readerCount</code> 和 <code>readerWait</code> 两个原子计数器。获取写锁时，会把 <code>readerCount</code> 减去一个最大值来阻止新的读者进入，然后等已有的读者全部退出。</p>
+<p>需要注意的是<strong>写饥饿问题</strong>：如果读操作非常频繁且耗时长，写锁会一直拿不到。Go 的做法是让新的读者在有写者等待时阻塞，以此平衡读写，但极端场景下写的延迟仍然可能较高。选用 RWMutex 前一定要确认你的场景确实是读多写少。</p>
+<p><strong>sync.WaitGroup —— 等待一组任务完成</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> wg </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">WaitGroup</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> i </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i </span><span style="color:#D73A49;--shiki-dark:#F97583">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 5</span><span style="color:#24292E;--shiki-dark:#E1E4E8">; i</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    wg.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Add</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    go</span><span style="color:#D73A49;--shiki-dark:#F97583"> func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">id</span><span style="color:#D73A49;--shiki-dark:#F97583"> int</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> wg.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Done</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        fmt.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Printf</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Worker </span><span style="color:#005CC5;--shiki-dark:#79B8FF">%d</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> done</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, id)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }(i)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">wg.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Wait</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span></code></pre>
+<p>底层是一个 64 位的 state：高 32 位是任务计数器，低 32 位是等待者数量。<code>Done()</code> 本质上就是 <code>Add(-1)</code>，计数器归零时唤醒所有等待者。</p>
+<p>关键注意事项：<code>Add</code> 必须在 <code>Wait</code> 之前调用。可以在 goroutine 内部调 <code>Add</code>，但要保证时序正确。另外 WaitGroup 不能复制，传参时必须用指针。</p>
+<p><strong>sync.Once —— 只执行一次</strong></p>
+<p>典型场景是单例模式或初始化操作：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> once </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Once</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> instance </span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Config</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> GetConfig</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() </span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Config</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    once.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Do</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        instance </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> loadConfig</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    })</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> instance</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>内部用 <code>done</code> 标记 + Mutex 双重保障，保证无论多少个 goroutine 同时调 <code>Do</code>，<code>loadConfig()</code> 只会被执行一次，而且所有 goroutine 都能拿到同一个结果。</p>
+<p><strong>sync.Pool —— 临时对象池</strong></p>
+<p>用来复用频繁创建和销毁的对象，减少 GC 压力：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> bufPool </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Pool</span><span style="color:#24292E;--shiki-dark:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    New: </span><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() </span><span style="color:#D73A49;--shiki-dark:#F97583">interface</span><span style="color:#24292E;--shiki-dark:#E1E4E8">{} {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> new</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#6F42C1;--shiki-dark:#B392F0">bytes</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Buffer</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    },</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> handleRequest</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    buf </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> bufPool.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">().(</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#6F42C1;--shiki-dark:#B392F0">bytes</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Buffer</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> bufPool.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Put</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(buf)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    buf.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Reset</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    // 使用 buf 处理请求</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p><code>sync.Pool</code> 会在每轮 GC 时清空，所以它适合缓存临时对象（如 <code>bytes.Buffer</code>、<code>http.Request</code>），不适合做持久连接池。标准库的 <code>fmt</code> 和 <code>encoding/json</code> 内部都用了 Pool 来优化性能。</p>
+<p><strong>sync.Map —— 并发安全的 map</strong></p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">var</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> m </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Map</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Store</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"value"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, ok </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> m.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Load</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Range</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">value</span><span style="color:#D73A49;--shiki-dark:#F97583"> interface</span><span style="color:#24292E;--shiki-dark:#E1E4E8">{}) </span><span style="color:#D73A49;--shiki-dark:#F97583">bool</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    fmt.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Println</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, value)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">})</span></span></code></pre>
+<p>底层采用 read-only fast path + dirty map 的双层结构。对于读多写少或者 key 集合趋于稳定的场景性能很好，但如果大量写入新 key，性能反而不如 <code>map + RWMutex</code>。Go 官方文档也建议，大部分场景优先考虑 <code>map + Mutex/RWMutex</code>。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p><strong>Mutex vs Channel，怎么选？</strong></p>
+<p>Go 社区有句名言：“Don’t communicate by sharing memory, share memory by communicating.”但这不意味着永远不用锁。我的理解是这样的：</p>
+<ul>
+<li><strong>用 Mutex/RWMutex</strong>：保护共享状态（计数器、缓存、配置），临界区短小，不需要跨 goroutine 传递数据。</li>
+<li><strong>用 Channel</strong>：传递数据所有权、协调 goroutine 之间的执行顺序、实现生产者-消费者模型。</li>
+<li>简单记法：<strong>传数据用 channel，护状态用锁</strong>。</li>
+</ul>
+<p><strong>面试中常见的错误写法：</strong></p>
+<p>忘记 Unlock 是最经典的问题。一定要用 <code>defer</code>：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 错误：panic 或提前 return 会导致锁永远不释放</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 锁没释放</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 正确</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>另一个坑是<strong>复制 Mutex</strong>。Mutex 内含状态，值拷贝会导致锁失效。Go vet 能检查这个问题，结构体里如果包含 Mutex，传递时要用指针：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 错误</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">type</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Counter</span><span style="color:#D73A49;--shiki-dark:#F97583"> struct</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    mu    </span><span style="color:#6F42C1;--shiki-dark:#B392F0">sync</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Mutex</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    count </span><span style="color:#D73A49;--shiki-dark:#F97583">int</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#E36209;--shiki-dark:#FFAB70">c </span><span style="color:#6F42C1;--shiki-dark:#B392F0">Counter</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#6F42C1;--shiki-dark:#B392F0">Inc</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() { </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 值接收者，复制了 Mutex</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    c.mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> c.mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    c.count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 正确</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> (</span><span style="color:#E36209;--shiki-dark:#FFAB70">c </span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Counter</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#6F42C1;--shiki-dark:#B392F0">Inc</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() { </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 指针接收者</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    c.mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Lock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    defer</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> c.mu.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Unlock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    c.count</span><span style="color:#D73A49;--shiki-dark:#F97583">++</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>组件</th><th>核心用途</th><th>底层关键机制</th><th>典型场景</th></tr></thead><tbody><tr><td>Mutex</td><td>互斥访问</td><td>正常/饥饿双模式，信号量</td><td>共享计数器、状态保护</td></tr><tr><td>RWMutex</td><td>读写分离</td><td>readerCount 原子计数，写者阻塞读者</td><td>缓存、配置中心</td></tr><tr><td>WaitGroup</td><td>等待完成</td><td>64位 state，计数器归零唤醒</td><td>并发任务编排</td></tr><tr><td>Once</td><td>单次执行</td><td>done + Mutex 双重检查</td><td>单例、初始化</td></tr><tr><td>Pool</td><td>对象复用</td><td>per-P 本地池 + GC 时清空</td><td>bytes.Buffer、临时对象</td></tr><tr><td>Map</td><td>并发安全 map</td><td>read + dirty 双层结构</td><td>key 稳定的并发读写</td></tr></tbody></table>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>golang.org/x/sync/errgroup</strong></p>
+<p><code>sync.WaitGroup</code> 的增强版，能收集 goroutine 中的错误并统一返回。在实际项目中非常实用：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">g, ctx </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> errgroup.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">WithContext</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">g.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Go</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() </span><span style="color:#D73A49;--shiki-dark:#F97583">error</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> { </span><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> fetchUser</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx) })</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">g.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Go</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() </span><span style="color:#D73A49;--shiki-dark:#F97583">error</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> { </span><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> fetchOrders</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx) })</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> g.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Wait</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(); err </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    log.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Fatal</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(err)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p><strong>golang.org/x/sync/semaphore</strong></p>
+<p>带权重的信号量，适合限制并发数量。比如控制最多 10 个 goroutine 同时访问某个资源，用 <code>semaphore.Weighted</code> 比手动维护 channel 更清晰。</p>
+<p><strong>sync/atomic 包</strong></p>
+<p>对于简单的计数器、标志位，<code>atomic</code> 比 Mutex 更高效。<code>atomic.AddInt64</code>、<code>atomic.LoadInt64</code>、<code>atomic.CompareAndSwap</code> 这些操作在底层直接用 CPU 的原子指令实现，没有锁的开销。但要注意，atomic 只保证单个操作的原子性，多个 atomic 操作之间仍然需要锁来保证一致性。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先理解并发问题</strong>：搞清楚什么是竞态条件（race condition），用 <code>go run -race</code> 跑一遍自己的代码。</li>
+<li><strong>从 Mutex 开始</strong>：把 Lock/Unlock 的语义和 defer 用法吃透，然后看源码理解正常/饥饿模式的切换。</li>
+<li><strong>逐个击破</strong>：WaitGroup -> Once -> RWMutex -> Pool -> Map，每学一个都写个小 demo 验证。</li>
+<li><strong>对比学习</strong>：把 Mutex 和 Channel 放在一起比较，弄清楚各自的最佳适用场景。</li>
+<li><strong>读标准库源码</strong>：Go 的 sync 包源码量不大，注释写得非常好，推荐直接通读一遍。</li>
+<li><strong>在项目中实践</strong>：找一个真实的并发场景（比如并发请求限流、缓存更新），动手用 sync 包的组件去实现。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://pkg.go.dev/sync">Go 官方文档 - sync 包</a></li>
+<li><a href="https://go.dev/blog/share-memory-by-communicating">Go 官方博客 - Share Memory By Communicating</a></li>
+<li><a href="https://go.dev/ref/mem">Go 内存模型规范</a></li>
+<li><a href="https://github.com/golang/go/blob/master/src/sync/mutex.go">Go Mutex 源码分析（正常模式与饥饿模式）</a></li>
+<li><a href="https://pkg.go.dev/golang.org/x/sync/errgroup">errgroup - golang.org/x/sync/errgroup</a></li>
+<li><a href="https://book.douban.com/subject/30378095/">Go 并发编程实战 - 许式伟</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：的包怎么用，和怎么选" data-astro-cid-gysqo7gh>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-17" data-astro-cid-gysqo7gh>sync.Mutex 的正常模式和饥饿模式有什么区别？什么时候会切换？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-18" data-astro-cid-gysqo7gh>sync.RWMutex 和 Mutex 的区别？什么场景下用 RWMutex 更合适？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-19" data-astro-cid-gysqo7gh>WaitGroup 的 Add、Done、Wait 分别做了什么？有什么注意事项？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-20" data-astro-cid-gysqo7gh>sync.Once 怎么保证只执行一次？用在什么场景？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-21" data-astro-cid-gysqo7gh>sync.Pool 的作用是什么？什么时候会清空？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-22" data-astro-cid-gysqo7gh>sync.Map 和普通 map 加锁有什么区别？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-23" data-astro-cid-gysqo7gh>Mutex 和 Channel 怎么选？什么情况下用锁，什么情况下用 channel？</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-146" data-astro-cid-gysqo7gh>**用 Mutex/RWMutex**：保护共享状态（计数器、缓存、配置），临界区短小，不需要跨 goroutine 传递数据。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-147" data-astro-cid-gysqo7gh>**用 Channel**：传递数据所有权、协调 goroutine 之间的执行顺序、实现生产者-消费者模型。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-148" data-astro-cid-gysqo7gh>简单记法：**传数据用 channel，护状态用锁**。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-228" data-astro-cid-gysqo7gh>**先理解并发问题**：搞清楚什么是竞态条件（race condition），用 `go run -race` 跑一遍自己的代码。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-229" data-astro-cid-gysqo7gh>**从 Mutex 开始**：把 Lock/Unlock 的语义和 defer 用法吃透，然后看源码理解正常/饥饿模式的切换。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-230" data-astro-cid-gysqo7gh>**逐个击破**：WaitGroup -&gt; Once -&gt; RWMutex -&gt; Pool -&gt; Map，每学一个都写个小 demo 验证。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-231" data-astro-cid-gysqo7gh>**对比学习**：把 Mutex 和 Channel 放在一起比较，弄清楚各自的最佳适用场景。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-232" data-astro-cid-gysqo7gh>**读标准库源码**：Go 的 sync 包源码量不大，注释写得非常好，推荐直接通读一遍。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-233" data-astro-cid-gysqo7gh>**在项目中实践**：找一个真实的并发场景（比如并发请求限流、缓存更新），动手用 sync 包的组件去实现。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-237" data-astro-cid-gysqo7gh>[Go 官方文档 - sync 包](https://pkg.go.dev/sync)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-238" data-astro-cid-gysqo7gh>[Go 官方博客 - Share Memory By Communicating](https://go.dev/blog/share-memory-by-communicating)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-239" data-astro-cid-gysqo7gh>[Go 内存模型规范](https://go.dev/ref/mem)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-240" data-astro-cid-gysqo7gh>[Go Mutex 源码分析（正常模式与饥饿模式）](https://github.com/golang/go/blob/master/src/sync/mutex.go)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-241" data-astro-cid-gysqo7gh>[errgroup - golang.org/x/sync/errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-242" data-astro-cid-gysqo7gh>[Go 并发编程实战 - 许式伟](https://book.douban.com/subject/30378095/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

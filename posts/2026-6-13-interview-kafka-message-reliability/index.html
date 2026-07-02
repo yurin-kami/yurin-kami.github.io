@@ -1,0 +1,145 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Kafka怎么保证消息不丢失 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Kafka怎么保证消息不丢失</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/kafka" class="tag-link" data-astro-cid-gysqo7gh>Kafka</a><a href="/tags/%E6%B6%88%E6%81%AF%E5%8F%AF%E9%9D%A0%E6%80%A7" class="tag-link" data-astro-cid-gysqo7gh>消息可靠性</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>在分布式消息队列的面试中，Kafka 的可靠性几乎是必考的一环。很多同学能聊清楚 Partition、Consumer Group 的基本概念，但一旦被追问”消息真的不会丢吗”、“acks=all 就够了吗”、“exactly-once 是怎么做到的”，就容易说不到位。这篇笔记从生产者、Broker、消费者三端出发，把 Kafka 消息可靠性的完整链路梳理一遍。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中围绕 Kafka 消息可靠性的提问，通常集中在以下几个方向：</p>
+<ul>
+<li>“Kafka 的 acks 参数有几种取值？分别代表什么？对性能和可靠性有什么影响？”</li>
+<li>“min.insync.replicas 是干什么的？它和 acks 怎么配合？”</li>
+<li>“消费者的 offset 自动提交有什么问题？为什么生产环境通常手动提交？”</li>
+<li>“at-least-once、at-most-once、exactly-once 三种语义有什么区别？”</li>
+<li>“Kafka 的幂等生产者和事务机制分别解决了什么问题？”</li>
+</ul>
+<p>这些问题考察的不只是参数记忆，更是对”一条消息从生产到消费，到底经历了什么”这条链路的理解深度。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p><strong>一、生产者端：acks 的三种选择</strong></p>
+<p><code>acks</code> 决定了生产者发送消息后，需要等待多少副本确认才算成功。这是可靠性与性能之间最直接的权衡点。</p>
+<p><code>acks=0</code>：发完就走，不等任何确认。性能最高，但如果 Broker 在落盘前挂了，消息直接丢失，生产者完全无感知。适合日志采集这类”丢几条无所谓”的场景。</p>
+<p><code>acks=1</code>：Leader 写入本地日志后即返回确认，不等 Follower 同步。这是默认值，在大多数场景下够用。但如果 Leader 在同步到 Follower 之前宕机，这条消息仍然会丢。</p>
+<p><code>acks=all</code>（等价于 <code>acks=-1</code>）：所有 ISR（In-Sync Replicas）中的副本都写入成功才返回确认。可靠性最高，配合重试机制，可以做到生产者端不丢消息。代价是延迟增大、吞吐量下降。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// Go 示例 (sarama)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">config.Producer.RequiredAcks </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> sarama.WaitForAll </span><span style="color:#6A737D;--shiki-dark:#6A737D">// acks=all</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">config.Producer.Retry.Max </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 5</span><span style="color:#6A737D;--shiki-dark:#6A737D">                     // 失败重试 5 次</span></span></code></pre>
+<p><strong>二、Broker 端：min.insync.replicas 与副本策略</strong></p>
+<p>光有 <code>acks=all</code> 还不够。如果 ISR 里只有一个副本（比如其他 Follower 都落后了），那 <code>acks=all</code> 退化成 <code>acks=1</code>，等于没有额外保护。这时候就需要 <code>min.insync.replicas</code> 登场。</p>
+<p><code>min.insync.replicas</code> 规定了 ISR 中至少要有多少个副本在线，否则 Broker 直接拒绝写入（抛出 <code>NotEnoughReplicasException</code>）。典型配置是 <code>replication.factor=3</code> + <code>min.insync.replicas=2</code> + <code>acks=all</code>，这三者组合在一起，保证了消息至少写入 2 个副本才算成功。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># server.properties</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">default.replication.factor</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">3</span><span style="color:#6A737D;--shiki-dark:#6A737D">       # Topic 默认 3 副本</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">min.insync.replicas</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">2</span><span style="color:#6A737D;--shiki-dark:#6A737D">              # ISR 最少 2 个副本</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#85E89D">unclean.leader.election.enable</span><span style="color:#24292E;--shiki-dark:#E1E4E8">: </span><span style="color:#005CC5;--shiki-dark:#79B8FF">false</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 禁止非 ISR 副本当选 Leader</span></span></code></pre>
+<p>最后一条 <code>unclean.leader.election.enable=false</code> 也很关键。如果允许非 ISR 副本当选 Leader，意味着一个落后很多的副本可能成为新 Leader，之前的消息就丢了。</p>
+<p><strong>三、消费者端：手动提交 offset</strong></p>
+<p>消费者端最容易丢消息的环节不是”读不到”，而是”读到了但没处理完就把 offset 提交了”。</p>
+<p>Kafka 默认开启自动提交（<code>auto.commit.enable=true</code>），每隔一段时间（默认 5 秒）自动将消费位点提交到 <code>__consumer_offsets</code>。问题在于：如果消费者拉到消息后还没来得及处理就崩溃了，而 offset 已经被自动提交，那这批消息就永远不会被重新消费——对业务来说，等同于丢失。</p>
+<p>解决方案是关闭自动提交，改为手动提交：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">config.Consumer.Offsets.AutoCommit.Enable </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> false</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">for</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> msg </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#D73A49;--shiki-dark:#F97583"> range</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> consumer.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Messages</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    process</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(msg)        </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 先完成业务处理</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    consumer.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Commit</span><span style="color:#24292E;--shiki-dark:#E1E4E8">()   </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 成功后再提交 offset</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>这样即使消费者崩溃，重启后会从上次提交的 offset 继续消费，最多重复消费，不会丢失。</p>
+<p><strong>四、三种投递语义</strong></p>
+<p>把上面三端的配置串起来，就涉及面试高频考点——三种消息投递语义：</p>
+<p><strong>at-most-once（最多一次）</strong>：消息可能丢失，但不会重复。对应 <code>acks=0</code> 或消费者先提交 offset 再处理消息。性能最好，但不可靠。</p>
+<p><strong>at-least-once（至少一次）</strong>：消息不会丢失，但可能重复。对应 <code>acks=all</code> + 消费者手动提交 offset（处理完再提交）。这是大多数生产环境的配置。代价是消费端必须实现幂等处理，因为消息可能被重复消费。</p>
+<p><strong>exactly-once（精确一次）</strong>：消息既不丢失也不重复。这是最理想但也最难实现的语义。Kafka 从 0.11 版本开始，通过幂等生产者和事务机制来逼近这个目标。</p>
+<p><strong>五、幂等生产者与事务</strong></p>
+<p><strong>幂等生产者</strong>（Idempotent Producer）解决的是生产者重试导致的重复问题。开启后，Kafka 为每条消息分配一个全局唯一的 <code>(producerId, sequenceNumber)</code>，Broker 端据此去重。即使生产者因超时重试，同一条消息也只会被写入一次。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">config.Producer.Idempotent </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">config.Net.MaxOpenRequests </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#6A737D;--shiki-dark:#6A737D">  // 保证消息有序发送</span></span></code></pre>
+<p>注意 <code>MaxOpenRequests</code> 需要设为 1（Kafka 3.0+ 已放宽此限制），否则乱序的请求可能导致 sequence number 不连续。</p>
+<p><strong>事务</strong>（Transaction）解决的是跨 Partition、跨 Topic 的原子写入问题。比如一个流处理应用从 Topic A 读消息、处理后写入 Topic B，需要保证”读 A + 写 B + 提交 offset”这三步要么全成功要么全回滚。Kafka 的事务机制通过两阶段提交实现了这一点，配合消费端的 <code>read_committed</code> 隔离级别，可以做到端到端的 exactly-once 语义。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>把整条链路画出来会更清晰：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>生产者 --[acks=all]--> Broker(3副本, min.insync=2) --[手动提交offset]--> 消费者</span></span>
+<span class="line"><span>   |                      |                              |</span></span>
+<span class="line"><span>   v                      v                              v</span></span>
+<span class="line"><span> 幂等生产者          unclean.leader=false            先处理再提交</span></span>
+<span class="line"><span> (去重)              (防止落后副本当选)              (防止丢失)</span></span></code></pre>
+<p>实际工程中，完全的 exactly-once 代价不小。大部分业务选择 at-least-once 加消费端幂等，是一个务实的折中。比如订单处理可以用订单号做幂等键，收到重复消息时直接忽略。只有对一致性要求极高的金融、审计场景，才值得上完整的事务链路。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>知识点</th><th>核心要点</th></tr></thead><tbody><tr><td>acks=0/1/all</td><td>不等确认 / Leader确认 / 全部ISR确认</td></tr><tr><td>min.insync.replicas</td><td>ISR最少副本数，防止acks=all退化</td></tr><tr><td>unclean.leader.election</td><td>禁止落后副本当选Leader，防丢消息</td></tr><tr><td>手动提交offset</td><td>处理完再提交，避免消费位点超前</td></tr><tr><td>at-most-once</td><td>可能丢，不重复</td></tr><tr><td>at-least-once</td><td>不丢，可能重复（主流选择）</td></tr><tr><td>exactly-once</td><td>幂等生产者+事务+read_committed</td></tr><tr><td>幂等生产者</td><td>producerId+sequenceNumber去重</td></tr><tr><td>Kafka事务</td><td>跨Partition/Topic原子写入</td></tr></tbody></table>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>消息丢失的三个场景速查</strong>：生产者发送失败（网络抖动）通过重试+acks解决；Broker 宕机（未同步到副本）通过多副本+min.insync.replicas 解决；消费者处理失败（业务异常）通过手动提交 offset 解决。</p>
+<p><strong>ISR 机制</strong>：ISR 是”与 Leader 保持同步的副本集合”。Follower 如果落后太多（由 <code>replica.lag.time.max.ms</code> 控制），会被踢出 ISR。只有 ISR 中的副本才有资格参与 acks=all 的确认和 Leader 选举。</p>
+<p><strong>Rebalance 与消息可靠性</strong>：消费者组发生 Rebalance 时，如果 offset 提交策略不当，可能导致消息重复消费或丢失。配合手动提交和幂等处理可以规避这个问题。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li>先在本地用 docker-compose 搭一个 3 节点的 Kafka 集群，亲手测试 <code>acks=0/1/all</code> 在 Kill Broker 后的表现差异。</li>
+<li>写一个简单的生产消费 Demo，分别开启和关闭自动提交，观察消费者崩溃重启后的消费行为。</li>
+<li>阅读 Kafka 官方文档中 Delivery Semantics 一节，理解 at-least-once 和 exactly-once 的设计取舍。</li>
+<li>如果时间充裕，可以研究 Kafka Streams 的 exactly-once 处理模式，看看事务在流处理中是如何落地的。</li>
+</ol>
+<p>面试回答的核心思路是”三端各自保证 + 组合形成语义”，不要只背参数，要能把链路讲清楚。</p>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://kafka.apache.org/documentation/#semantics">Apache Kafka 官方文档 - Delivery Semantics</a></li>
+<li><a href="https://kafka.apache.org/documentation/#producerconfigs_acks">Kafka 可靠性最佳实践：acks、副本与ISR</a></li>
+<li><a href="https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/">Exactly-Once Semantics in Apache Kafka</a></li>
+<li>《Kafka 权威指南》第 4 章：Kafka 生产者 &#x26; 第 6 章：可靠的数据传输</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>&quot;Kafka 的 acks 参数有几种取值？分别代表什么？对性能和可靠性有什么影响？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>&quot;min.insync.replicas 是干什么的？它和 acks 怎么配合？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>&quot;消费者的 offset 自动提交有什么问题？为什么生产环境通常手动提交？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-12" data-astro-cid-gysqo7gh>&quot;at-least-once、at-most-once、exactly-once 三种语义有什么区别？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-13" data-astro-cid-gysqo7gh>&quot;Kafka 的幂等生产者和事务机制分别解决了什么问题？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#." data-astro-cid-gysqo7gh>server.properties</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-130" data-astro-cid-gysqo7gh>先在本地用 docker-compose 搭一个 3 节点的 Kafka 集群，亲手测试 `acks=0/1/all` 在 Kill Broker 后的表现差异。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-131" data-astro-cid-gysqo7gh>写一个简单的生产消费 Demo，分别开启和关闭自动提交，观察消费者崩溃重启后的消费行为。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-132" data-astro-cid-gysqo7gh>阅读 Kafka 官方文档中 Delivery Semantics 一节，理解 at-least-once 和 exactly-once 的设计取舍。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>如果时间充裕，可以研究 Kafka Streams 的 exactly-once 处理模式，看看事务在流处理中是如何落地的。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-139" data-astro-cid-gysqo7gh>[Apache Kafka 官方文档 - Delivery Semantics](https://kafka.apache.org/documentation/#semantics)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-140" data-astro-cid-gysqo7gh>[Kafka 可靠性最佳实践：acks、副本与ISR](https://kafka.apache.org/documentation/#producerconfigs_acks)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-141" data-astro-cid-gysqo7gh>[Exactly-Once Semantics in Apache Kafka](https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-142" data-astro-cid-gysqo7gh>《Kafka 权威指南》第 4 章：Kafka 生产者 &amp; 第 6 章：可靠的数据传输</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

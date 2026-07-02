@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>项目笔记：中文编译通过运行时全是乱码 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>项目笔记：中文编译通过运行时全是乱码</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/c%2B%2B" class="tag-link" data-astro-cid-gysqo7gh>C++</a><a href="/tags/msvc" class="tag-link" data-astro-cid-gysqo7gh>MSVC</a><a href="/tags/utf-8" class="tag-link" data-astro-cid-gysqo7gh>UTF-8</a><a href="/tags/%E7%BC%96%E7%A0%81" class="tag-link" data-astro-cid-gysqo7gh>编码</a><a href="/tags/%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98" class="tag-link" data-astro-cid-gysqo7gh>项目实战</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="项目笔记中文编译通过运行时全是乱码">项目笔记：中文编译通过运行时全是乱码<a class="anchor-link" aria-label="Link to this section" href="#项目笔记中文编译通过运行时全是乱码"><span class="icon icon-link"></span></a></h1>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>OptiScaler 是一个 C++ DLL 注入式工具，替换游戏中的 DLSS / FSR / XeSS 上采样器，通过 ImGui 覆盖菜单提供实时参数调节。在中文国际化过程中，我把翻译好的中文字符串直接写入了 <code>.cpp</code> 源文件。文件用 UTF-8 编码保存，代码编译顺利通过，没有任何报错。然而运行游戏打开菜单时，所有中文都变成了乱码——那种经典的 GBK 乱码，“设置”显示成了”璁剧疆”之类的无意义字符。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// translations_zh.cpp（文件保存为 UTF-8 编码）</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Settings"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "设置"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Quality"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]  </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "质量"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">m_translations[</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"Performance"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "性能"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>编译通过，零错误零警告。但运行时 ImGui 渲染出来的是乱码。</p>
+<p>根本原因是 <strong>MSVC 默认使用系统 code page 来解析源文件</strong>。中文 Windows 的默认 code page 是 GBK（CP936）。当 MSVC 的词法分析器读取 UTF-8 编码的源文件时，它把 UTF-8 字节流当作 GBK 来解释：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>"设置" 的 UTF-8 编码: E8 AE BE E7 BD AE (6 字节)</span></span>
+<span class="line"><span>按 GBK 解读:          E8AE → 璁  BEE7 → 剧  BDAE → 疆</span></span></code></pre>
+<p>编译器并不是”不知道”文件是 UTF-8——它压根没检查。MSVC 的历史行为是：除非明确告知，否则假设源文件使用当前系统的 ANSI code page。</p>
+<h3 id="解决">解决<a class="anchor-link" aria-label="Link to this section" href="#解决"><span class="icon icon-link"></span></a></h3>
+<p>在 <code>.vcxproj</code> 文件中添加 <code>/utf-8</code> 编译选项：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="xml"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">&#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">ItemDefinitionGroup</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">ClCompile</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    &#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">AdditionalOptions</span><span style="color:#24292E;--shiki-dark:#E1E4E8">>/utf-8 %(AdditionalOptions)&#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">AdditionalOptions</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  &#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">ClCompile</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">&#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">ItemDefinitionGroup</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span></code></pre>
+<p>或者在 Visual Studio IDE 中：<strong>项目属性 → C/C++ → 命令行 → 其他选项</strong> 中输入 <code>/utf-8</code>。</p>
+<p><code>/utf-8</code> 是一个组合选项，等价于同时设置两个子选项：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>/utf-8 = /source-charset:utf-8 + /execution-charset:utf-8</span></span></code></pre>
+<p><strong>两个必须同时设置，缺一不可。</strong></p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<h4 id="source-charset-vs-execution-charset">source charset vs execution charset<a class="anchor-link" aria-label="Link to this section" href="#source-charset-vs-execution-charset"><span class="icon icon-link"></span></a></h4>
+<p>这是理解 MSVC 编码行为的关键概念。MSVC 的编译过程分为两个独立的编码阶段：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>源文件字节流 ──[source charset]──→ 内部 Unicode 表示 ──[execution charset]──→ 目标文件字节流</span></span></code></pre>
+<p><strong>Source charset（源字符集）</strong>：告诉编译器”我的 <code>.cpp</code> 文件是什么编码”。设为 <code>utf-8</code> 后，编译器知道用 UTF-8 解码源文件中的字符串字面量。</p>
+<p><strong>Execution charset（执行字符集）</strong>：告诉编译器”生成的可执行文件中，字符串字面量应该用什么编码存储”。设为 <code>utf-8</code> 后，字符串在目标文件中以 UTF-8 字节序列存放。</p>
+<p>如果只设了 <code>/source-charset:utf-8</code> 而没有设 <code>/execution-charset:utf-8</code>：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>源文件 "设置" (UTF-8: E8 AE BE E7 BD AE)</span></span>
+<span class="line"><span>  → source charset 正确解码为 Unicode 码点 U+8BBE U+7F6E</span></span>
+<span class="line"><span>  → execution charset 仍为 GBK(CP936)</span></span>
+<span class="line"><span>  → 编译器将 U+8BBE U+7F6E 转换为 GBK 编码: C9 E8 D6 C3</span></span>
+<span class="line"><span>  → 运行时 UTF-8 环境（ImGui）读到 GBK 字节 → 乱码</span></span></code></pre>
+<p>只有两者都设为 UTF-8，才能确保从源文件到目标文件的编码全程一致。</p>
+<h4 id="gcc-和-clang-的情况">GCC 和 Clang 的情况<a class="anchor-link" aria-label="Link to this section" href="#gcc-和-clang-的情况"><span class="icon icon-link"></span></a></h4>
+<p>GCC 和 Clang 默认假设源文件为 UTF-8 编码，执行字符集也默认为 UTF-8。因此在 Linux / macOS 上通常不需要额外的编译选项。这也解释了为什么同一份代码在 Linux 上编译运行正常，到了 Windows MSVC 就出问题——编译器默认行为不同。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>编译器     source charset 默认值    execution charset 默认值</span></span>
+<span class="line"><span>MSVC       系统 ANSI code page      系统 ANSI code page</span></span>
+<span class="line"><span>GCC        UTF-8                   UTF-8</span></span>
+<span class="line"><span>Clang      UTF-8                   UTF-8</span></span></code></pre>
+<h4 id="utf-8-选项的版本要求">/utf-8 选项的版本要求<a class="anchor-link" aria-label="Link to this section" href="#utf-8-选项的版本要求"><span class="icon icon-link"></span></a></h4>
+<p><code>/utf-8</code> 选项从 Visual Studio 2015 Update 2 开始支持。更早版本的 MSVC 需要分别设置 <code>/source-charset:utf-8</code> 和 <code>/execution-charset:utf-8</code>。考虑到 VS 2015 已经是十年前的编译器，现在基本不会遇到不支持的情况。</p>
+<h4 id="bom-头的替代作用">BOM 头的替代作用<a class="anchor-link" aria-label="Link to this section" href="#bom-头的替代作用"><span class="icon icon-link"></span></a></h4>
+<p>在 <code>.cpp</code> 文件开头添加 UTF-8 BOM（<code>\xEF\xBB\xBF</code>）也可以让 MSVC 识别源文件为 UTF-8 编码。但 BOM 只解决了 source charset 的问题，不影响 execution charset。因此即使有 BOM，仍然需要设置 <code>/execution-charset:utf-8</code>。另外，BOM 在某些工具链中会引起问题（如 Git diff 输出、某些 Unix 工具），所以更推荐使用编译选项而非 BOM。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>MSVC source charset</strong>：控制编译器如何解码源文件中的字符。默认使用系统 ANSI code page，需显式设为 UTF-8。</li>
+<li><strong>MSVC execution charset</strong>：控制编译器在目标文件中如何编码字符串字面量。默认使用系统 ANSI code page，需显式设为 UTF-8。</li>
+<li><strong><code>/utf-8</code></strong>：MSVC 的便捷选项，等价于 <code>/source-charset:utf-8 /execution-charset:utf-8</code>。</li>
+<li><strong>GBK（CP936）</strong>：中文 Windows 的默认 ANSI code page，是 GB2312 的超集，与 UTF-8 不兼容。</li>
+<li><strong>跨编译器差异</strong>：GCC / Clang 默认 UTF-8，MSVC 默认系统 code page。这是跨平台 C++ 项目中编码问题的常见根源。</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<h4 id="c20-char8_t">C++20 char8_t<a class="anchor-link" aria-label="Link to this section" href="#c20-char8_t"><span class="icon icon-link"></span></a></h4>
+<p>C++20 引入了 <code>char8_t</code> 类型，专门用于表示 UTF-8 编码的字符：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// C++20</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> char8_t</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> s </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> u8"设置"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span><span style="color:#6A737D;--shiki-dark:#6A737D">  // 保证 UTF-8 编码，类型安全</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// const char* s2 = u8"设置"; // C++20 中编译错误！不允许隐式转换</span></span></code></pre>
+<p><code>char8_t</code> 在类型层面区分了”UTF-8 字符串”和”普通字符串”，避免了编码混淆。但现有大部分库（包括 ImGui）的 API 接受 <code>const char*</code>，使用 <code>char8_t</code> 需要显式 <code>reinterpret_cast</code>，实用性受限。</p>
+<h4 id="u8-前缀">u8"" 前缀<a class="anchor-link" aria-label="Link to this section" href="#u8-前缀"><span class="icon icon-link"></span></a></h4>
+<p>在 C++11 中，<code>u8"..."</code> 前缀要求编译器以 UTF-8 编码存储字符串字面量，不受 execution charset 影响：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// C++11 起可用</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">const</span><span style="color:#D73A49;--shiki-dark:#F97583"> char*</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> s </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> u8"设置"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span><span style="color:#6A737D;--shiki-dark:#6A737D">  // 无论 execution charset 是什么，都是 UTF-8</span></span></code></pre>
+<p>这看起来是完美的解决方案，但有个陷阱：如果源文件本身不是 UTF-8 编码，<code>u8""</code> 内的非 ASCII 字符会编译失败或产生未定义行为。所以 <code>/source-charset:utf-8</code> 仍然是必要的。</p>
+<h4 id="bom-头的作用与争议">BOM 头的作用与争议<a class="anchor-link" aria-label="Link to this section" href="#bom-头的作用与争议"><span class="icon icon-link"></span></a></h4>
+<p>UTF-8 BOM（<code>\xEF\xBB\xBF</code>）在 UTF-8 中不是必需的（UTF-8 不需要字节序标记），但 MSVC 将其作为识别 UTF-8 文件的信号。其他编辑器（Notepad、旧版 VS）也依赖 BOM 来判断文件编码。现代编辑器（VS Code、Sublime Text）则通过内容嗅探自动检测。在开源社区，无 BOM 的 UTF-8 是主流约定。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>入门</strong>：理解 source charset 和 execution charset 的区别，这是 MSVC 编码体系的核心。</li>
+<li><strong>实践</strong>：用 <code>xxd</code> 或 VS Code 的 Hex Editor 扩展查看编译前后字符串的字节变化，直观验证编码转换过程。</li>
+<li><strong>规范</strong>：在项目中统一使用 <code>/utf-8</code> 编译选项，所有源文件保存为无 BOM 的 UTF-8，并在 <code>.editorconfig</code> 中声明 <code>charset = utf-8</code>。</li>
+<li><strong>进阶</strong>：关注 C++20 的 <code>char8_t</code> 和 <code>u8""</code> 前缀，理解 C++ 标准委员会在 UTF-8 安全性方面的设计意图。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/cpp/build/reference/utf-8-set-source-and-executable-character-sets-to-utf-8">MSVC /utf-8 选项文档</a></li>
+<li><a href="https://learn.microsoft.com/en-us/cpp/build/reference/source-charset-set-source-character-set">MSVC /source-charset 选项文档</a></li>
+<li><a href="https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0482r6.html">C++20 char8_t 提案 P0482</a></li>
+<li><a href="https://utf8everywhere.org/">UTF-8 BOM 争议讨论</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#项目笔记：中文编译通过运行时全是乱码" data-astro-cid-gysqo7gh>项目笔记：中文编译通过运行时全是乱码</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#解决" data-astro-cid-gysqo7gh>解决</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-96" data-astro-cid-gysqo7gh>**MSVC source charset**：控制编译器如何解码源文件中的字符。默认使用系统 ANSI code page，需显式设为 UTF-8。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-97" data-astro-cid-gysqo7gh>**MSVC execution charset**：控制编译器在目标文件中如何编码字符串字面量。默认使用系统 ANSI code page，需显式设为 UTF-8。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-98" data-astro-cid-gysqo7gh>**`/utf-8`**：MSVC 的便捷选项，等价于 `/source-charset:utf-8 /execution-charset:utf-8`。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-99" data-astro-cid-gysqo7gh>**GBK（CP936）**：中文 Windows 的默认 ANSI code page，是 GB2312 的超集，与 UTF-8 不兼容。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-100" data-astro-cid-gysqo7gh>**跨编译器差异**：GCC / Clang 默认 UTF-8，MSVC 默认系统 code page。这是跨平台 C++ 项目中编码问题的常见根源。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-133" data-astro-cid-gysqo7gh>**入门**：理解 source charset 和 execution charset 的区别，这是 MSVC 编码体系的核心。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-134" data-astro-cid-gysqo7gh>**实践**：用 `xxd` 或 VS Code 的 Hex Editor 扩展查看编译前后字符串的字节变化，直观验证编码转换过程。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-135" data-astro-cid-gysqo7gh>**规范**：在项目中统一使用 `/utf-8` 编译选项，所有源文件保存为无 BOM 的 UTF-8，并在 `.editorconfig` 中声明 `charset = utf-8`。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-136" data-astro-cid-gysqo7gh>**进阶**：关注 C++20 的 `char8_t` 和 `u8&quot;&quot;` 前缀，理解 C++ 标准委员会在 UTF-8 安全性方面的设计意图。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-140" data-astro-cid-gysqo7gh>[MSVC /utf-8 选项文档](https://learn.microsoft.com/en-us/cpp/build/reference/utf-8-set-source-and-executable-character-sets-to-utf-8)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-141" data-astro-cid-gysqo7gh>[MSVC /source-charset 选项文档](https://learn.microsoft.com/en-us/cpp/build/reference/source-charset-set-source-character-set)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-142" data-astro-cid-gysqo7gh>[C++20 char8_t 提案 P0482](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0482r6.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-143" data-astro-cid-gysqo7gh>[UTF-8 BOM 争议讨论](https://utf8everywhere.org/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

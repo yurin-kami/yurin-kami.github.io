@@ -1,0 +1,497 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>Infographic 信息图指南 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>Infographic 信息图指南</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-01-03</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/infographic" class="tag-link" data-astro-cid-gysqo7gh>Infographic</a><a href="/tags/%E5%8F%AF%E8%A7%86%E5%8C%96" class="tag-link" data-astro-cid-gysqo7gh>可视化</a><a href="/tags/markdown" class="tag-link" data-astro-cid-gysqo7gh>Markdown</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <p>本文将详细介绍如何在 Markdown 中使用 <a href="https://infographic.antv.vision/">@antv/infographic</a> 创建各种精美的信息图表。</p>
+<h2 id="什么是-infographic">什么是 Infographic<a class="anchor-link" aria-label="Link to this section" href="#什么是-infographic"><span class="icon icon-link"></span></a></h2>
+<p>Infographic（信息图）是一种将数据、信息和知识以视觉化方式呈现的图表形式。相比传统的文字描述，信息图能够更直观、更有吸引力地传达信息。</p>
+<p>在本博客中，你可以直接在 Markdown 代码块中使用 <code>infographic</code> 标记来创建各种类型的信息图，支持：</p>
+<ul>
+<li>列表展示</li>
+<li>流程说明</li>
+<li>数据对比</li>
+<li>层级结构</li>
+<li>统计图表</li>
+<li>象限分析</li>
+<li>关系展示</li>
+</ul>
+<h2 id="基本语法">基本语法<a class="anchor-link" aria-label="Link to this section" href="#基本语法"><span class="icon icon-link"></span></a></h2>
+<p>在代码块中使用 <code>infographic</code> 标记，第一行指定模板名称，然后使用类似 YAML 的语法定义数据：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="markdown"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```infographic</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">infographic &#x3C;template-name></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">data</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  title 标题</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  desc 描述</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  items</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    - label 条目名称</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">      desc 条目描述</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">      icon mdi/icon-name</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">```</span></span></code></pre>
+<h2 id="列表类模板-list-">列表类模板 (list-*)<a class="anchor-link" aria-label="Link to this section" href="#列表类模板-list-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示信息列表、特性清单、技术栈等。</p>
+<h3 id="网格卡片布局">网格卡片布局<a class="anchor-link" aria-label="Link to this section" href="#网格卡片布局"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>list-grid-badge-card</code> 模板展示卡片式列表：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic list-grid-badge-card</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 前端技术栈</span></span>
+<span class="line"><span>  desc 现代化前端开发常用技术</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label TypeScript</span></span>
+<span class="line"><span>      desc 类型安全的 JavaScript 超集</span></span>
+<span class="line"><span>      icon mdi/language-typescript</span></span>
+<span class="line"><span>    - label React</span></span>
+<span class="line"><span>      desc 用于构建用户界面的 JavaScript 库</span></span>
+<span class="line"><span>      icon mdi/react</span></span>
+<span class="line"><span>    - label Astro</span></span>
+<span class="line"><span>      desc 现代化静态站点生成器</span></span>
+<span class="line"><span>      icon mdi/rocket-launch</span></span>
+<span class="line"><span>    - label Tailwind CSS</span></span>
+<span class="line"><span>      desc 实用优先的 CSS 框架</span></span>
+<span class="line"><span>      icon mdi/tailwind</span></span>
+<span class="line"><span>    - label Vite</span></span>
+<span class="line"><span>      desc 下一代前端构建工具</span></span>
+<span class="line"><span>      icon mdi/lightning-bolt</span></span>
+<span class="line"><span>    - label Biome</span></span>
+<span class="line"><span>      desc 一体化的 Web 工具链</span></span>
+<span class="line"><span>      icon mdi/cog</span></span></code></pre>
+<h3 id="糖果风格卡片">糖果风格卡片<a class="anchor-link" aria-label="Link to this section" href="#糖果风格卡片"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>list-grid-candy-card-lite</code> 创建更有趣的卡片样式：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic list-grid-candy-card-lite</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 博客特色功能</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 深色模式</span></span>
+<span class="line"><span>      desc 优雅的主题切换</span></span>
+<span class="line"><span>      icon mdi/theme-light-dark</span></span>
+<span class="line"><span>    - label 全站搜索</span></span>
+<span class="line"><span>      desc 基于 Pagefind 的无后端搜索</span></span>
+<span class="line"><span>      icon mdi/magnify</span></span>
+<span class="line"><span>    - label Markdown 增强</span></span>
+<span class="line"><span>      desc 支持 GFM、Mermaid、Infographic</span></span>
+<span class="line"><span>      icon mdi/markdown</span></span>
+<span class="line"><span>    - label 智能推荐</span></span>
+<span class="line"><span>      desc 基于语义相似度的文章推荐</span></span>
+<span class="line"><span>      icon mdi/brain</span></span></code></pre>
+<h3 id="水平箭头列表">水平箭头列表<a class="anchor-link" aria-label="Link to this section" href="#水平箭头列表"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>list-row-horizontal-icon-arrow</code> 展示线性列表：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic list-row-horizontal-icon-arrow</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 开发流程</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 需求分析</span></span>
+<span class="line"><span>      icon mdi/clipboard-text</span></span>
+<span class="line"><span>    - label 设计方案</span></span>
+<span class="line"><span>      icon mdi/palette</span></span>
+<span class="line"><span>    - label 编码实现</span></span>
+<span class="line"><span>      icon mdi/code-tags</span></span>
+<span class="line"><span>    - label 测试部署</span></span>
+<span class="line"><span>      icon mdi/rocket-launch</span></span></code></pre>
+<h2 id="流程顺序类模板-sequence-">流程/顺序类模板 (sequence-*)<a class="anchor-link" aria-label="Link to this section" href="#流程顺序类模板-sequence-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示步骤、流程、时间线等有顺序关系的信息。</p>
+<h3 id="之字形步骤">之字形步骤<a class="anchor-link" aria-label="Link to this section" href="#之字形步骤"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>sequence-zigzag-steps-underline-text</code> 展示流程步骤：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic sequence-zigzag-steps-underline-text</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 博客搭建流程</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 选择框架</span></span>
+<span class="line"><span>      desc 选择 Astro 作为静态站点生成器</span></span>
+<span class="line"><span>    - label 设计主题</span></span>
+<span class="line"><span>      desc 参考 Shoka 主题进行设计</span></span>
+<span class="line"><span>    - label 开发功能</span></span>
+<span class="line"><span>      desc 实现文章系统、搜索、评论等功能</span></span>
+<span class="line"><span>    - label 部署上线</span></span>
+<span class="line"><span>      desc 使用 Vercel 进行自动化部署</span></span></code></pre>
+<h3 id="圆形流程">圆形流程<a class="anchor-link" aria-label="Link to this section" href="#圆形流程"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>sequence-circular-simple</code> 展示循环流程：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic sequence-circular-simple</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title PDCA 循环</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label Plan</span></span>
+<span class="line"><span>      desc 制定计划</span></span>
+<span class="line"><span>    - label Do</span></span>
+<span class="line"><span>      desc 执行实施</span></span>
+<span class="line"><span>    - label Check</span></span>
+<span class="line"><span>      desc 检查验证</span></span>
+<span class="line"><span>    - label Act</span></span>
+<span class="line"><span>      desc 改进优化</span></span></code></pre>
+<h3 id="垂直路线图">垂直路线图<a class="anchor-link" aria-label="Link to this section" href="#垂直路线图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>sequence-roadmap-vertical-simple</code> 展示时间线或路线图：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic sequence-roadmap-vertical-simple</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 项目里程碑</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 2024 Q1</span></span>
+<span class="line"><span>      desc 项目启动，完成基础架构</span></span>
+<span class="line"><span>    - label 2024 Q2</span></span>
+<span class="line"><span>      desc 实现核心功能，开始内容迁移</span></span>
+<span class="line"><span>    - label 2024 Q3</span></span>
+<span class="line"><span>      desc 优化性能，添加高级功能</span></span>
+<span class="line"><span>    - label 2024 Q4</span></span>
+<span class="line"><span>      desc 正式发布，持续优化</span></span></code></pre>
+<h3 id="金字塔结构">金字塔结构<a class="anchor-link" aria-label="Link to this section" href="#金字塔结构"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>sequence-pyramid-simple</code> 展示层级递进关系：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic sequence-pyramid-simple</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 马斯洛需求层次</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 自我实现</span></span>
+<span class="line"><span>    - label 尊重需求</span></span>
+<span class="line"><span>    - label 社交需求</span></span>
+<span class="line"><span>    - label 安全需求</span></span>
+<span class="line"><span>    - label 生理需求</span></span>
+<span class="line"><span>theme</span></span>
+<span class="line"><span>  palette</span></span>
+<span class="line"><span>    - #8b5cf6</span></span>
+<span class="line"><span>    - #3b82f6</span></span>
+<span class="line"><span>    - #06b6d4</span></span>
+<span class="line"><span>    - #10b981</span></span>
+<span class="line"><span>    - #f59e0b</span></span></code></pre>
+<h2 id="对比类模板-compare-">对比类模板 (compare-*)<a class="anchor-link" aria-label="Link to this section" href="#对比类模板-compare-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示二元对比、优缺点分析等。</p>
+<h3 id="水平二元对比">水平二元对比<a class="anchor-link" aria-label="Link to this section" href="#水平二元对比"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>compare-binary-horizontal-simple-fold</code> 进行对比：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic compare-binary-horizontal-simple-fold</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title SSR vs SSG</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 服务端渲染 (SSR)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 实时生成</span></span>
+<span class="line"><span>          desc 每次请求时渲染页面</span></span>
+<span class="line"><span>        - label 动态内容</span></span>
+<span class="line"><span>          desc 适合频繁更新的内容</span></span>
+<span class="line"><span>        - label 服务器负载</span></span>
+<span class="line"><span>          desc 需要服务器资源</span></span>
+<span class="line"><span>    - label 静态生成 (SSG)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 构建时生成</span></span>
+<span class="line"><span>          desc 提前生成所有页面</span></span>
+<span class="line"><span>        - label 静态内容</span></span>
+<span class="line"><span>          desc 适合内容相对稳定的场景</span></span>
+<span class="line"><span>        - label CDN 友好</span></span>
+<span class="line"><span>          desc 可以部署到 CDN 边缘节点</span></span></code></pre>
+<h3 id="swot-分析">SWOT 分析<a class="anchor-link" aria-label="Link to this section" href="#swot-分析"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>compare-swot</code> 进行 SWOT 分析：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic compare-swot</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 技术博客 SWOT 分析</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 优势 (Strengths)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 技术积累</span></span>
+<span class="line"><span>        - label 个人品牌</span></span>
+<span class="line"><span>        - label 知识沉淀</span></span>
+<span class="line"><span>    - label 劣势 (Weaknesses)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 时间投入</span></span>
+<span class="line"><span>        - label 持续更新压力</span></span>
+<span class="line"><span>        - label 初期流量低</span></span>
+<span class="line"><span>    - label 机会 (Opportunities)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 技术社区活跃</span></span>
+<span class="line"><span>        - label 开源生态发展</span></span>
+<span class="line"><span>        - label 个人成长空间</span></span>
+<span class="line"><span>    - label 威胁 (Threats)</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 内容同质化</span></span>
+<span class="line"><span>        - label 平台竞争</span></span>
+<span class="line"><span>        - label 技术快速迭代</span></span></code></pre>
+<h2 id="层级类模板-hierarchy-">层级类模板 (hierarchy-*)<a class="anchor-link" aria-label="Link to this section" href="#层级类模板-hierarchy-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示组织结构、分类体系等树形关系。</p>
+<h3 id="系统分层结构">系统分层结构<a class="anchor-link" aria-label="Link to this section" href="#系统分层结构"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>hierarchy-structure</code> 展示多层架构，非常适合展示系统架构、模块分层：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic hierarchy-structure</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 系统分层结构</span></span>
+<span class="line"><span>  desc 展示不同层级的模块与功能分组</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 展现层</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 小程序</span></span>
+<span class="line"><span>        - label APP</span></span>
+<span class="line"><span>        - label PAD</span></span>
+<span class="line"><span>        - label 客户端</span></span>
+<span class="line"><span>        - label WEB</span></span>
+<span class="line"><span>    - label 应用层</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 核心模块</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span>
+<span class="line"><span>            - label 功能5</span></span>
+<span class="line"><span>            - label 功能6</span></span>
+<span class="line"><span>        - label 基础模块</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span>
+<span class="line"><span>            - label 功能5</span></span>
+<span class="line"><span>            - label 功能6</span></span>
+<span class="line"><span>        - label 其他模块</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span>
+<span class="line"><span>            - label 功能5</span></span>
+<span class="line"><span>            - label 功能6</span></span>
+<span class="line"><span>    - label 平台层</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 模块1</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span>
+<span class="line"><span>        - label 模块2</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span>
+<span class="line"><span>        - label 模块3</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label 功能1</span></span>
+<span class="line"><span>            - label 功能2</span></span>
+<span class="line"><span>            - label 功能3</span></span>
+<span class="line"><span>            - label 功能4</span></span></code></pre>
+<h3 id="科技风格树形图">科技风格树形图<a class="anchor-link" aria-label="Link to this section" href="#科技风格树形图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>hierarchy-tree-tech-style-capsule-item</code> 展示层级结构：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic hierarchy-tree-tech-style-capsule-item</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 前端技术体系</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 前端开发</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 基础技术</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label HTML</span></span>
+<span class="line"><span>            - label CSS</span></span>
+<span class="line"><span>            - label JavaScript</span></span>
+<span class="line"><span>        - label 框架/库</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label React</span></span>
+<span class="line"><span>            - label Vue</span></span>
+<span class="line"><span>            - label Astro</span></span>
+<span class="line"><span>        - label 工程化</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label Vite</span></span>
+<span class="line"><span>            - label Webpack</span></span>
+<span class="line"><span>            - label Rollup</span></span></code></pre>
+<h3 id="圆角矩形树形图">圆角矩形树形图<a class="anchor-link" aria-label="Link to this section" href="#圆角矩形树形图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>hierarchy-tree-curved-line-rounded-rect-node</code> 展示层级：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic hierarchy-tree-curved-line-rounded-rect-node</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 博客内容分类</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 技术文章</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 前端</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label React</span></span>
+<span class="line"><span>            - label TypeScript</span></span>
+<span class="line"><span>        - label 后端</span></span>
+<span class="line"><span>          children</span></span>
+<span class="line"><span>            - label Node.js</span></span>
+<span class="line"><span>            - label 数据库</span></span>
+<span class="line"><span>    - label 生活随笔</span></span>
+<span class="line"><span>      children</span></span>
+<span class="line"><span>        - label 年度总结</span></span>
+<span class="line"><span>        - label 读书笔记</span></span></code></pre>
+<h2 id="图表类模板-chart-">图表类模板 (chart-*)<a class="anchor-link" aria-label="Link to this section" href="#图表类模板-chart-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示统计数据、数值对比等。</p>
+<h3 id="柱状图">柱状图<a class="anchor-link" aria-label="Link to this section" href="#柱状图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>chart-column-simple</code> 展示数据对比：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic chart-column-simple</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 月度文章发布统计</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 1月</span></span>
+<span class="line"><span>      value 5</span></span>
+<span class="line"><span>    - label 2月</span></span>
+<span class="line"><span>      value 8</span></span>
+<span class="line"><span>    - label 3月</span></span>
+<span class="line"><span>      value 12</span></span>
+<span class="line"><span>    - label 4月</span></span>
+<span class="line"><span>      value 6</span></span>
+<span class="line"><span>    - label 5月</span></span>
+<span class="line"><span>      value 10</span></span>
+<span class="line"><span>    - label 6月</span></span>
+<span class="line"><span>      value 15</span></span></code></pre>
+<h3 id="条形图">条形图<a class="anchor-link" aria-label="Link to this section" href="#条形图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>chart-bar-plain-text</code> 展示横向对比：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic chart-bar-plain-text</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 编程语言使用占比</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label TypeScript</span></span>
+<span class="line"><span>      value 45</span></span>
+<span class="line"><span>    - label JavaScript</span></span>
+<span class="line"><span>      value 25</span></span>
+<span class="line"><span>    - label Python</span></span>
+<span class="line"><span>      value 15</span></span>
+<span class="line"><span>    - label Go</span></span>
+<span class="line"><span>      value 10</span></span>
+<span class="line"><span>    - label Others</span></span>
+<span class="line"><span>      value 5</span></span></code></pre>
+<h3 id="饼图">饼图<a class="anchor-link" aria-label="Link to this section" href="#饼图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>chart-pie-plain-text</code> 展示占比分布：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic chart-pie-plain-text</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 访问来源分布</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 搜索引擎</span></span>
+<span class="line"><span>      value 45</span></span>
+<span class="line"><span>    - label 社交媒体</span></span>
+<span class="line"><span>      value 30</span></span>
+<span class="line"><span>    - label 直接访问</span></span>
+<span class="line"><span>      value 15</span></span>
+<span class="line"><span>    - label 外部链接</span></span>
+<span class="line"><span>      value 10</span></span></code></pre>
+<h3 id="环形图">环形图<a class="anchor-link" aria-label="Link to this section" href="#环形图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>chart-pie-donut-pill-badge</code> 创建环形图：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic chart-pie-donut-pill-badge</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 技术栈占比</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 前端</span></span>
+<span class="line"><span>      value 50</span></span>
+<span class="line"><span>    - label 后端</span></span>
+<span class="line"><span>      value 30</span></span>
+<span class="line"><span>    - label DevOps</span></span>
+<span class="line"><span>      value 20</span></span></code></pre>
+<h3 id="折线图">折线图<a class="anchor-link" aria-label="Link to this section" href="#折线图"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>chart-line-plain-text</code> 展示趋势：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic chart-line-plain-text</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 博客访问量趋势</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 第1周</span></span>
+<span class="line"><span>      value 100</span></span>
+<span class="line"><span>    - label 第2周</span></span>
+<span class="line"><span>      value 150</span></span>
+<span class="line"><span>    - label 第3周</span></span>
+<span class="line"><span>      value 200</span></span>
+<span class="line"><span>    - label 第4周</span></span>
+<span class="line"><span>      value 280</span></span>
+<span class="line"><span>    - label 第5周</span></span>
+<span class="line"><span>      value 350</span></span>
+<span class="line"><span>    - label 第6周</span></span>
+<span class="line"><span>      value 420</span></span></code></pre>
+<h2 id="象限分析-quadrant-">象限分析 (quadrant-*)<a class="anchor-link" aria-label="Link to this section" href="#象限分析-quadrant-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示四象限分析、优先级矩阵等。</p>
+<h3 id="简单卡片象限">简单卡片象限<a class="anchor-link" aria-label="Link to this section" href="#简单卡片象限"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>quadrant-quarter-simple-card</code> 进行象限分析：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic quadrant-quarter-simple-card</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 四象限分析</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 重要且紧急</span></span>
+<span class="line"><span>      desc 直接规避风险</span></span>
+<span class="line"><span>      illus notify</span></span>
+<span class="line"><span>    - label 重要不紧急</span></span>
+<span class="line"><span>      desc 采取风险控制措施</span></span>
+<span class="line"><span>      illus coffee</span></span>
+<span class="line"><span>    - label 不重要但紧急</span></span>
+<span class="line"><span>      desc 通过保险转移风险</span></span>
+<span class="line"><span>      illus diary</span></span>
+<span class="line"><span>    - label 不重要不紧急</span></span>
+<span class="line"><span>      desc 选择接受风险</span></span>
+<span class="line"><span>      illus invest</span></span></code></pre>
+<h2 id="关系图-relation-">关系图 (relation-*)<a class="anchor-link" aria-label="Link to this section" href="#关系图-relation-"><span class="icon icon-link"></span></a></h2>
+<p>适合展示元素间的关联关系。</p>
+<h3 id="圆形图标关系">圆形图标关系<a class="anchor-link" aria-label="Link to this section" href="#圆形图标关系"><span class="icon icon-link"></span></a></h3>
+<p>使用 <code>relation-circle-icon-badge</code> 展示关系网络：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic relation-circle-circular-progress</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 子公司盈利分析</span></span>
+<span class="line"><span>  desc 各子公司财务表现，盈利同比增长</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 云计算子公司</span></span>
+<span class="line"><span>      value 25</span></span>
+<span class="line"><span>      desc 年度净利润率达25%，成为集团核心增长引擎</span></span>
+<span class="line"><span>      icon mingcute/cardano-ada-fill</span></span>
+<span class="line"><span>    - label 人工智能子公司</span></span>
+<span class="line"><span>      value 40</span></span>
+<span class="line"><span>      desc AI业务快速扩张，盈利同比增长40%</span></span>
+<span class="line"><span>      icon mingcute/openai-fill</span></span>
+<span class="line"><span>    - label 物联网子公司</span></span>
+<span class="line"><span>      value 1000</span></span>
+<span class="line"><span>      desc IoT设备出货量突破千万，盈利稳步提升</span></span>
+<span class="line"><span>      icon mingcute/medium-fill</span></span>
+<span class="line"><span>    - label 金融科技子公司</span></span>
+<span class="line"><span>      value 18</span></span>
+<span class="line"><span>      desc 数字支付业务增长迅猛，净利润率18%</span></span>
+<span class="line"><span>      icon mingcute/paypal-fill</span></span>
+<span class="line"><span>    - label 新能源子公司</span></span>
+<span class="line"><span>      value 50</span></span>
+<span class="line"><span>      desc 绿色能源项目实现规模化盈利，增长潜力巨大</span></span>
+<span class="line"><span>      icon mingcute/drone-fill</span></span></code></pre>
+<h2 id="主题定制">主题定制<a class="anchor-link" aria-label="Link to this section" href="#主题定制"><span class="icon icon-link"></span></a></h2>
+<p>可以通过 <code>theme</code> 块自定义颜色方案：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>infographic list-grid-badge-card</span></span>
+<span class="line"><span>data</span></span>
+<span class="line"><span>  title 自定义配色示例</span></span>
+<span class="line"><span>  items</span></span>
+<span class="line"><span>    - label 主色调</span></span>
+<span class="line"><span>      desc 品牌主色</span></span>
+<span class="line"><span>    - label 辅助色</span></span>
+<span class="line"><span>      desc 强调色彩</span></span>
+<span class="line"><span>    - label 中性色</span></span>
+<span class="line"><span>      desc 背景文字</span></span>
+<span class="line"><span>theme</span></span>
+<span class="line"><span>  palette</span></span>
+<span class="line"><span>    - #3b82f6</span></span>
+<span class="line"><span>    - #8b5cf6</span></span>
+<span class="line"><span>    - #f97316</span></span>
+<span class="line"><span>    - #06b6d4</span></span>
+<span class="line"><span>    - #10b981</span></span></code></pre>
+<h2 id="实用技巧">实用技巧<a class="anchor-link" aria-label="Link to this section" href="#实用技巧"><span class="icon icon-link"></span></a></h2>
+<h3 id="1-选择合适的模板">1. 选择合适的模板<a class="anchor-link" aria-label="Link to this section" href="#1-选择合适的模板"><span class="icon icon-link"></span></a></h3>
+<p>根据要展示的信息类型选择对应的模板：</p>
+<ul>
+<li><strong>列表信息</strong> → <code>list-*</code></li>
+<li><strong>流程步骤</strong> → <code>sequence-*</code></li>
+<li><strong>数据对比</strong> → <code>compare-*</code> 或 <code>chart-*</code></li>
+<li><strong>层级关系</strong> → <code>hierarchy-*</code></li>
+<li><strong>优先级分析</strong> → <code>quadrant-*</code></li>
+<li><strong>关联关系</strong> → <code>relation-*</code></li>
+</ul>
+<h3 id="2-合理使用图标">2. 合理使用图标<a class="anchor-link" aria-label="Link to this section" href="#2-合理使用图标"><span class="icon icon-link"></span></a></h3>
+<p>使用 <a href="https://pictogrammers.com/library/mdi/">Material Design Icons</a> 让信息图更生动：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plain"><code><span class="line"><span>icon mdi/rocket-launch</span></span>
+<span class="line"><span>icon mdi/heart</span></span>
+<span class="line"><span>icon mdi/lightbulb</span></span>
+<span class="line"><span>icon mdi/chart-line</span></span></code></pre>
+<h3 id="3-控制信息密度">3. 控制信息密度<a class="anchor-link" aria-label="Link to this section" href="#3-控制信息密度"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li>每个信息图不要包含过多条目（建议 3-8 个）</li>
+<li>使用简洁的标签和描述</li>
+<li>复杂信息可以拆分成多个信息图</li>
+</ul>
+<h3 id="4-注意主题适配">4. 注意主题适配<a class="anchor-link" aria-label="Link to this section" href="#4-注意主题适配"><span class="icon icon-link"></span></a></h3>
+<p>信息图会自动跟随博客的深色/浅色主题切换，无需额外配置。</p>
+<h2 id="总结">总结<a class="anchor-link" aria-label="Link to this section" href="#总结"><span class="icon icon-link"></span></a></h2>
+<p>Infographic 为 Markdown 文档提供了强大的可视化能力，能够让技术博客、文档、笔记更加生动易读。合理使用各种模板，可以显著提升内容的表现力和可读性。</p>
+<p>更多模板和详细文档，请访问 <a href="https://infographic.antv.vision/">Infographic 官方网站</a>。</p> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#什么是" data-astro-cid-gysqo7gh>什么是 Infographic</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>列表展示</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>流程说明</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>数据对比</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-12" data-astro-cid-gysqo7gh>层级结构</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-13" data-astro-cid-gysqo7gh>统计图表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-14" data-astro-cid-gysqo7gh>象限分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-15" data-astro-cid-gysqo7gh>关系展示</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#基本语法" data-astro-cid-gysqo7gh>基本语法</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-28" data-astro-cid-gysqo7gh>label 条目名称</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#列表类模板(\*)" data-astro-cid-gysqo7gh>列表类模板 (list-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#网格卡片布局" data-astro-cid-gysqo7gh>网格卡片布局</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-48" data-astro-cid-gysqo7gh>label TypeScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-51" data-astro-cid-gysqo7gh>label React</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-54" data-astro-cid-gysqo7gh>label Astro</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-57" data-astro-cid-gysqo7gh>label Tailwind CSS</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-60" data-astro-cid-gysqo7gh>label Vite</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-63" data-astro-cid-gysqo7gh>label Biome</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#糖果风格卡片" data-astro-cid-gysqo7gh>糖果风格卡片</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-77" data-astro-cid-gysqo7gh>label 深色模式</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-80" data-astro-cid-gysqo7gh>label 全站搜索</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-83" data-astro-cid-gysqo7gh>label Markdown 增强</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-86" data-astro-cid-gysqo7gh>label 智能推荐</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#水平箭头列表" data-astro-cid-gysqo7gh>水平箭头列表</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-100" data-astro-cid-gysqo7gh>label 需求分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-102" data-astro-cid-gysqo7gh>label 设计方案</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-104" data-astro-cid-gysqo7gh>label 编码实现</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-106" data-astro-cid-gysqo7gh>label 测试部署</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#流程/顺序类模板(\*)" data-astro-cid-gysqo7gh>流程/顺序类模板 (sequence-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#之字形步骤" data-astro-cid-gysqo7gh>之字形步骤</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-123" data-astro-cid-gysqo7gh>label 选择框架</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-125" data-astro-cid-gysqo7gh>label 设计主题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-127" data-astro-cid-gysqo7gh>label 开发功能</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-129" data-astro-cid-gysqo7gh>label 部署上线</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#圆形流程" data-astro-cid-gysqo7gh>圆形流程</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-142" data-astro-cid-gysqo7gh>label Plan</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-144" data-astro-cid-gysqo7gh>label Do</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-146" data-astro-cid-gysqo7gh>label Check</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-148" data-astro-cid-gysqo7gh>label Act</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#垂直路线图" data-astro-cid-gysqo7gh>垂直路线图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-161" data-astro-cid-gysqo7gh>label 2024 Q1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-163" data-astro-cid-gysqo7gh>label 2024 Q2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-165" data-astro-cid-gysqo7gh>label 2024 Q3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>label 2024 Q4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#金字塔结构" data-astro-cid-gysqo7gh>金字塔结构</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-180" data-astro-cid-gysqo7gh>label 自我实现</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-181" data-astro-cid-gysqo7gh>label 尊重需求</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-182" data-astro-cid-gysqo7gh>label 社交需求</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-183" data-astro-cid-gysqo7gh>label 安全需求</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-184" data-astro-cid-gysqo7gh>label 生理需求</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-187" data-astro-cid-gysqo7gh>#8b5cf6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-188" data-astro-cid-gysqo7gh>#3b82f6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-189" data-astro-cid-gysqo7gh>#06b6d4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-190" data-astro-cid-gysqo7gh>#10b981</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-191" data-astro-cid-gysqo7gh>#f59e0b</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#对比类模板(\*)" data-astro-cid-gysqo7gh>对比类模板 (compare-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#水平二元对比" data-astro-cid-gysqo7gh>水平二元对比</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-207" data-astro-cid-gysqo7gh>label 服务端渲染 (SSR)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-209" data-astro-cid-gysqo7gh>label 实时生成</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-211" data-astro-cid-gysqo7gh>label 动态内容</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-213" data-astro-cid-gysqo7gh>label 服务器负载</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-215" data-astro-cid-gysqo7gh>label 静态生成 (SSG)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-217" data-astro-cid-gysqo7gh>label 构建时生成</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-219" data-astro-cid-gysqo7gh>label 静态内容</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-221" data-astro-cid-gysqo7gh>label CDN 友好</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>SWOT 分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-234" data-astro-cid-gysqo7gh>label 优势 (Strengths)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-236" data-astro-cid-gysqo7gh>label 技术积累</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-237" data-astro-cid-gysqo7gh>label 个人品牌</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-238" data-astro-cid-gysqo7gh>label 知识沉淀</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-239" data-astro-cid-gysqo7gh>label 劣势 (Weaknesses)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-241" data-astro-cid-gysqo7gh>label 时间投入</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-242" data-astro-cid-gysqo7gh>label 持续更新压力</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-243" data-astro-cid-gysqo7gh>label 初期流量低</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-244" data-astro-cid-gysqo7gh>label 机会 (Opportunities)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-246" data-astro-cid-gysqo7gh>label 技术社区活跃</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-247" data-astro-cid-gysqo7gh>label 开源生态发展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-248" data-astro-cid-gysqo7gh>label 个人成长空间</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-249" data-astro-cid-gysqo7gh>label 威胁 (Threats)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-251" data-astro-cid-gysqo7gh>label 内容同质化</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-252" data-astro-cid-gysqo7gh>label 平台竞争</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-253" data-astro-cid-gysqo7gh>label 技术快速迭代</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#层级类模板(\*)" data-astro-cid-gysqo7gh>层级类模板 (hierarchy-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#系统分层结构" data-astro-cid-gysqo7gh>系统分层结构</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-270" data-astro-cid-gysqo7gh>label 展现层</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-272" data-astro-cid-gysqo7gh>label 小程序</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-273" data-astro-cid-gysqo7gh>label APP</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-274" data-astro-cid-gysqo7gh>label PAD</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-275" data-astro-cid-gysqo7gh>label 客户端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-276" data-astro-cid-gysqo7gh>label WEB</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-277" data-astro-cid-gysqo7gh>label 应用层</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-279" data-astro-cid-gysqo7gh>label 核心模块</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-281" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-282" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-283" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-284" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-285" data-astro-cid-gysqo7gh>label 功能5</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-286" data-astro-cid-gysqo7gh>label 功能6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-287" data-astro-cid-gysqo7gh>label 基础模块</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-289" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-290" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-291" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-292" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-293" data-astro-cid-gysqo7gh>label 功能5</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-294" data-astro-cid-gysqo7gh>label 功能6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-295" data-astro-cid-gysqo7gh>label 其他模块</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-297" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-298" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-299" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-300" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-301" data-astro-cid-gysqo7gh>label 功能5</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-302" data-astro-cid-gysqo7gh>label 功能6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-303" data-astro-cid-gysqo7gh>label 平台层</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-305" data-astro-cid-gysqo7gh>label 模块1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-307" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-308" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-309" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-310" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-311" data-astro-cid-gysqo7gh>label 模块2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-313" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-314" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-315" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-316" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-317" data-astro-cid-gysqo7gh>label 模块3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-319" data-astro-cid-gysqo7gh>label 功能1</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-320" data-astro-cid-gysqo7gh>label 功能2</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-321" data-astro-cid-gysqo7gh>label 功能3</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-322" data-astro-cid-gysqo7gh>label 功能4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#科技风格树形图" data-astro-cid-gysqo7gh>科技风格树形图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-334" data-astro-cid-gysqo7gh>label 前端开发</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-336" data-astro-cid-gysqo7gh>label 基础技术</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-338" data-astro-cid-gysqo7gh>label HTML</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-339" data-astro-cid-gysqo7gh>label CSS</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-340" data-astro-cid-gysqo7gh>label JavaScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-341" data-astro-cid-gysqo7gh>label 框架/库</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-343" data-astro-cid-gysqo7gh>label React</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-344" data-astro-cid-gysqo7gh>label Vue</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-345" data-astro-cid-gysqo7gh>label Astro</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-346" data-astro-cid-gysqo7gh>label 工程化</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-348" data-astro-cid-gysqo7gh>label Vite</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-349" data-astro-cid-gysqo7gh>label Webpack</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-350" data-astro-cid-gysqo7gh>label Rollup</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#圆角矩形树形图" data-astro-cid-gysqo7gh>圆角矩形树形图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-362" data-astro-cid-gysqo7gh>label 技术文章</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-364" data-astro-cid-gysqo7gh>label 前端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-366" data-astro-cid-gysqo7gh>label React</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-367" data-astro-cid-gysqo7gh>label TypeScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-368" data-astro-cid-gysqo7gh>label 后端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-370" data-astro-cid-gysqo7gh>label Node.js</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-371" data-astro-cid-gysqo7gh>label 数据库</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-372" data-astro-cid-gysqo7gh>label 生活随笔</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-374" data-astro-cid-gysqo7gh>label 年度总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-375" data-astro-cid-gysqo7gh>label 读书笔记</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#图表类模板(\*)" data-astro-cid-gysqo7gh>图表类模板 (chart-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#柱状图" data-astro-cid-gysqo7gh>柱状图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-391" data-astro-cid-gysqo7gh>label 1月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-393" data-astro-cid-gysqo7gh>label 2月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-395" data-astro-cid-gysqo7gh>label 3月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-397" data-astro-cid-gysqo7gh>label 4月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-399" data-astro-cid-gysqo7gh>label 5月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-401" data-astro-cid-gysqo7gh>label 6月</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#条形图" data-astro-cid-gysqo7gh>条形图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-414" data-astro-cid-gysqo7gh>label TypeScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-416" data-astro-cid-gysqo7gh>label JavaScript</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-418" data-astro-cid-gysqo7gh>label Python</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-420" data-astro-cid-gysqo7gh>label Go</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-422" data-astro-cid-gysqo7gh>label Others</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#饼图" data-astro-cid-gysqo7gh>饼图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-435" data-astro-cid-gysqo7gh>label 搜索引擎</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-437" data-astro-cid-gysqo7gh>label 社交媒体</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-439" data-astro-cid-gysqo7gh>label 直接访问</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-441" data-astro-cid-gysqo7gh>label 外部链接</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#环形图" data-astro-cid-gysqo7gh>环形图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-454" data-astro-cid-gysqo7gh>label 前端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-456" data-astro-cid-gysqo7gh>label 后端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-458" data-astro-cid-gysqo7gh>label DevOps</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#折线图" data-astro-cid-gysqo7gh>折线图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-471" data-astro-cid-gysqo7gh>label 第1周</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-473" data-astro-cid-gysqo7gh>label 第2周</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-475" data-astro-cid-gysqo7gh>label 第3周</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-477" data-astro-cid-gysqo7gh>label 第4周</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-479" data-astro-cid-gysqo7gh>label 第5周</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-481" data-astro-cid-gysqo7gh>label 第6周</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#象限分析(\*)" data-astro-cid-gysqo7gh>象限分析 (quadrant-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#简单卡片象限" data-astro-cid-gysqo7gh>简单卡片象限</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-498" data-astro-cid-gysqo7gh>label 重要且紧急</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-501" data-astro-cid-gysqo7gh>label 重要不紧急</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-504" data-astro-cid-gysqo7gh>label 不重要但紧急</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-507" data-astro-cid-gysqo7gh>label 不重要不紧急</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#关系图(\*)" data-astro-cid-gysqo7gh>关系图 (relation-\*)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#圆形图标关系" data-astro-cid-gysqo7gh>圆形图标关系</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-526" data-astro-cid-gysqo7gh>label 云计算子公司</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-530" data-astro-cid-gysqo7gh>label 人工智能子公司</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-534" data-astro-cid-gysqo7gh>label 物联网子公司</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-538" data-astro-cid-gysqo7gh>label 金融科技子公司</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-542" data-astro-cid-gysqo7gh>label 新能源子公司</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#主题定制" data-astro-cid-gysqo7gh>主题定制</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-557" data-astro-cid-gysqo7gh>label 主色调</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-559" data-astro-cid-gysqo7gh>label 辅助色</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-561" data-astro-cid-gysqo7gh>label 中性色</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-565" data-astro-cid-gysqo7gh>#3b82f6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-566" data-astro-cid-gysqo7gh>#8b5cf6</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-567" data-astro-cid-gysqo7gh>#f97316</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-568" data-astro-cid-gysqo7gh>#06b6d4</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-569" data-astro-cid-gysqo7gh>#10b981</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#实用技巧" data-astro-cid-gysqo7gh>实用技巧</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#.选择合适的模板" data-astro-cid-gysqo7gh>1. 选择合适的模板</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-578" data-astro-cid-gysqo7gh>**列表信息** → `list-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-579" data-astro-cid-gysqo7gh>**流程步骤** → `sequence-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-580" data-astro-cid-gysqo7gh>**数据对比** → `compare-*` 或 `chart-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-581" data-astro-cid-gysqo7gh>**层级关系** → `hierarchy-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-582" data-astro-cid-gysqo7gh>**优先级分析** → `quadrant-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-583" data-astro-cid-gysqo7gh>**关联关系** → `relation-*`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#.合理使用图标" data-astro-cid-gysqo7gh>2. 合理使用图标</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#.控制信息密度" data-astro-cid-gysqo7gh>3. 控制信息密度</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-598" data-astro-cid-gysqo7gh>每个信息图不要包含过多条目（建议 3-8 个）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-599" data-astro-cid-gysqo7gh>使用简洁的标签和描述</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-600" data-astro-cid-gysqo7gh>复杂信息可以拆分成多个信息图</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#.注意主题适配" data-astro-cid-gysqo7gh>4. 注意主题适配</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#总结" data-astro-cid-gysqo7gh>总结</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

@@ -1,0 +1,184 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/redis" class="tag-link" data-astro-cid-gysqo7gh>Redis</a><a href="/tags/%E7%BC%93%E5%AD%98" class="tag-link" data-astro-cid-gysqo7gh>缓存</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h2 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h2>
+<p>最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。</p>
+<h2 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h2>
+<p>面试官通常会这样问：</p>
+<blockquote>
+<p>什么是缓存穿透、缓存击穿、缓存雪崩？分别怎么解决？</p>
+</blockquote>
+<p>这道题考的不只是定义，更是你能否在实际架构中识别风险并选择合适的方案。</p>
+<h2 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h2>
+<h3 id="一三个问题的定义和区别">一、三个问题的定义和区别<a class="anchor-link" aria-label="Link to this section" href="#一三个问题的定义和区别"><span class="icon icon-link"></span></a></h3>
+<p><strong>缓存穿透</strong>：客户端查询一个根本不存在的数据，缓存永远 miss，每次请求都直接打到数据库。攻击者可以用大量随机 key 发起攻击，导致数据库压力骤增。</p>
+<p><strong>缓存击穿</strong>：某个热点 key 在过期失效的瞬间，大量并发请求同时 miss 缓存，一起查数据库。它和穿透的区别是：这个数据是真实存在的，只是恰好缓存过期了。</p>
+<p><strong>缓存雪崩</strong>：大量 key 在同一时间集中过期，或者 Redis 本身宕机，导致几乎所有请求都落到数据库。雪崩是”面”的问题，击穿是”点”的问题。</p>
+<p>一句话总结：穿透是”查无此 key”，击穿是”热点 key 刚好过期”，雪崩是”大批 key 同时过期”。</p>
+<h3 id="二缓存穿透布隆过滤器--缓存空值">二、缓存穿透：布隆过滤器 + 缓存空值<a class="anchor-link" aria-label="Link to this section" href="#二缓存穿透布隆过滤器--缓存空值"><span class="icon icon-link"></span></a></h3>
+<p><strong>方案一：缓存空值。</strong> 当数据库也查不到时，在缓存中写入一个空值（或特殊标记），设置较短的 TTL（比如 60 秒）。下次同样的请求直接命中缓存，返回空结果。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, err </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.Nil {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    val, err </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> db.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">!=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">""</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">60</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Second) </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 缓存空值，短 TTL</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ""</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">3600</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Second)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>优点是简单有效；缺点是攻击者用大量随机 key 请求时，缓存会被空值填满。</p>
+<p><strong>方案二：布隆过滤器。</strong> 在缓存前置一层布隆过滤器，将所有合法的 key 预加载进去。请求先过布隆过滤器，判断不存在的 key 直接拦截，不会到达缓存和数据库。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">bloom.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Add</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key1"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">bloom.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Add</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"key2"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#D73A49;--shiki-dark:#F97583"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) (</span><span style="color:#D73A49;--shiki-dark:#F97583">string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">error</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#D73A49;--shiki-dark:#F97583"> !</span><span style="color:#24292E;--shiki-dark:#E1E4E8">bloom.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Contains</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> ""</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, ErrKeyNotFound </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 直接返回</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    // 正常查缓存和数据库...</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>布隆过滤器有一定误判率（可能把不存在的 key 判断为存在），但绝不会漏掉存在的 key。实际工程中可直接使用 Redis 的 <code>RedisBloom</code> 模块。</p>
+<h3 id="三缓存击穿互斥锁--逻辑过期">三、缓存击穿：互斥锁 + 逻辑过期<a class="anchor-link" aria-label="Link to this section" href="#三缓存击穿互斥锁--逻辑过期"><span class="icon icon-link"></span></a></h3>
+<p><strong>方案一：互斥锁（SETNX）。</strong> 当缓存 miss 时，不直接查数据库，而是先尝试获取分布式锁。只有拿到锁的那个请求去查数据库并回填缓存，其他请求等待后重试。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, err </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.Nil {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    lockKey </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "lock:"</span><span style="color:#D73A49;--shiki-dark:#F97583"> +</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> key</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    if</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> acquireLock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(lockKey) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        defer</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> releaseLock</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(lockKey)</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">        // Double Check：拿到锁后再查一次缓存</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        val, err </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> { </span><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">        // 查数据库，写缓存</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        val, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> db.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">3600</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Second)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    } </span><span style="color:#D73A49;--shiki-dark:#F97583">else</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Sleep</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">100</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> time.Millisecond)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">        return</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key) </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 重试</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>注意拿到锁之后要做 Double Check，因为可能有其他请求已经回填了缓存。</p>
+<p><strong>方案二：逻辑过期。</strong> 不在 Redis 上设置 TTL，而是在 value 中嵌入一个逻辑过期时间。读取时发现逻辑过期了，就异步触发缓存更新，当前请求直接返回旧数据。好处是不会阻塞任何请求，代价是短时间内可能读到稍旧的数据。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">type</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> CacheEntry</span><span style="color:#D73A49;--shiki-dark:#F97583"> struct</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    Value     </span><span style="color:#D73A49;--shiki-dark:#F97583">string</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    ExpireAt  </span><span style="color:#6F42C1;--shiki-dark:#B392F0">time</span><span style="color:#24292E;--shiki-dark:#E1E4E8">.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Time</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 永不过期，靠 value 里的 ExpireAt 判断</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, entry, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 后台定时刷新热点数据</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">go</span><span style="color:#D73A49;--shiki-dark:#F97583"> func</span><span style="color:#24292E;--shiki-dark:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    ticker </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">NewTicker</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(time.Hour)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    for</span><span style="color:#D73A49;--shiki-dark:#F97583"> range</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ticker.C {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        val, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> db.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(hotKey)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">        redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(hotKey, </span><span style="color:#6F42C1;--shiki-dark:#B392F0">CacheEntry</span><span style="color:#24292E;--shiki-dark:#E1E4E8">{val, time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Now</span><span style="color:#24292E;--shiki-dark:#E1E4E8">().</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Add</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(time.Hour)}, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}()</span></span></code></pre>
+<h3 id="四缓存雪崩随机-ttl--多级缓存--熔断降级">四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级<a class="anchor-link" aria-label="Link to this section" href="#四缓存雪崩随机-ttl--多级缓存--熔断降级"><span class="icon icon-link"></span></a></h3>
+<p><strong>方案一：TTL 加随机偏移。</strong> 写入缓存时，在基础 TTL 上叠加一个随机值，避免大批 key 同时过期。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">baseTTL </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 3600</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">randomTTL </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> rand.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Intn</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">600</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 0~600 秒</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Duration</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(baseTTL</span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#24292E;--shiki-dark:#E1E4E8">randomTTL)</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Second)</span></span></code></pre>
+<p><strong>方案二：多级缓存。</strong> 在 Redis 前面再加一层本地缓存（进程内 LRU），作为 L1 缓存。即使 Redis 短暂不可用，本地缓存仍能挡住大部分请求。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// L1：本地缓存</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, ok </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> localCache.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ok { </span><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// L2：Redis</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, err </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> err </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    localCache.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">5</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Minute)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// L3：数据库</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">val, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> db.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Get</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">redis.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">3600</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Second)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">localCache.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">5</span><span style="color:#D73A49;--shiki-dark:#F97583">*</span><span style="color:#24292E;--shiki-dark:#E1E4E8">time.Minute)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> val, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span></span></code></pre>
+<p>在 Rinne-IM 项目中，我用的就是”本地 LRU + Redis”两级缓存架构，热数据命中率达到 99.2%。即使 Redis 短暂不可用，本地缓存依然可以兜底。</p>
+<p><strong>方案三：熔断降级。</strong> 当数据库压力过大或 Redis 完全宕机时，通过熔断器直接返回默认值或拒绝请求，防止数据库被彻底打垮。常用的库有 <code>gobreaker</code>（Go）和 <code>sentinel</code>。</p>
+<h2 id="分析与思考">分析与思考<a class="anchor-link" aria-label="Link to this section" href="#分析与思考"><span class="icon icon-link"></span></a></h2>
+<p>面试时回答这三个问题，除了给出方案，最好能说清楚方案之间的取舍：</p>
+<ul>
+<li><strong>缓存空值 vs 布隆过滤器</strong>：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。</li>
+<li><strong>互斥锁 vs 逻辑过期</strong>：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。</li>
+<li><strong>随机 TTL 是最廉价的雪崩防御</strong>，几乎零成本，所有项目都应该默认加上。</li>
+</ul>
+<h2 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>问题</th><th>触发条件</th><th>核心影响</th><th>推荐方案</th></tr></thead><tbody><tr><td>缓存穿透</td><td>查询不存在的 key</td><td>请求全部打到 DB</td><td>布隆过滤器、缓存空值</td></tr><tr><td>缓存击穿</td><td>热点 key 过期</td><td>瞬时并发打 DB</td><td>互斥锁、逻辑过期</td></tr><tr><td>缓存雪崩</td><td>大量 key 同时过期 / Redis 宕机</td><td>请求全部打到 DB</td><td>随机 TTL、多级缓存、熔断降级</td></tr></tbody></table>
+<h2 id="相关知识扩展缓存一致性">相关知识扩展：缓存一致性<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展缓存一致性"><span class="icon icon-link"></span></a></h2>
+<p>解决了”三兄弟”之后，面试官往往会追问：缓存和数据库之间的一致性怎么保证？</p>
+<p><strong>延迟双删</strong>：先删缓存，再更新数据库，等一小段时间（比如 500ms）后再删一次缓存。第二次删除是为了清除在更新数据库期间被其他请求回填的旧数据。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">func</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> Update</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#E36209;--shiki-dark:#FFAB70">key</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">val</span><span style="color:#D73A49;--shiki-dark:#F97583"> string</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">error</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    cache.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Delete</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)           </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 第一次删除</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    db.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Set</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, val)            </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 更新数据库</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    time.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Sleep</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#005CC5;--shiki-dark:#79B8FF">500</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> time.Millisecond)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    cache.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Delete</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key)           </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 第二次删除</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> nil</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span></code></pre>
+<p>这个方案简单但有缺陷：延迟时间不好定，太短删不干净，太长影响性能。</p>
+<p><strong>Canal + Binlog 订阅</strong>：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存</span></span></code></pre>
+<p>这也是目前大厂用得最多的方案。缺点是引入了额外的中间件，有一定的运维成本和延迟（通常毫秒级，可以接受）。</p>
+<p><strong>Cache Aside Pattern（旁路模式）</strong>：最常用的读写策略。读操作先查缓存，miss 则查数据库并回填缓存；写操作先更新数据库，再删除缓存。注意是”删除缓存”而不是”更新缓存”，因为并发写场景下更新缓存可能出现数据不一致。</p>
+<h2 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>先理解 Redis 基础数据结构</strong>，String、Hash、List、Set、ZSet 各适合什么场景。</li>
+<li><strong>搞清楚过期策略和淘汰策略</strong>（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。</li>
+<li><strong>动手实现一遍缓存穿透和击穿的解决方案</strong>，纸上得来终觉浅，写一遍代码比背十遍八股文有用。</li>
+<li><strong>了解分布式锁的实现</strong>（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。</li>
+<li><strong>读一读 Redis 官方文档的持久化和集群章节</strong>，对理解缓存系统的整体架构很有帮助。</li>
+</ol>
+<h2 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h2>
+<ul>
+<li><a href="https://redis.io/docs/latest/develop/interact/expiry/">Redis 官方文档 - Expire</a></li>
+<li><a href="https://redis.io/docs/latest/develop/use/keyspace-notifications/">Redis 官方文档 - Keyspace Notifications</a></li>
+<li><a href="https://tech.meituan.com/">美团技术团队 - 缓存一致性方案</a></li>
+<li><a href="https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/">RedisBloom 模块</a></li>
+<li><a href="https://github.com/alibaba/canal">Canal 项目 (GitHub)</a></li>
+<li><a href="https://github.com/sony/gobreaker">gobreaker 熔断器库</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#一、三个问题的定义和区别" data-astro-cid-gysqo7gh>一、三个问题的定义和区别</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#二、缓存穿透：布隆过滤器+缓存空值" data-astro-cid-gysqo7gh>二、缓存穿透：布隆过滤器 + 缓存空值</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#三、缓存击穿：互斥锁+逻辑过期" data-astro-cid-gysqo7gh>三、缓存击穿：互斥锁 + 逻辑过期</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#四、缓存雪崩：随机+多级缓存+熔断降级" data-astro-cid-gysqo7gh>四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#分析与思考" data-astro-cid-gysqo7gh>分析与思考</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-139" data-astro-cid-gysqo7gh>**缓存空值 vs 布隆过滤器**：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-140" data-astro-cid-gysqo7gh>**互斥锁 vs 逻辑过期**：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-141" data-astro-cid-gysqo7gh>**随机 TTL 是最廉价的雪崩防御**，几乎零成本，所有项目都应该默认加上。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#相关知识扩展：缓存一致性" data-astro-cid-gysqo7gh>相关知识扩展：缓存一致性</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-180" data-astro-cid-gysqo7gh>**先理解 Redis 基础数据结构**，String、Hash、List、Set、ZSet 各适合什么场景。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-181" data-astro-cid-gysqo7gh>**搞清楚过期策略和淘汰策略**（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-182" data-astro-cid-gysqo7gh>**动手实现一遍缓存穿透和击穿的解决方案**，纸上得来终觉浅，写一遍代码比背十遍八股文有用。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-183" data-astro-cid-gysqo7gh>**了解分布式锁的实现**（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-184" data-astro-cid-gysqo7gh>**读一读 Redis 官方文档的持久化和集群章节**，对理解缓存系统的整体架构很有帮助。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-188" data-astro-cid-gysqo7gh>[Redis 官方文档 - Expire](https://redis.io/docs/latest/develop/interact/expiry/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-189" data-astro-cid-gysqo7gh>[Redis 官方文档 - Keyspace Notifications](https://redis.io/docs/latest/develop/use/keyspace-notifications/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-190" data-astro-cid-gysqo7gh>[美团技术团队 - 缓存一致性方案](https://tech.meituan.com/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-191" data-astro-cid-gysqo7gh>[RedisBloom 模块](https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-192" data-astro-cid-gysqo7gh>[Canal 项目 (GitHub)](https://github.com/alibaba/canal)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-193" data-astro-cid-gysqo7gh>[gobreaker 熔断器库](https://github.com/sony/gobreaker)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

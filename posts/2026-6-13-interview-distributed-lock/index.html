@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：分布式锁用Redis还是ZooKeeper实现 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：分布式锁用Redis还是ZooKeeper实现</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F" class="tag-link" data-astro-cid-gysqo7gh>分布式系统</a><a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81" class="tag-link" data-astro-cid-gysqo7gh>分布式锁</a><a href="/tags/redis" class="tag-link" data-astro-cid-gysqo7gh>Redis</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h2 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h2>
+<p>在单机环境下，我们用 <code>sync.Mutex</code> 或 <code>sync.RWMutex</code> 就能解决并发资源竞争问题。但一旦系统扩展到多个实例同时运行，本地锁就彻底失效了——每个进程都有自己独立的内存空间，锁无法跨节点感知。这时候我们就需要一个”所有人都能看见”的锁机制，也就是<strong>分布式锁</strong>。</p>
+<p>这篇笔记整理自我准备面试时对分布式锁的系统梳理，覆盖 Redis、ZooKeeper、etcd 三种主流实现方案，以及围绕它们的经典争论。</p>
+<h2 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h2>
+<blockquote>
+<p><strong>面试官：分布式锁有哪些实现方案？各自有什么优缺点？你在项目中是怎么选的？</strong></p>
+</blockquote>
+<p>这道题看似在问”有哪些”，实际上面试官希望听到你对比不同方案的取舍，最好还能聊出一些深度——比如 Redlock 的争议、锁续期的工程实践。</p>
+<h2 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h2>
+<h3 id="方案一基于-redis-的分布式锁">方案一：基于 Redis 的分布式锁<a class="anchor-link" aria-label="Link to this section" href="#方案一基于-redis-的分布式锁"><span class="icon icon-link"></span></a></h3>
+<p>最经典的实现。核心就一条命令：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>SET lock_key unique_value NX EX 10</span></span></code></pre>
+<p><code>NX</code> 保证”只有第一个人能成功写入”，<code>EX</code> 设置过期时间防止死锁，<code>unique_value</code> 用来确保只有锁的持有者能释放它。释放锁时必须用 <strong>Lua 脚本</strong>保证原子性——先比较值，再删除：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="lua"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#005CC5;--shiki-dark:#79B8FF">call</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"get"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, KEYS[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">]) </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> ARGV[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">then</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> redis.</span><span style="color:#005CC5;--shiki-dark:#79B8FF">call</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"del"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, KEYS[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">1</span><span style="color:#24292E;--shiki-dark:#E1E4E8">])</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">else</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">    return</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">end</span></span></code></pre>
+<p>为什么不能直接 <code>GET</code> 再 <code>DEL</code>？因为如果两步之间锁恰好过期被别人拿到了，你就会误删别人的锁。Lua 脚本在 Redis 中是原子执行的，避免了这个竞态。</p>
+<p><strong>优点</strong>：性能极高，实现简单，大多数项目默认就有 Redis。
+<strong>缺点</strong>：Redis 主从切换时可能丢锁（锁写在 master 上还没同步到 slave，master 挂了），单节点 Redis 锁在 AP 场景下并不可靠。</p>
+<h4 id="redlock-算法">Redlock 算法<a class="anchor-link" aria-label="Link to this section" href="#redlock-算法"><span class="icon icon-link"></span></a></h4>
+<p>为了解决单点问题，antirez 提出了 <strong>Redlock</strong>：部署 5 个独立的 Redis 节点，客户端依次尝试向所有节点获取锁，只要超过半数（3 个）成功就算拿到锁。有效时间 = TTL - 获取锁花费的时间。</p>
+<p>思路很好，但引发了分布式领域最大的争论之一（后面分析部分详聊）。</p>
+<h3 id="方案二基于-zookeeper-的分布式锁">方案二：基于 ZooKeeper 的分布式锁<a class="anchor-link" aria-label="Link to this section" href="#方案二基于-zookeeper-的分布式锁"><span class="icon icon-link"></span></a></h3>
+<p>ZooKeeper 利用<strong>临时有序节点</strong>实现锁：</p>
+<ol>
+<li>在锁的父路径下创建临时顺序节点 <code>lock-0000000001</code></li>
+<li>获取所有子节点并排序</li>
+<li>如果自己是最小序号的节点，则获取锁成功</li>
+<li>否则，对前一个节点注册 Watcher，等待它被删除</li>
+</ol>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">nodePath, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> zk.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Create</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path</span><span style="color:#D73A49;--shiki-dark:#F97583">+</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"/lock-"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">nil</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, zk.FlagEphemeral</span><span style="color:#D73A49;--shiki-dark:#F97583">|</span><span style="color:#24292E;--shiki-dark:#E1E4E8">zk.FlagSequence)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">children, _, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> zk.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Children</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(path)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">sort.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Strings</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(children)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">if</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> children[</span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">] </span><span style="color:#D73A49;--shiki-dark:#F97583">==</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> filepath.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Base</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(nodePath) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">    // 拿到锁了</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">}</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 否则 Watch 前一个节点</span></span></code></pre>
+<p><strong>关键设计</strong>：临时节点意味着客户端崩溃后节点自动删除，不会死锁。有序节点天然实现了排队语义，避免了”羊群效应”——每个客户端只监听前一个节点，而非全部节点。</p>
+<p><strong>优点</strong>：强一致性（ZAB 协议），客户端断开自动释放锁，可靠性高。
+<strong>缺点</strong>：性能不如 Redis（每次操作都走共识协议），运维成本高，需要额外维护 ZK 集群。</p>
+<h3 id="方案三基于-etcd-的分布式锁">方案三：基于 etcd 的分布式锁<a class="anchor-link" aria-label="Link to this section" href="#方案三基于-etcd-的分布式锁"><span class="icon icon-link"></span></a></h3>
+<p>etcd 的锁基于 <strong>Lease（租约）+ Revision（版本号）+ 事务（Txn）</strong>：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="go"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 1. 创建 Lease</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">resp, _ </span><span style="color:#D73A49;--shiki-dark:#F97583">:=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> cli.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Grant</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(ctx, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#6A737D;--shiki-dark:#6A737D">// 10 秒租约</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">// 2. 事务写入：如果 key 不存在则创建</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">txn.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">If</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(clientv3.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">Compare</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(clientv3.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">CreateRevision</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key), </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"="</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#005CC5;--shiki-dark:#79B8FF">0</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)).</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    Then</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(clientv3.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">OpPut</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">""</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, clientv3.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">WithLease</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(resp.ID))).</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">    Else</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(clientv3.</span><span style="color:#6F42C1;--shiki-dark:#B392F0">OpGet</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(key))</span></span></code></pre>
+<p>Lease 的作用类似 Redis 的 TTL——客户端挂了，Lease 过期后 key 自动删除。Revision 是 etcd 的全局递增版本号，可以用来实现有序排队。<code>Txn</code> 操作保证”判断 key 是否存在”和”写入”是原子的。</p>
+<p>实际上 Kubernetes 内部就用 etcd 做分布式协调，所以它的可靠性是经过大规模验证的。</p>
+<p><strong>优点</strong>：强一致性（Raft 协议），Lease 自动过期防死锁，适合已有 etcd 基础设施的场景（如 K8s 生态）。
+<strong>缺点</strong>：性能中等，社区对 etcd 锁的关注度不如 Redis/ZK。</p>
+<h3 id="三种方案对比">三种方案对比<a class="anchor-link" aria-label="Link to this section" href="#三种方案对比"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>维度</th><th>Redis</th><th>ZooKeeper</th><th>etcd</th></tr></thead><tbody><tr><td><strong>一致性模型</strong></td><td>AP（最终一致）</td><td>CP（强一致）</td><td>CP（强一致）</td></tr><tr><td><strong>性能</strong></td><td>高</td><td>中</td><td>中</td></tr><tr><td><strong>可靠性</strong></td><td>中（主从切换风险）</td><td>高</td><td>高</td></tr><tr><td><strong>锁自动释放</strong></td><td>TTL 过期</td><td>临时节点</td><td>Lease 过期</td></tr><tr><td><strong>实现复杂度</strong></td><td>低</td><td>中</td><td>中</td></tr><tr><td><strong>运维成本</strong></td><td>低（通常已有）</td><td>高</td><td>中（K8s 场景已有）</td></tr><tr><td><strong>排队语义</strong></td><td>不支持</td><td>有序节点 + Watch</td><td>Revision + Watch</td></tr><tr><td><strong>适用场景</strong></td><td>高性能、允许小概率失效</td><td>金融级强一致</td><td>云原生/K8s 生态</td></tr></tbody></table>
+<p><strong>选型建议</strong>：如果你的业务对锁的准确性要求不是特别严格（比如缓存更新），用 Redis 就好，简单高效。如果是金融、交易场景，必须用 ZK 或 etcd 的强一致锁。如果已经在 K8s 生态里，直接用 etcd 是最自然的选择。</p>
+<h2 id="分析martin-kleppmann-vs-antirez-之争">分析：Martin Kleppmann vs antirez 之争<a class="anchor-link" aria-label="Link to this section" href="#分析martin-kleppmann-vs-antirez-之争"><span class="icon icon-link"></span></a></h2>
+<p>这是分布式锁领域最著名的学术争论，面试时提一嘴绝对加分。</p>
+<p><strong>Martin Kleppmann</strong>（《DERTA》作者）在 2016 年发文质疑 Redlock，核心论点：</p>
+<ol>
+<li><strong>自动过期是危险的</strong>：如果持锁进程因 GC 停顿或网络延迟导致处理变慢，锁过期后另一个进程会同时拿到锁，造成两个进程同时操作同一资源。</li>
+<li><strong>时钟不可信</strong>：Redlock 假设各节点时钟大致同步，但现实中时钟跳跃是完全可能的。</li>
+<li><strong>没有 fencing token 机制</strong>：安全的分布式锁应该给每次获锁分配一个单调递增的 token（类似版本号），存储服务可以据此拒绝过期锁的写入请求。</li>
+</ol>
+<p><strong>antirez</strong>（Redis 作者）随后回应：</p>
+<ol>
+<li>Redlock 的设计目标不是用于”保护数据安全”的场景，而是”提高效率”——避免多个 worker 重复做同一件事。</li>
+<li>如果真需要绝对安全，应该结合 fencing token，但这已经不是锁本身的问题了。</li>
+<li>自动过期是一种”安全网”，防止客户端崩溃后的死锁，不应该被视为缺陷。</li>
+</ol>
+<p><strong>结论</strong>：两人说的其实不矛盾。Kleppmann 从理论正确性出发，antirez 从工程实用性出发。实际生产中，<strong>关键数据保护不能只靠锁，还要配合存储端的 fencing/乐观校验</strong>。</p>
+<h2 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li>分布式锁的核心矛盾：<strong>性能 vs 一致性</strong>。Redis 选性能，ZK/etcd 选一致性。</li>
+<li>锁必须有<strong>自动释放机制</strong>（TTL/临时节点/Lease），否则客户端崩溃 = 全局死锁。</li>
+<li>释放锁必须<strong>原子操作</strong>（Lua 脚本/Txn），否则可能误删他人的锁。</li>
+<li>锁的 value 必须<strong>唯一</strong>（UUID），配合原子释放来防止误删。</li>
+<li>Redlock 解决了单点故障问题，但无法解决时钟漂移和 GC 停顿带来的锁失效。</li>
+<li>真正安全的锁需要<strong>存储端配合</strong>——fencing token 是最后一道防线。</li>
+</ol>
+<h2 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h2>
+<h3 id="锁续期看门狗watchdog机制">锁续期：看门狗（Watchdog）机制<a class="anchor-link" aria-label="Link to this section" href="#锁续期看门狗watchdog机制"><span class="icon icon-link"></span></a></h3>
+<p>自动过期时间设太短，业务没执行完锁就释放了；设太长，崩溃后其他客户端要等很久。Redisson 的解决方案是<strong>看门狗</strong>：后台线程每隔 <code>lockWatchdogTimeout / 3</code>（默认 10 秒）检查一次，如果持有锁的线程还在运行，就自动续期。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>持锁线程还在跑 → 看门狗续期（重置 TTL）</span></span>
+<span class="line"><span>持锁线程已退出 → 看门狗停止 → TTL 自然到期后锁释放</span></span></code></pre>
+<p>这优雅地解决了”过期时间设多少”的问题。</p>
+<h3 id="可重入锁实现">可重入锁实现<a class="anchor-link" aria-label="Link to this section" href="#可重入锁实现"><span class="icon icon-link"></span></a></h3>
+<p>同一个线程可能需要多次获取同一把锁（递归调用）。实现方式是在锁的 value 中记录持有者 ID + 重入次数：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>第一次获锁：SET lock_key {threadId:1} NX EX 30</span></span>
+<span class="line"><span>第二次获锁：发现是自己持有 → 计数 +1 → {threadId:2}</span></span>
+<span class="line"><span>释放锁：计数 -1 → 到 0 时才真正删除</span></span></code></pre>
+<p>Redisson 用 Hash 结构实现：field 是线程标识，value 是重入次数。ZooKeeper 的方案更简单——同一个客户端创建多个临时节点即可。</p>
+<h2 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h2>
+<ol>
+<li><strong>先动手写一个 Redis 分布式锁</strong>，把 <code>SET NX EX</code> + Lua 释放跑通，理解为什么需要原子释放。</li>
+<li><strong>读 Redisson 源码</strong>，看它怎么处理看门狗续期、可重入、阻塞等待（<code>PUB/SUB</code> 监听释放事件）。</li>
+<li><strong>搭一个 3 节点 ZK 集群</strong>，用 Curator 框架体验临时有序节点锁，对比 Redis 锁的行为差异。</li>
+<li><strong>读 Kleppmann 和 antirez 的原文</strong>（见下方参考链接），理解理论与实践的分歧。</li>
+<li><strong>思考你项目的实际需求</strong>：是防重复执行（容忍小概率并发）还是保护关键数据（绝对不允许并发）？答案决定了你的选型。</li>
+</ol>
+<h2 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h2>
+<ul>
+<li>Martin Kleppmann: <a href="https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html">How to do distributed locking</a></li>
+<li>antirez: <a href="http://antirez.com/news/101">Is Redlock safe?</a></li>
+<li>Redis 官方: <a href="https://redis.io/docs/manual/patterns/distributed-locks/">Distributed locks with Redis</a></li>
+<li>Apache Curator: <a href="https://curator.apache.org/curator-recipes/shared-lock.html">Shared Lock 文档</a></li>
+<li>etcd 官方: <a href="https://etcd.io/docs/v3.5/dev-guide/recipes/#lock">Lock recipe</a></li>
+<li>《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案一：基于的分布式锁" data-astro-cid-gysqo7gh>方案一：基于 Redis 的分布式锁</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案二：基于的分布式锁" data-astro-cid-gysqo7gh>方案二：基于 ZooKeeper 的分布式锁</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-48" data-astro-cid-gysqo7gh>在锁的父路径下创建临时顺序节点 `lock-0000000001`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-49" data-astro-cid-gysqo7gh>获取所有子节点并排序</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-50" data-astro-cid-gysqo7gh>如果自己是最小序号的节点，则获取锁成功</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-51" data-astro-cid-gysqo7gh>否则，对前一个节点注册 Watcher，等待它被删除</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#方案三：基于的分布式锁" data-astro-cid-gysqo7gh>方案三：基于 etcd 的分布式锁</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#三种方案对比" data-astro-cid-gysqo7gh>三种方案对比</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#分析：之争" data-astro-cid-gysqo7gh>分析：Martin Kleppmann vs antirez 之争</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-110" data-astro-cid-gysqo7gh>**自动过期是危险的**：如果持锁进程因 GC 停顿或网络延迟导致处理变慢，锁过期后另一个进程会同时拿到锁，造成两个进程同时操作同一资源。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**时钟不可信**：Redlock 假设各节点时钟大致同步，但现实中时钟跳跃是完全可能的。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-112" data-astro-cid-gysqo7gh>**没有 fencing token 机制**：安全的分布式锁应该给每次获锁分配一个单调递增的 token（类似版本号），存储服务可以据此拒绝过期锁的写入请求。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-116" data-astro-cid-gysqo7gh>Redlock 的设计目标不是用于&quot;保护数据安全&quot;的场景，而是&quot;提高效率&quot;——避免多个 worker 重复做同一件事。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-117" data-astro-cid-gysqo7gh>如果真需要绝对安全，应该结合 fencing token，但这已经不是锁本身的问题了。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-118" data-astro-cid-gysqo7gh>自动过期是一种&quot;安全网&quot;，防止客户端崩溃后的死锁，不应该被视为缺陷。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-124" data-astro-cid-gysqo7gh>分布式锁的核心矛盾：**性能 vs 一致性**。Redis 选性能，ZK/etcd 选一致性。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-125" data-astro-cid-gysqo7gh>锁必须有**自动释放机制**（TTL/临时节点/Lease），否则客户端崩溃 = 全局死锁。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-126" data-astro-cid-gysqo7gh>释放锁必须**原子操作**（Lua 脚本/Txn），否则可能误删他人的锁。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-127" data-astro-cid-gysqo7gh>锁的 value 必须**唯一**（UUID），配合原子释放来防止误删。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-128" data-astro-cid-gysqo7gh>Redlock 解决了单点故障问题，但无法解决时钟漂移和 GC 停顿带来的锁失效。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-129" data-astro-cid-gysqo7gh>真正安全的锁需要**存储端配合**——fencing token 是最后一道防线。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#锁续期：看门狗（）机制" data-astro-cid-gysqo7gh>锁续期：看门狗（Watchdog）机制</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#可重入锁实现" data-astro-cid-gysqo7gh>可重入锁实现</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-158" data-astro-cid-gysqo7gh>**先动手写一个 Redis 分布式锁**，把 `SET NX EX` + Lua 释放跑通，理解为什么需要原子释放。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-159" data-astro-cid-gysqo7gh>**读 Redisson 源码**，看它怎么处理看门狗续期、可重入、阻塞等待（`PUB/SUB` 监听释放事件）。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-160" data-astro-cid-gysqo7gh>**搭一个 3 节点 ZK 集群**，用 Curator 框架体验临时有序节点锁，对比 Redis 锁的行为差异。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-161" data-astro-cid-gysqo7gh>**读 Kleppmann 和 antirez 的原文**（见下方参考链接），理解理论与实践的分歧。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-162" data-astro-cid-gysqo7gh>**思考你项目的实际需求**：是防重复执行（容忍小概率并发）还是保护关键数据（绝对不允许并发）？答案决定了你的选型。</a> </li><li class="toc-h2" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-166" data-astro-cid-gysqo7gh>Martin Kleppmann: [How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>antirez: [Is Redlock safe?](http://antirez.com/news/101)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-168" data-astro-cid-gysqo7gh>Redis 官方: [Distributed locks with Redis](https://redis.io/docs/manual/patterns/distributed-locks/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-169" data-astro-cid-gysqo7gh>Apache Curator: [Shared Lock 文档](https://curator.apache.org/curator-recipes/shared-lock.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-170" data-astro-cid-gysqo7gh>etcd 官方: [Lock recipe](https://etcd.io/docs/v3.5/dev-guide/recipes/#lock)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-171" data-astro-cid-gysqo7gh>《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

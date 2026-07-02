@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Redis五大数据结构的使用场景 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Redis五大数据结构的使用场景</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/redis" class="tag-link" data-astro-cid-gysqo7gh>Redis</a><a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84" class="tag-link" data-astro-cid-gysqo7gh>数据结构</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记redis-五大数据结构的使用场景">面试笔记：Redis 五大数据结构的使用场景<a class="anchor-link" aria-label="Link to this section" href="#面试笔记redis-五大数据结构的使用场景"><span class="icon icon-link"></span></a></h1>
+<blockquote>
+<p>面试被问到”Redis 有几种数据类型、分别用在什么场景”，背过答案的人能脱口而出”String、Hash、List、Set、ZSet”，但面试官一追问”底层编码怎么转换”、“排行榜用哪个、消息队列用哪个”，很多人就开始含糊。这篇笔记把五大结构从使用场景到内部编码一次性串清楚。</p>
+</blockquote>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>Redis 的数据结构是后端面试的必考题，几乎每一轮都会问。我之前只是记住了五种类型的名字和几个常用命令，但对”什么时候该用 Set 而不是 List”、“ZSet 底层到底怎么实现的”这些问题没有系统想过。后来在准备面试的过程中，把每种结构的场景、编码转换和典型应用做了一次完整梳理，发现面试官的追问其实都围绕着同一条线索：<strong>数据结构决定了使用模式，而内部编码决定了性能边界</strong>。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中关于 Redis 数据结构的常见问法：</p>
+<ul>
+<li>“Redis 有哪几种数据类型？各自的使用场景是什么？”</li>
+<li>“String 除了存缓存还能干什么？计数器怎么实现？”</li>
+<li>“Hash 和 String 存对象有什么区别？”</li>
+<li>“List 怎么做消息队列？和 Kafka 有什么区别？”</li>
+<li>“Set 和 ZSet 的区别是什么？排行榜怎么实现？”</li>
+<li>“这些结构的底层编码是什么？什么时候会发生转换？”</li>
+</ul>
+<p>这些问题看似零散，其实都围绕一个核心：<strong>选对数据结构，就选对了一半的架构方案</strong>。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p><strong>1. String — 最万能的瑞士军刀</strong></p>
+<p>String 是 Redis 最基础的类型，但它的用途远不止”存个缓存”。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SET</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> key</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> value</span><span style="color:#6A737D;--shiki-dark:#6A737D">          # 缓存对象</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">INCR</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> counter</span><span style="color:#6A737D;--shiki-dark:#6A737D">           # 原子计数器</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SET</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> session:abc</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "..."</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> EX</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1800</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 分布式 Session</span></span></code></pre>
+<p>典型场景：缓存（JSON 序列化后存储）、计数器（文章阅读量、点赞数）、分布式锁（<code>SET lock val NX EX 30</code>）、Session 共享。</p>
+<p>内部编码：值较短时使用 SDS（Simple Dynamic String），如果值是纯整数则直接以整数编码存储，省去序列化开销。Redis 7.0 之后 SDS 的优化更加紧凑，小字符串的内存占用进一步降低。</p>
+<p><strong>2. Hash — 存对象的最佳选择</strong></p>
+<p>当你需要存储一个”用户”或”商品”这样有多个字段的对象时，Hash 比 String 更合适。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">HSET</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> user:1001</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> name</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Alice"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> age</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 30</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> city</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Shanghai"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">HGET</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> user:1001</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> name</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">HGETALL</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> user:1001</span></span></code></pre>
+<p>典型场景：用户信息缓存、商品属性存储、购物车（用户 ID 做 key，商品 ID 做 field，数量做 value）。</p>
+<p>和 String 存 JSON 对比：Hash 可以单独修改某个字段而不需要整体覆写，网络开销和序列化开销都更小。但如果对象需要整体读取且字段很少，String 反而更简单。</p>
+<p>内部编码转换：字段少且值短时使用 ziplist（压缩列表），字段数超过 <code>hash-max-ziplist-entries</code>（默认 128）或值超过 <code>hash-max-ziplist-value</code>（默认 64 字节）时转为 hashtable。ziplist 的优势是内存紧凑，hashtable 的优势是 O(1) 查找。</p>
+<p><strong>3. List — 轻量消息队列与时间线</strong></p>
+<p>List 是一个有序的双端链表，支持从两端推入和弹出。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">LPUSH</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> queue</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "task1"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">RPOP</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> queue</span><span style="color:#6A737D;--shiki-dark:#6A737D">             # 简单的消息队列</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">BRPOP</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> queue</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#6A737D;--shiki-dark:#6A737D">          # 阻塞式弹出，实现阻塞队列</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">LRANGE</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> timeline</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 19</span><span style="color:#6A737D;--shiki-dark:#6A737D">   # 取最新 20 条</span></span></code></pre>
+<p>典型场景：消息队列（生产者 LPUSH，消费者 BRPOP）、社交时间线（新消息 LPUSH，取最新 N 条 LRANGE）、最新文章列表。</p>
+<p>需要注意的是，List 做消息队列是”简易版”——没有消费确认（ACK）、没有消费者组、没有持久化保证。生产环境中如果需要这些能力，应该用 Redis Stream（后文会提）。</p>
+<p>内部编码转换：元素少时使用 ziplist，元素多后转为 quicklist（快速列表）。quicklist 是 ziplist 和双向链表的混合体——将多个 ziplist 节点串成链表，兼顾内存紧凑和快速插入。</p>
+<p><strong>4. Set — 去重与集合运算</strong></p>
+<p>Set 是无序的、元素唯一的集合，最大的价值在于支持集合间的交、并、差运算。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SADD</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user1</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Alice"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Bob"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Charlie"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SADD</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user2</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Bob"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "David"</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "Charlie"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SINTER</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user1</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user2</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 共同关注: Bob, Charlie</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SUNION</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user1</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user2</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # 全部关注者</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">SDIFF</span><span style="color:#032F62;--shiki-dark:#9ECBFF">  followers:user1</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> followers:user2</span><span style="color:#6A737D;--shiki-dark:#6A737D">  # user1 独有关注</span></span></code></pre>
+<p>典型场景：共同好友/共同关注（交集）、标签系统（用户兴趣标签集合）、去重（判断 IP 是否已访问过）、抽奖（SRANDMEMBER 随机抽取）。</p>
+<p>内部编码转换：当所有元素都是整数且数量少于 <code>set-max-intset-entries</code>（默认 512）时使用 intset（整数集合，底层是有序数组，查找 O(log n)），否则转为 hashtable（查找 O(1)）。intset 在元素全是整数的场景下非常省内存。</p>
+<p><strong>5. Sorted Set (ZSet) — 排行榜的灵魂</strong></p>
+<p>ZSet 在 Set 的基础上给每个元素加了一个 score，元素按 score 排序且唯一。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ZADD</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> leaderboard</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1580</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "player:A"</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2340</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "player:B"</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 980</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "player:C"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ZREVRANGE</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> leaderboard</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 0</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 9</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> WITHSCORES</span><span style="color:#6A737D;--shiki-dark:#6A737D">   # Top 10 排行榜</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ZRANGEBYSCORE</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> leaderboard</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1000</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2000</span><span style="color:#6A737D;--shiki-dark:#6A737D">    # 分数区间查询</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">ZRANK</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> leaderboard</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> "player:B"</span><span style="color:#6A737D;--shiki-dark:#6A737D">           # 排名查询</span></span></code></pre>
+<p>典型场景：排行榜（游戏积分、商品销量、热搜排名）、延时队列（score 存时间戳，定时轮询取到期任务）、带权重的 Feed 流。</p>
+<p>排行榜是 ZSet 最经典的面试案例。<code>ZADD</code> 插入 O(log N)，<code>ZRANGE</code> 取排名 O(log N + M)，万级排行榜取 Top 10 几乎是瞬间完成。如果用 MySQL 做 <code>ORDER BY score DESC LIMIT 10</code>，数据量大时性能会急剧下降。</p>
+<p>内部编码转换：元素少时使用 ziplist（元素按 score 排序存储），元素多后转为 skiplist（跳跃表）+ hashtable。skiplist 负责按 score 有序查询，hashtable 负责 O(1) 查元素的 score。跳跃表是一种随机化的多层链表结构，平均查找和插入都是 O(log N)，实现比平衡树简单，且范围查询效率更高。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>把五种结构放在一起看，有一条清晰的选择逻辑：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>需要存简单值或计数？ → String</span></span>
+<span class="line"><span>需要存多字段对象？   → Hash</span></span>
+<span class="line"><span>需要有序列表/队列？  → List</span></span>
+<span class="line"><span>需要去重/集合运算？  → Set</span></span>
+<span class="line"><span>需要按分数排序？     → ZSet</span></span></code></pre>
+<p>另一条线索是内部编码的转换规律。Redis 的设计哲学是<strong>小数据用紧凑结构省内存，大数据用高效结构保性能</strong>。ziplist 出现在 String、Hash、List、ZSet 的底层实现中，它是 Redis 内存优化的核心武器。面试时如果能说出”ziplist 在什么阈值下会转换成 hashtable 或 skiplist”，会显得对底层实现有真正的理解，而不只是会调 API。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>数据结构</th><th>典型场景</th><th>小数据编码</th><th>大数据编码</th><th>关键命令</th></tr></thead><tbody><tr><td>String</td><td>缓存/计数器/分布式锁</td><td>SDS/整数</td><td>SDS</td><td>SET/GET/INCR</td></tr><tr><td>Hash</td><td>用户信息/购物车</td><td>ziplist</td><td>hashtable</td><td>HSET/HGET/HGETALL</td></tr><tr><td>List</td><td>消息队列/时间线</td><td>ziplist</td><td>quicklist</td><td>LPUSH/RPOP/BRPOP</td></tr><tr><td>Set</td><td>共同好友/去重/标签</td><td>intset</td><td>hashtable</td><td>SADD/SINTER/SISMEMBER</td></tr><tr><td>ZSet</td><td>排行榜/延时队列</td><td>ziplist</td><td>skiplist+hashtable</td><td>ZADD/ZRANGE/ZRANK</td></tr></tbody></table>
+<p>几个容易混淆的点需要注意：</p>
+<ul>
+<li>ZSet 和 List 都能做”有序”的事，但 List 按插入顺序排列，ZSet 按 score 排序，应用场景完全不同。</li>
+<li>Hash 和 String 都能存对象，但 Hash 支持字段级读写，适合频繁更新部分字段的场景。</li>
+<li>Set 的去重能力是”天然的”，不需要业务层做判断，SISMEMBER 是 O(1) 操作。</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p>除了五大基础结构，Redis 还提供了几种特殊数据结构，面试中偶尔会被提及：</p>
+<p><strong>HyperLogLog</strong> — 基数统计利器。用固定 12KB 内存估算上亿个不重复元素的数量，误差率约 0.81%。典型场景是 UV（独立访客）统计：<code>PFADD uv:page:home user_001 user_002 ...</code>，然后用 <code>PFCOUNT</code> 获取去重后的访问人数。相比用 Set 做去重计数，HyperLogLog 在大数据量下内存开销低了几个数量级。</p>
+<p><strong>Bitmap</strong> — 位图操作，本质是 String 的位级扩展。每个 bit 可以表示一个布尔状态，适合签到系统（用户某天是否签到）、布隆过滤器、在线状态统计。<code>BITCOUNT</code> 可以统计某段时间内的签到天数，<code>BITOP</code> 支持位运算合并多天的签到数据。</p>
+<p><strong>Stream</strong> — Redis 5.0 引入的消息流，是 List 做消息队列的”正式版”。支持消费者组（Consumer Group）、消息确认（ACK）、按 ID 范围读取、消息堆积。如果需要在 Redis 中实现可靠的消息队列，Stream 是比 List + BRPOP 更合适的选择。它的模型类似 Kafka，但更轻量。</p>
+<p><strong>Geospatial</strong> — 地理位置数据结构，底层用 ZSet 存储，score 是 GeoHash 编码。支持 <code>GEODIST</code>（距离计算）、<code>GEORADIUS</code>（附近搜索）。适合”附近的人”、门店距离排序等 LBS 场景。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<p>如果你是第一次系统学习 Redis 数据结构，建议按这个顺序推进：</p>
+<ol>
+<li><strong>先把五种基础结构的命令敲一遍</strong>。不要只看文档，打开 redis-cli 实际操作，体会每种结构的手感和适用边界。</li>
+<li><strong>理解内部编码转换</strong>。这是面试加分项，也是理解 Redis 为什么”快且省”的关键。重点关注 ziplist、skiplist、intset 这三种结构的设计思路。</li>
+<li><strong>做两到三个小项目</strong>。比如用 String 做分布式限流器、用 Hash 做用户中心缓存、用 ZSet 做排行榜、用 List 或 Stream 做简易消息队列。</li>
+<li><strong>扩展阅读特殊结构</strong>。HyperLogLog 和 Bitmap 在大数据统计场景中非常实用，Stream 则是 Redis 向消息中间件领域延伸的重要一步。</li>
+<li><strong>阅读《Redis 设计与实现》</strong>（黄健宏著）。这本书对每种数据结构的底层实现有非常详尽的图解，是面试前最好的参考书。</li>
+</ol>
+<p>面试时不需要把所有细节都倒出来，但要能做到”说出场景、给出结构、解释编码”这三步闭环。面试官追问时，能讲清楚 ziplist 为什么紧凑、skiplist 为什么比平衡树更适合范围查询，就已经超过大多数候选人了。</p>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://redis.io/docs/data-types/">Redis 官方文档 - Data Types</a></li>
+<li><a href="https://redis.io/commands/">Redis 命令参考</a></li>
+<li>《Redis 设计与实现》 — 黄健宏（数据结构章节，对 SDS、ziplist、skiplist 有详细图解）</li>
+<li><a href="https://zhuanlan.zhihu.com/p/72840466">Redis 内部数据结构详解（知乎专栏）</a></li>
+<li><a href="https://redis.io/docs/data-types/streams/">Redis Stream 使用指南</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：五大数据结构的使用场景" data-astro-cid-gysqo7gh>面试笔记：Redis 五大数据结构的使用场景</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-13" data-astro-cid-gysqo7gh>&quot;Redis 有哪几种数据类型？各自的使用场景是什么？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-14" data-astro-cid-gysqo7gh>&quot;String 除了存缓存还能干什么？计数器怎么实现？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-15" data-astro-cid-gysqo7gh>&quot;Hash 和 String 存对象有什么区别？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-16" data-astro-cid-gysqo7gh>&quot;List 怎么做消息队列？和 Kafka 有什么区别？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-17" data-astro-cid-gysqo7gh>&quot;Set 和 ZSet 的区别是什么？排行榜怎么实现？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-18" data-astro-cid-gysqo7gh>&quot;这些结构的底层编码是什么？什么时候会发生转换？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-130" data-astro-cid-gysqo7gh>ZSet 和 List 都能做&quot;有序&quot;的事，但 List 按插入顺序排列，ZSet 按 score 排序，应用场景完全不同。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-131" data-astro-cid-gysqo7gh>Hash 和 String 都能存对象，但 Hash 支持字段级读写，适合频繁更新部分字段的场景。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-132" data-astro-cid-gysqo7gh>Set 的去重能力是&quot;天然的&quot;，不需要业务层做判断，SISMEMBER 是 O(1) 操作。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-150" data-astro-cid-gysqo7gh>**先把五种基础结构的命令敲一遍**。不要只看文档，打开 redis-cli 实际操作，体会每种结构的手感和适用边界。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-151" data-astro-cid-gysqo7gh>**理解内部编码转换**。这是面试加分项，也是理解 Redis 为什么&quot;快且省&quot;的关键。重点关注 ziplist、skiplist、intset 这三种结构的设计思路。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-152" data-astro-cid-gysqo7gh>**做两到三个小项目**。比如用 String 做分布式限流器、用 Hash 做用户中心缓存、用 ZSet 做排行榜、用 List 或 Stream 做简易消息队列。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-153" data-astro-cid-gysqo7gh>**扩展阅读特殊结构**。HyperLogLog 和 Bitmap 在大数据统计场景中非常实用，Stream 则是 Redis 向消息中间件领域延伸的重要一步。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-154" data-astro-cid-gysqo7gh>**阅读《Redis 设计与实现》**（黄健宏著）。这本书对每种数据结构的底层实现有非常详尽的图解，是面试前最好的参考书。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-160" data-astro-cid-gysqo7gh>[Redis 官方文档 - Data Types](https://redis.io/docs/data-types/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-161" data-astro-cid-gysqo7gh>[Redis 命令参考](https://redis.io/commands/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-162" data-astro-cid-gysqo7gh>《Redis 设计与实现》 -- 黄健宏（数据结构章节，对 SDS、ziplist、skiplist 有详细图解）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-163" data-astro-cid-gysqo7gh>[Redis 内部数据结构详解（知乎专栏）](https://zhuanlan.zhihu.com/p/72840466)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-164" data-astro-cid-gysqo7gh>[Redis Stream 使用指南](https://redis.io/docs/data-types/streams/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>项目笔记：MSVC报C4335 Mac file format detected - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>项目笔记：MSVC报C4335 Mac file format detected</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/c%2B%2B" class="tag-link" data-astro-cid-gysqo7gh>C++</a><a href="/tags/msvc" class="tag-link" data-astro-cid-gysqo7gh>MSVC</a><a href="/tags/%E7%BC%96%E8%AF%91%E5%99%A8" class="tag-link" data-astro-cid-gysqo7gh>编译器</a><a href="/tags/%E8%A1%8C%E7%BB%93%E5%B0%BE" class="tag-link" data-astro-cid-gysqo7gh>行结尾</a><a href="/tags/%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98" class="tag-link" data-astro-cid-gysqo7gh>项目实战</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="项目笔记msvc报c4335-mac-file-format-detected">项目笔记：MSVC报C4335 Mac file format detected<a class="anchor-link" aria-label="Link to this section" href="#项目笔记msvc报c4335-mac-file-format-detected"><span class="icon icon-link"></span></a></h1>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>OptiScaler 是一个 C++ DLL 注入式工具，替换游戏中的 DLSS / FSR / XeSS 上采样器，通过 ImGui 覆盖菜单提供实时参数调节。在国际化过程中，我用 Python 脚本批量修改了一批 <code>.cpp</code> 和 <code>.h</code> 文件来替换翻译字符串。脚本跑完后满怀期待地编译，结果 MSVC 编译器像疯了一样刷出几百条 C4335 警告：<code>"Mac file format detected"</code>。更要命的是，项目配置了 <code>/WX</code>（警告即错误），编译直接失败。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>warning C4335: Mac file format detected: please convert the source file to either</span></span>
+<span class="line"><span>DOS or UNIX format</span></span></code></pre>
+<p>问题根源很清晰：Python 在 Windows 上用文本模式（<code>"w"</code>）写文件时，默认使用 <code>\n</code>（LF）作为行结尾。而 MSVC 期望 Windows 标准的 <code>\r\n</code>（CRLF）行结尾。当 MSVC 在源文件中只看到 <code>\n</code> 而没有 <code>\r</code> 时，它判定文件使用了”旧 Mac 格式”（旧 Mac OS 使用 <code>\r</code> 即 CR 作为行结尾），于是抛出 C4335。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># Python 脚本写入文件</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">with</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"translations_zh.cpp"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"w"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">encoding</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"utf-8"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">as</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    f.write(content)  </span><span style="color:#6A737D;--shiki-dark:#6A737D"># 写入的行结尾是 \n (LF)</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># MSVC 期望 \r\n (CRLF)</span></span></code></pre>
+<h3 id="解决">解决<a class="anchor-link" aria-label="Link to this section" href="#解决"><span class="icon icon-link"></span></a></h3>
+<p>在 Python 脚本写入文件之后，追加一个行结尾规范化步骤：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 读取文件内容（二进制模式）</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">with</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(filepath, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"rb"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">as</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    raw </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> f.read()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 行结尾规范化：先统一为 LF，再转为 CRLF</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">raw </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> raw.replace(</span><span style="color:#D73A49;--shiki-dark:#F97583">b</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\r\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">b</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)   </span><span style="color:#6A737D;--shiki-dark:#6A737D"># 步骤1：将已有的 CRLF 全部转为 LF</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">raw </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> raw.replace(</span><span style="color:#D73A49;--shiki-dark:#F97583">b</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#D73A49;--shiki-dark:#F97583">b</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\r\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)   </span><span style="color:#6A737D;--shiki-dark:#6A737D"># 步骤2：将所有 LF 转为 CRLF</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">with</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(filepath, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"wb"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">) </span><span style="color:#D73A49;--shiki-dark:#F97583">as</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> f:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">    f.write(raw)</span></span></code></pre>
+<p><strong>两步操作的顺序至关重要。</strong> 如果省略步骤1直接做步骤2，文件中已有的 <code>\r\n</code> 会被步骤2中的 <code>\n</code> 匹配规则再次转换，变成 <code>\r\r\n</code>——一个无效的三字节行结尾，MSVC 依然会报错。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>错误示范：</span></span>
+<span class="line"><span>  原始: Hello\r\nWorld\r\n</span></span>
+<span class="line"><span>  直接替换 \n → \r\n: Hello\r\r\nWorld\r\r\n   ← 损坏！</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>正确做法：</span></span>
+<span class="line"><span>  原始: Hello\r\nWorld\r\n</span></span>
+<span class="line"><span>  步骤1 \r\n → \n: Hello\nWorld\n</span></span>
+<span class="line"><span>  步骤2 \n → \r\n: Hello\r\nWorld\r\n          ← 正确</span></span></code></pre>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<h4 id="行结尾格式的历史">行结尾格式的历史<a class="anchor-link" aria-label="Link to this section" href="#行结尾格式的历史"><span class="icon icon-link"></span></a></h4>
+<p>行结尾格式的差异是计算机历史上最持久的跨平台兼容性问题之一：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>系统</th><th>行结尾</th><th>转义</th><th>来源</th></tr></thead><tbody><tr><td>Windows</td><td>CR+LF</td><td><code>\r\n</code></td><td>继承自打字机：回车（CR）+ 换行（LF）两个物理动作</td></tr><tr><td>Unix / Linux / macOS (10+)</td><td>LF</td><td><code>\n</code></td><td>Dennis Ritchie 在 Unix 中简化为一个字节</td></tr><tr><td>经典 Mac OS (9 及以前)</td><td>CR</td><td><code>\r</code></td><td>早期 Apple 系统的选择，macOS X 后废弃</td></tr></tbody></table>
+<p>CRLF 用两个字节表示一行结尾，LF 只用一个字节。在网络协议（HTTP、SMTP）中通常规定使用 CRLF，而现代开发工具大多能自动识别两种格式——除了 MSVC。</p>
+<h4 id="msvc-为什么在意行结尾">MSVC 为什么在意行结尾？<a class="anchor-link" aria-label="Link to this section" href="#msvc-为什么在意行结尾"><span class="icon icon-link"></span></a></h4>
+<p>MSVC 的词法分析器（lexer）在解析源文件时会检测行结尾的一致性。如果整个文件都是 CRLF 突然出现一个 LF，或者整体都是 LF，它会判定文件格式异常并触发 C4335。这不是编译错误（不会阻止代码生成），但在配置了 <code>/WX</code> 的项目中会被升级为错误。</p>
+<h4 id="wx警告即错误">/WX：警告即错误<a class="anchor-link" aria-label="Link to this section" href="#wx警告即错误"><span class="icon icon-link"></span></a></h4>
+<p><code>/WX</code> 是 MSVC 的编译选项，将所有警告视为错误（Treat Warnings As Errors）。这在高质量 C++ 项目中是标配做法，目的是不遗漏任何潜在问题。对应 GCC / Clang 的 <code>-Werror</code>。OptiScaler 配置了 <code>/WX</code>，意味着 C4335 从”可以忽略的警告”变成了”阻止编译的错误”。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="xml"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">&#x3C;!-- .vcxproj 中的配置 --></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">&#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">ClCompile</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">WarningLevel</span><span style="color:#24292E;--shiki-dark:#E1E4E8">>Level4&#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">WarningLevel</span><span style="color:#24292E;--shiki-dark:#E1E4E8">>   </span><span style="color:#6A737D;--shiki-dark:#6A737D">&#x3C;!-- /W4 最高警告等级 --></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">  &#x3C;</span><span style="color:#22863A;--shiki-dark:#85E89D">TreatWarningAsError</span><span style="color:#24292E;--shiki-dark:#E1E4E8">>true&#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">TreatWarningAsError</span><span style="color:#24292E;--shiki-dark:#E1E4E8">>  </span><span style="color:#6A737D;--shiki-dark:#6A737D">&#x3C;!-- /WX --></span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#E1E4E8">&#x3C;/</span><span style="color:#22863A;--shiki-dark:#85E89D">ClCompile</span><span style="color:#24292E;--shiki-dark:#E1E4E8">></span></span></code></pre>
+<h4 id="python-文件写入的行结尾行为">Python 文件写入的行结尾行为<a class="anchor-link" aria-label="Link to this section" href="#python-文件写入的行结尾行为"><span class="icon icon-link"></span></a></h4>
+<p>Python 的 <code>open()</code> 在文本模式下有一个 <code>newline</code> 参数：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 默认行为：Windows 上 \n 会被转换为 \r\n</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"file.txt"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"w"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)                     </span><span style="color:#6A737D;--shiki-dark:#6A737D"># newline=None（系统默认）</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 但在某些场景下（如设置了环境变量或 locale），行为可能不符合预期</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 显式指定最安全：</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#79B8FF">open</span><span style="color:#24292E;--shiki-dark:#E1E4E8">(</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"file.txt"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#032F62;--shiki-dark:#9ECBFF">"w"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, </span><span style="color:#E36209;--shiki-dark:#FFAB70">newline</span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#005CC5;--shiki-dark:#79B8FF">\r\n</span><span style="color:#032F62;--shiki-dark:#9ECBFF">"</span><span style="color:#24292E;--shiki-dark:#E1E4E8">)     </span><span style="color:#6A737D;--shiki-dark:#6A737D"># 强制写入 CRLF</span></span></code></pre>
+<p>不过最可靠的做法仍然是二进制模式写入，完全掌控字节内容。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><strong>行结尾格式</strong>：CRLF（Windows）、LF（Unix/Linux/macOS）、CR（旧 Mac OS）。这是跨平台文件处理中最常遇到的兼容性问题。</li>
+<li><strong>MSVC C4335</strong>：当源文件行结尾不符合 Windows 预期（CRLF）时触发。在 <code>/WX</code> 下会阻止编译。</li>
+<li><strong>/WX（Treat Warnings As Errors）</strong>：将所有编译警告升级为错误，是 C++ 高质量项目的标准配置。</li>
+<li><strong>Python 文本模式 vs 二进制模式的行结尾处理</strong>：文本模式的 <code>newline</code> 参数控制行结尾转换，二进制模式直接写入原始字节。</li>
+</ul>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<h4 id="editorconfig">.editorconfig<a class="anchor-link" aria-label="Link to this section" href="#editorconfig"><span class="icon icon-link"></span></a></h4>
+<p><code>.editorconfig</code> 是跨编辑器的代码风格配置文件，可以统一团队中所有成员的行结尾格式：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="ini"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># .editorconfig</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">root</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = true</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">[*]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">end_of_line</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = crlf          </span><span style="color:#6A737D;--shiki-dark:#6A737D"># Windows 项目统一 CRLF</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">charset</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = utf-8</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">trim_trailing_whitespace</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = true</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">insert_final_newline</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = true</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">[*.sh]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">end_of_line</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> = lf            </span><span style="color:#6A737D;--shiki-dark:#6A737D"># Shell 脚本统一 LF</span></span></code></pre>
+<p>VS Code、Visual Studio、IntelliJ 等主流 IDE 均原生支持 <code>.editorconfig</code>。</p>
+<h4 id="git-autocrlf-配置">Git autocrlf 配置<a class="anchor-link" aria-label="Link to this section" href="#git-autocrlf-配置"><span class="icon icon-link"></span></a></h4>
+<p>Git 的 <code>core.autocrlf</code> 设置控制提交和检出时的行结尾转换：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># Windows 开发者推荐设置</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">git</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> config</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --global</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> core.autocrlf</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> true</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 提交时 CRLF → LF，检出时 LF → CRLF</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># Linux / macOS 开发者推荐</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#B392F0">git</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> config</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> --global</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> core.autocrlf</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> input</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D"># 提交时 CRLF → LF，检出时保持 LF</span></span></code></pre>
+<p>更精确的控制可以使用 <code>.gitattributes</code> 文件：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># .gitattributes</span></span>
+<span class="line"><span>*.cpp    text eol=crlf</span></span>
+<span class="line"><span>*.h      text eol=crlf</span></span>
+<span class="line"><span>*.sh     text eol=lf</span></span>
+<span class="line"><span>*.py     text eol=lf</span></span></code></pre>
+<h4 id="prettier--eslint-行结尾规则">Prettier / ESLint 行结尾规则<a class="anchor-link" aria-label="Link to this section" href="#prettier--eslint-行结尾规则"><span class="icon icon-link"></span></a></h4>
+<p>前端和 Node.js 项目中，Prettier 的 <code>endOfLine</code> 选项和 ESLint 的 <code>linebreak-style</code> 规则可以强制检查行结尾格式。在 CI 中运行 lint 可以避免不同平台的开发者提交不一致的行结尾。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>入门</strong>：在编辑器中开启”显示不可见字符”功能（VS Code: <code>editor.renderWhitespace: "all"</code>），直观观察 CRLF 和 LF 的区别。</li>
+<li><strong>实践</strong>：为自己的项目添加 <code>.editorconfig</code> 和 <code>.gitattributes</code>，从根源上统一行结尾格式。</li>
+<li><strong>工程化</strong>：在 CI 中加入行结尾检查脚本（例如 <code>file</code> 命令检测或自定义 Python 脚本），确保不会有意外格式的文件混入。</li>
+<li><strong>深入</strong>：了解 MSVC 的词法分析器实现，理解它为什么对行结尾敏感——这与预处理器的 <code>#line</code> 指令和调试信息中的行号映射有关。</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4335">MSVC 编译器警告 C4335</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Newline">Newline - Wikipedia</a></li>
+<li><a href="https://editorconfig.org/">EditorConfig 官方规范</a></li>
+<li><a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreautocrlf">Git core.autocrlf 文档</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#项目笔记：报" data-astro-cid-gysqo7gh>项目笔记：MSVC报C4335 Mac file format detected</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#脚本写入文件" data-astro-cid-gysqo7gh>Python 脚本写入文件</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#期望\\()" data-astro-cid-gysqo7gh>MSVC 期望 \r\n (CRLF)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#解决" data-astro-cid-gysqo7gh>解决</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#读取文件内容（二进制模式）" data-astro-cid-gysqo7gh>读取文件内容（二进制模式）</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#行结尾规范化：先统一为，再转为" data-astro-cid-gysqo7gh>行结尾规范化：先统一为 LF，再转为 CRLF</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#默认行为：上\会被转换为\\" data-astro-cid-gysqo7gh>默认行为：Windows 上 \n 会被转换为 \r\n</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#但在某些场景下（如设置了环境变量或），行为可能不符合预期" data-astro-cid-gysqo7gh>但在某些场景下（如设置了环境变量或 locale），行为可能不符合预期</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#显式指定最安全：" data-astro-cid-gysqo7gh>显式指定最安全：</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-100" data-astro-cid-gysqo7gh>**行结尾格式**：CRLF（Windows）、LF（Unix/Linux/macOS）、CR（旧 Mac OS）。这是跨平台文件处理中最常遇到的兼容性问题。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-101" data-astro-cid-gysqo7gh>**MSVC C4335**：当源文件行结尾不符合 Windows 预期（CRLF）时触发。在 `/WX` 下会阻止编译。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-102" data-astro-cid-gysqo7gh>**/WX（Treat Warnings As Errors）**：将所有编译警告升级为错误，是 C++ 高质量项目的标准配置。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-103" data-astro-cid-gysqo7gh>**Python 文本模式 vs 二进制模式的行结尾处理**：文本模式的 `newline` 参数控制行结尾转换，二进制模式直接写入原始字节。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#." data-astro-cid-gysqo7gh>.editorconfig</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#开发者推荐设置" data-astro-cid-gysqo7gh>Windows 开发者推荐设置</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#提交时→，检出时→" data-astro-cid-gysqo7gh>提交时 CRLF → LF，检出时 LF → CRLF</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#/开发者推荐" data-astro-cid-gysqo7gh>Linux / macOS 开发者推荐</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#提交时→，检出时保持" data-astro-cid-gysqo7gh>提交时 CRLF → LF，检出时保持 LF</a> </li><li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#." data-astro-cid-gysqo7gh>.gitattributes</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-157" data-astro-cid-gysqo7gh>**入门**：在编辑器中开启&quot;显示不可见字符&quot;功能（VS Code: `editor.renderWhitespace: &quot;all&quot;`），直观观察 CRLF 和 LF 的区别。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-158" data-astro-cid-gysqo7gh>**实践**：为自己的项目添加 `.editorconfig` 和 `.gitattributes`，从根源上统一行结尾格式。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-159" data-astro-cid-gysqo7gh>**工程化**：在 CI 中加入行结尾检查脚本（例如 `file` 命令检测或自定义 Python 脚本），确保不会有意外格式的文件混入。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-160" data-astro-cid-gysqo7gh>**深入**：了解 MSVC 的词法分析器实现，理解它为什么对行结尾敏感——这与预处理器的 `#line` 指令和调试信息中的行号映射有关。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-164" data-astro-cid-gysqo7gh>[MSVC 编译器警告 C4335](https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-4-c4335)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-165" data-astro-cid-gysqo7gh>[Newline - Wikipedia](https://en.wikipedia.org/wiki/Newline)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-166" data-astro-cid-gysqo7gh>[EditorConfig 官方规范](https://editorconfig.org/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>[Git core.autocrlf 文档](https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreautocrlf)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

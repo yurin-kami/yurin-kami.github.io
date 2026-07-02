@@ -1,0 +1,137 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：Kafka的核心架构组件是怎么回事 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：Kafka的核心架构组件是怎么回事</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/kafka" class="tag-link" data-astro-cid-gysqo7gh>Kafka</a><a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97" class="tag-link" data-astro-cid-gysqo7gh>消息队列</a><a href="/tags/%E6%9E%B6%E6%9E%84" class="tag-link" data-astro-cid-gysqo7gh>架构</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka 核心架构组件理清楚：Broker、Topic、Partition、Replica、Consumer Group，顺便聊聊分区策略和 Rebalance 机制。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试官常见的问法：</p>
+<ul>
+<li>“请描述一下 Kafka 的整体架构”</li>
+<li>“Topic 和 Partition 是什么关系？为什么要分 Partition”</li>
+<li>“Consumer Group 是怎么工作的？Rebalance 是怎么回事”</li>
+</ul>
+<p>考察的核心是：你是否理解 Kafka 如何通过分布式架构实现高吞吐、高可用的消息传递，以及在消费端如何实现并行消费和故障容错。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<h4 id="broker--kafka-的服务节点">Broker — Kafka 的服务节点<a class="anchor-link" aria-label="Link to this section" href="#broker--kafka-的服务节点"><span class="icon icon-link"></span></a></h4>
+<p>Broker 就是 Kafka 集群里的一台台服务器。每个 Broker 负责存储和转发消息，同时管理属于自己的 Partition 副本。一个生产环境的 Kafka 集群通常由多个 Broker 组成，通过多副本机制实现高可用——挂掉一个 Broker，其他 Broker 上的副本可以顶上。</p>
+<h4 id="topic--消息的逻辑分类">Topic — 消息的逻辑分类<a class="anchor-link" aria-label="Link to this section" href="#topic--消息的逻辑分类"><span class="icon icon-link"></span></a></h4>
+<p>Topic 可以类比为数据库里的”表”。生产者把消息发往某个 Topic，消费者从某个 Topic 订阅消息。但 Topic 只是逻辑概念，真正的存储和并行处理是靠 Partition 完成的。</p>
+<h4 id="partition--并行处理的物理单元">Partition — 并行处理的物理单元<a class="anchor-link" aria-label="Link to this section" href="#partition--并行处理的物理单元"><span class="icon icon-link"></span></a></h4>
+<p>Partition 是 Topic 的物理分片，也是 Kafka 并行能力的关键。一个 Topic 可以有多个 Partition，每个 Partition 是一个有序的、不可变的消息序列，每条消息在 Partition 内有唯一的 Offset（偏移量）。</p>
+<p>核心特性：Kafka 只保证单个 Partition 内的消息有序，跨 Partition 不保证全局顺序。这个设计用”局部有序”换来了高吞吐——不同 Partition 可以分布在不同 Broker 上并行读写。</p>
+<h4 id="replica--数据安全的保障">Replica — 数据安全的保障<a class="anchor-link" aria-label="Link to this section" href="#replica--数据安全的保障"><span class="icon icon-link"></span></a></h4>
+<p>每个 Partition 有多个副本，分为 Leader 和 Follower：</p>
+<ul>
+<li><strong>Leader Replica</strong>：处理所有读写请求</li>
+<li><strong>Follower Replica</strong>：从 Leader 同步数据，不直接服务客户端</li>
+</ul>
+<p>Leader 挂了怎么办？Follower 会被选举为新 Leader。Kafka 用 ISR（In-Sync Replicas）机制来管理副本同步——只有跟得上 Leader 的 Follower 才在 ISR 列表中，选举新 Leader 时优先从 ISR 中选。</p>
+<h4 id="consumer-group--并行消费的基石">Consumer Group — 并行消费的基石<a class="anchor-link" aria-label="Link to this section" href="#consumer-group--并行消费的基石"><span class="icon icon-link"></span></a></h4>
+<p>Consumer Group 是 Kafka 的消费模型。同一个 Group 内的消费者分摊消费 Topic 的 Partition：每个 Partition 只会被组内一个消费者处理。不同 Group 之间完全独立，各自消费各自的全量数据。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Consumer Group "order-service"</span></span>
+<span class="line"><span>├── Consumer A  →  Partition 0, Partition 1</span></span>
+<span class="line"><span>├── Consumer B  →  Partition 2, Partition 3</span></span>
+<span class="line"><span>└── Consumer C  →  Partition 4</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Consumer Group "analytics-service"</span></span>
+<span class="line"><span>├── Consumer X  →  Partition 0, Partition 1, Partition 2</span></span>
+<span class="line"><span>└── Consumer Y  →  Partition 3, Partition 4</span></span></code></pre>
+<p>这里有个硬约束：<strong>消费者数量不能超过 Partition 数量</strong>。多余的消费者会处于空闲状态。所以创建 Topic 时 Partition 的数量要根据预期的消费者规模来规划。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<h4 id="分区策略消息发到哪个-partition">分区策略：消息发到哪个 Partition<a class="anchor-link" aria-label="Link to this section" href="#分区策略消息发到哪个-partition"><span class="icon icon-link"></span></a></h4>
+<p>Kafka 提供三种分区策略：</p>
+<ol>
+<li><strong>指定 Partition</strong>：生产者直接指定发往哪个 Partition，最精确但需要自己管理</li>
+<li><strong>Key Hash</strong>：对消息的 Key 做哈希，相同 Key 的消息路由到同一个 Partition。这是最常用的策略，比如 IM 项目中以 conversationID 作为 Key，保证同一会话的消息有序</li>
+<li><strong>轮询（Round-Robin）</strong>：没有 Key 时，轮流发送到各个 Partition，实现均匀分布</li>
+</ol>
+<p>实际项目中，Key Hash 策略用得最多。既保证了”同一业务实体的消息有序”，又让不同实体的消息可以并行处理。</p>
+<h4 id="consumer-group-rebalance--分区再均衡">Consumer Group Rebalance — 分区再均衡<a class="anchor-link" aria-label="Link to this section" href="#consumer-group-rebalance--分区再均衡"><span class="icon icon-link"></span></a></h4>
+<p>Rebalance 是 Consumer Group 中 Partition 分配重新调整的过程。触发条件：</p>
+<ul>
+<li>消费者加入或离开 Group</li>
+<li>消费者心跳超时（<code>session.timeout.ms</code>）</li>
+<li>Topic 的 Partition 数量发生变化</li>
+</ul>
+<p>Rebalance 期间，整个 Group 的所有消费者停止消费，处于”停顿”状态。这是 Kafka 消费模型中最大的痛点——频繁 Rebalance 会严重影响吞吐量。</p>
+<p>优化策略有两个关键方向：</p>
+<p><strong>Static Membership</strong>：给消费者设置固定的 <code>group.instance.id</code>。消费者短暂重启时不会触发 Rebalance，Kafka 会等 <code>session.timeout.ms</code> 超时后才重新分配。适合滚动部署场景。</p>
+<p><strong>Cooperative Rebalance</strong>：将分配策略设为 <code>CooperativeStickyAssignor</code>。与默认的 Eager 模式（所有消费者放弃所有 Partition 再重新分配）不同，Cooperative 模式采用增量式迁移——只迁移需要变动的 Partition，未受影响的 Partition 继续消费，大幅减少停顿时间。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>概念</th><th>一句话解释</th></tr></thead><tbody><tr><td>Broker</td><td>Kafka 集群中的服务器节点，负责存储和转发消息</td></tr><tr><td>Topic</td><td>消息的逻辑分类，一个 Topic 包含多个 Partition</td></tr><tr><td>Partition</td><td>Topic 的物理分片，保证内部有序，是并行处理的基本单位</td></tr><tr><td>Replica</td><td>Partition 的副本，Leader 处理请求，Follower 同步数据</td></tr><tr><td>Consumer Group</td><td>消费者组，组内消费者分摊 Partition，不同组独立消费</td></tr><tr><td>Offset</td><td>消息在 Partition 中的位置，消费者用它记录消费进度</td></tr><tr><td>ISR</td><td>与 Leader 保持同步的副本集合，Leader 选举优先从中选</td></tr><tr><td>Rebalance</td><td>消费者变动时重新分配 Partition，期间停止消费</td></tr></tbody></table>
+<p>关键设计哲学：<strong>Kafka 用 Partition 实现并行，用 Replica 实现容错，用 Consumer Group 实现弹性消费</strong>。这三个机制组合在一起，构成了 Kafka 高吞吐、高可用架构的基础。</p>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>KRaft 替代 ZooKeeper</strong>：Kafka 3.x 开始引入 KRaft 模式，用内部的 Raft 共识协议替代 ZooKeeper 来管理集群元数据。好处是：减少了一个外部依赖，简化运维；Controller 节点选举更快，集群可管理的 Partition 数量从几千提升到百万级。对于新部署的集群，建议直接使用 KRaft 模式。</p>
+<p><strong>Kafka 事务消息</strong>：Kafka 0.11+ 支持事务，通过 <code>TransactionalID</code> 保证跨 Partition、跨 Topic 的原子写入。配合幂等生产者（PID + 序列号去重），可以实现 exactly-once 语义。消费端设置 <code>isolation.level=read_committed</code> 只读已提交消息。不过事务消息主要用于 Kafka-to-Kafka 的流处理场景；如果消费端要写入外部系统（如数据库），通常还是需要业务层自己保证幂等性。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先搞清楚概念关系</strong>：Broker → Topic → Partition → Replica 这条线是存储侧，Producer → Consumer Group → Offset 这条线是消费侧，两条线通过 Partition 交汇</li>
+<li><strong>动手搭一个三节点集群</strong>：用 Docker Compose 起三个 Broker，创建 Topic、发消息、观察 Partition 分布，比看十遍文档都管用</li>
+<li><strong>重点关注 Rebalance</strong>：这是生产环境中最容易踩坑的地方，理解触发条件和优化策略是面试加分项</li>
+<li><strong>结合项目讲</strong>：如果你用 Kafka 做过项目（比如 IM 消息中间件），以项目为例讲分区策略和消费模型，比干讲概念更有说服力</li>
+</ol>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://kafka.apache.org/documentation/#architecture">Apache Kafka 官方文档 — Architecture</a></li>
+<li><a href="https://www.oreilly.com/library/view/kafka-the-definitive/9781492043072/">Kafka 权威指南（Kafka: The Definitive Guide）</a></li>
+<li><a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-500%3A+Replace+ZooKeeper+with+a+Self-Managed+Metadata+Quorum">KIP-500: Replace ZooKeeper with a Self-Managed Metadata Quorum</a></li>
+<li><a href="https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/">Kafka Consumer Group Rebalance 详解 — Confluent Blog</a></li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-9" data-astro-cid-gysqo7gh>&quot;请描述一下 Kafka 的整体架构&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-10" data-astro-cid-gysqo7gh>&quot;Topic 和 Partition 是什么关系？为什么要分 Partition&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-11" data-astro-cid-gysqo7gh>&quot;Consumer Group 是怎么工作的？Rebalance 是怎么回事&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-35" data-astro-cid-gysqo7gh>**Leader Replica**：处理所有读写请求</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-36" data-astro-cid-gysqo7gh>**Follower Replica**：从 Leader 同步数据，不直接服务客户端</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-63" data-astro-cid-gysqo7gh>**指定 Partition**：生产者直接指定发往哪个 Partition，最精确但需要自己管理</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-64" data-astro-cid-gysqo7gh>**Key Hash**：对消息的 Key 做哈希，相同 Key 的消息路由到同一个 Partition。这是最常用的策略，比如 IM 项目中以 conversationID 作为 Key，保证同一会话的消息有序</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-65" data-astro-cid-gysqo7gh>**轮询（Round-Robin）**：没有 Key 时，轮流发送到各个 Partition，实现均匀分布</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-73" data-astro-cid-gysqo7gh>消费者加入或离开 Group</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-74" data-astro-cid-gysqo7gh>消费者心跳超时（`session.timeout.ms`）</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-75" data-astro-cid-gysqo7gh>Topic 的 Partition 数量发生变化</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-108" data-astro-cid-gysqo7gh>**先搞清楚概念关系**：Broker → Topic → Partition → Replica 这条线是存储侧，Producer → Consumer Group → Offset 这条线是消费侧，两条线通过 Partition 交汇</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-109" data-astro-cid-gysqo7gh>**动手搭一个三节点集群**：用 Docker Compose 起三个 Broker，创建 Topic、发消息、观察 Partition 分布，比看十遍文档都管用</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-110" data-astro-cid-gysqo7gh>**重点关注 Rebalance**：这是生产环境中最容易踩坑的地方，理解触发条件和优化策略是面试加分项</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**结合项目讲**：如果你用 Kafka 做过项目（比如 IM 消息中间件），以项目为例讲分区策略和消费模型，比干讲概念更有说服力</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-115" data-astro-cid-gysqo7gh>[Apache Kafka 官方文档 — Architecture](https://kafka.apache.org/documentation/#architecture)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-116" data-astro-cid-gysqo7gh>[Kafka 权威指南（Kafka: The Definitive Guide）](https://www.oreilly.com/library/view/kafka-the-definitive/9781492043072/)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-117" data-astro-cid-gysqo7gh>[KIP-500: Replace ZooKeeper with a Self-Managed Metadata Quorum](https://cwiki.apache.org/confluence/display/KAFKA/KIP-500%3A+Replace+ZooKeeper+with+a+Self-Managed+Metadata+Quorum)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-118" data-astro-cid-gysqo7gh>[Kafka Consumer Group Rebalance 详解 — Confluent Blog](https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/)</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 

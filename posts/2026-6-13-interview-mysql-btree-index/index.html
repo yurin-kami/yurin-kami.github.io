@@ -1,0 +1,214 @@
+<!DOCTYPE html><html lang="zh"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/fav.png"><meta name="generator" content="Astro v5.18.2"><title>面试笔记：MySQL InnoDB为什么用B+树做索引 - KAMISHOW!!!!!</title><link rel="stylesheet" href="/_astro/_slug_.Cb1UtwU2.css">
+<style>.post-article[data-astro-cid-gysqo7gh]{max-width:100%}.post-header[data-astro-cid-gysqo7gh]{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,107,157,.2)}.post-meta[data-astro-cid-gysqo7gh]{display:flex;align-items:center;gap:1rem;margin-top:.5rem;flex-wrap:wrap}.post-date[data-astro-cid-gysqo7gh]{color:#666;font-size:.9rem}.post-tags[data-astro-cid-gysqo7gh]{display:flex;gap:.3rem;flex-wrap:wrap}.tag-link[data-astro-cid-gysqo7gh]{display:inline-block;padding:.3rem .8rem;background-color:#ffe6f0cc;color:#ff6b9d;border-radius:15px;font-size:.9rem;transition:all .3s ease;text-decoration:none}.tag-link[data-astro-cid-gysqo7gh]:hover{background-color:#ff6b9d;color:#fff;text-decoration:none}.post-layout[data-astro-cid-gysqo7gh]{display:flex;gap:2rem;align-items:flex-start}.article-content[data-astro-cid-gysqo7gh]{flex:1;min-width:0}.post-toc[data-astro-cid-gysqo7gh]{width:250px;max-width:250px;flex-shrink:0;position:sticky;top:2rem}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh]{list-style:none;padding-left:0;margin:0}.toc[data-astro-cid-gysqo7gh] ul[data-astro-cid-gysqo7gh] li[data-astro-cid-gysqo7gh]{margin-bottom:.3rem}.toc-h2[data-astro-cid-gysqo7gh]{padding-left:1rem}.toc-h3[data-astro-cid-gysqo7gh]{padding-left:2rem}
+</style><script type="module" src="/_astro/page.Cq1APJXu.js"></script>
+<script>
+    (function () {
+      var script = document.createElement("script");
+      var viewTransitionsEnabled = document.querySelector("meta[name='astro-view-transitions-enabled']")?.content;
+
+      script.setAttribute("src", "https://stats.example.com/script.js");
+      script.setAttribute("defer", true);
+      script.setAttribute("data-website-id", "your-umami-id");
+      script.setAttribute("data-host-url", "https://stats.example.com");
+
+      if (!!viewTransitionsEnabled) {
+        script.setAttribute("data-astro-rerun", true);
+      }
+
+      var head = document.querySelector("head");
+      head.appendChild(script);
+    })()
+  </script></head> <body> <header> <nav> <a href="/">首页</a> <a href="/posts">文章</a> <a href="/tags">标签</a> <a href="/search">搜索</a> </nav> </header> <main>  <article class="post-article" data-astro-cid-gysqo7gh> <header class="post-header" data-astro-cid-gysqo7gh> <h1 data-astro-cid-gysqo7gh>面试笔记：MySQL InnoDB为什么用B+树做索引</h1> <div class="post-meta" data-astro-cid-gysqo7gh> <span class="post-date" data-astro-cid-gysqo7gh>2026-06-13</span> <span class="post-tags" data-astro-cid-gysqo7gh> <a href="/tags/mysql" class="tag-link" data-astro-cid-gysqo7gh>MySQL</a><a href="/tags/b%2B%E6%A0%91" class="tag-link" data-astro-cid-gysqo7gh>B+树</a><a href="/tags/%E7%B4%A2%E5%BC%95" class="tag-link" data-astro-cid-gysqo7gh>索引</a><a href="/tags/%E9%9D%A2%E8%AF%95" class="tag-link" data-astro-cid-gysqo7gh>面试</a><a href="/tags/%E5%85%AB%E8%82%A1%E6%96%87" class="tag-link" data-astro-cid-gysqo7gh>八股文</a> </span> </div> </header> <div class="post-layout" data-astro-cid-gysqo7gh> <div class="article-content" data-astro-cid-gysqo7gh> <h1 id="面试笔记mysql-innodb-为什么用-b-树做索引">面试笔记：MySQL InnoDB 为什么用 B+ 树做索引<a class="anchor-link" aria-label="Link to this section" href="#面试笔记mysql-innodb-为什么用-b-树做索引"><span class="icon icon-link"></span></a></h1>
+<blockquote>
+<p>准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。</p>
+</blockquote>
+<h3 id="前情提要">前情提要<a class="anchor-link" aria-label="Link to this section" href="#前情提要"><span class="icon icon-link"></span></a></h3>
+<p>索引是 MySQL 面试中出场率最高的知识点，没有之一。几乎每一轮面试都会问：你用的是什么索引、为什么选 B+ 树、联合索引怎么走、什么时候会失效。我之前背过”叶子节点用链表连接”这种标准答案，但面试官一旦追问”那跳表不行吗”、“覆盖索引和普通索引有什么区别”，就只能支支吾吾。</p>
+<p>后来我把 B+ 树相关的知识从数据结构层面到 SQL 优化层面做了一次完整的串联，发现这些问题其实是同一条逻辑链上的不同环节。把这条链理清，面试时不管怎么追问都能接住。</p>
+<h3 id="问题">问题<a class="anchor-link" aria-label="Link to this section" href="#问题"><span class="icon icon-link"></span></a></h3>
+<p>面试中关于 B+ 树索引的常见问法：</p>
+<ul>
+<li>“InnoDB 为什么用 B+ 树做索引，而不是 Hash、红黑树或者跳表？”</li>
+<li>“聚簇索引和非聚簇索引有什么区别？什么是回表？”</li>
+<li>“什么是覆盖索引？什么是最左前缀原则？”</li>
+<li>“索引在什么情况下会失效？”</li>
+<li>“索引下推（ICP）是什么？”</li>
+</ul>
+<p>这些问题看似独立，其实都围绕一个核心：<strong>B+ 树的结构决定了 InnoDB 索引的全部行为</strong>。</p>
+<h3 id="回答">回答<a class="anchor-link" aria-label="Link to this section" href="#回答"><span class="icon icon-link"></span></a></h3>
+<p><strong>B+ 树的结构</strong></p>
+<p>B+ 树是一棵平衡多路搜索树。核心特征：非叶子节点只存键值不存数据，叶子节点存储数据指针，叶子节点之间用双向链表连接。InnoDB 默认每个页 16KB，假设主键为 <code>BIGINT</code>（8 字节），加上指针开销，一个非叶子节点大约能存 1200 个键。这意味着：</p>
+<ul>
+<li>2 层 B+ 树可索引约 144 万条数据</li>
+<li>3 层可索引约 17 亿条数据</li>
+</ul>
+<p>千万级数据的表，树高只有 3 层，查询最多 3 次磁盘 I/O。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>          [10 | 20]</span></span>
+<span class="line"><span>         /    |    \</span></span>
+<span class="line"><span>    [1,5]  [10,15]  [20,25]</span></span>
+<span class="line"><span>      |       |        |</span></span>
+<span class="line"><span>    data    data     data</span></span>
+<span class="line"><span>   ←──── 叶子节点链表 ────→</span></span></code></pre>
+<p><strong>为什么不用其他数据结构？</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>数据结构</th><th>等值查询</th><th>范围查询</th><th>树高（千万级）</th><th>磁盘 I/O</th></tr></thead><tbody><tr><td>Hash 表</td><td>O(1)</td><td>不支持</td><td>-</td><td>1 次（但不支持范围）</td></tr><tr><td>红黑树</td><td>O(log N)</td><td>支持</td><td>~24 层</td><td>24 次，不可接受</td></tr><tr><td>跳表</td><td>O(log N)</td><td>支持</td><td>概率性，最坏退化</td><td>不稳定</td></tr><tr><td>B 树</td><td>O(log N)</td><td>支持</td><td>比 B+ 树高</td><td>每个节点存数据，扇出小</td></tr><tr><td><strong>B+ 树</strong></td><td><strong>O(log N)</strong></td><td><strong>支持</strong></td><td><strong>3 层</strong></td><td><strong>3 次</strong></td></tr></tbody></table>
+<p>Hash 等值最快但完全不支持范围查询和排序；红黑树是二叉树，千万级数据树高约 24 层，每层一次 I/O；跳表是概率平衡结构，最坏情况会退化成链表；B 树每个节点都存数据，导致单个页能存的键值更少，树更高。B+ 树在”矮”和”范围查询”两个维度上同时做到了最优。</p>
+<p><strong>聚簇索引 vs 非聚簇索引</strong></p>
+<p>InnoDB 的主键索引是聚簇索引：数据行直接存储在 B+ 树的叶子节点上，数据和索引物理上在一起。每张表只能有一个聚簇索引。</p>
+<p>二级索引（非聚簇索引）的叶子节点存储的不是数据行，而是主键值。通过二级索引查询时，先找到主键，再到聚簇索引中查找完整数据行，这个过程叫<strong>回表</strong>。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>聚簇索引（主键）：          二级索引（name）：</span></span>
+<span class="line"><span>+-----+-------+-----+      +-----+-----+</span></span>
+<span class="line"><span>| PK  | name  | age |      |name | PK  |</span></span>
+<span class="line"><span>+-----+-------+-----+      +-----+-----+</span></span>
+<span class="line"><span>| 1   | Alice | 30  |      |Alice| 1   |</span></span>
+<span class="line"><span>| 2   | Bob   | 25  |      |Bob  | 2   |</span></span>
+<span class="line"><span>| 3   | Carol | 35  |      |Carol| 3   |</span></span>
+<span class="line"><span>+-----+-------+-----+      +-----+-----+</span></span></code></pre>
+<p><strong>覆盖索引</strong></p>
+<p>如果查询的字段恰好都在某个二级索引中，就不需要回表，这叫覆盖索引。<code>EXPLAIN</code> 中 <code>Extra</code> 列会显示 <code>Using index</code>。</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 联合索引 (name, age)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">CREATE</span><span style="color:#D73A49;--shiki-dark:#F97583"> INDEX</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> idx_name_age</span><span style="color:#D73A49;--shiki-dark:#F97583"> ON</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users (</span><span style="color:#D73A49;--shiki-dark:#F97583">name</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, age);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 覆盖索引：只需要扫描索引，不回表</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> name</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, age </span><span style="color:#D73A49;--shiki-dark:#F97583">FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#D73A49;--shiki-dark:#F97583"> name</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'Alice'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 非覆盖索引：需要回表取 email 字段</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> name</span><span style="color:#24292E;--shiki-dark:#E1E4E8">, email </span><span style="color:#D73A49;--shiki-dark:#F97583">FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> users </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#D73A49;--shiki-dark:#F97583"> name</span><span style="color:#D73A49;--shiki-dark:#F97583"> =</span><span style="color:#032F62;--shiki-dark:#9ECBFF"> 'Alice'</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p><strong>最左前缀原则</strong></p>
+<p>联合索引 <code>(a, b, c)</code> 在 B+ 树中的排序规则是：先按 <code>a</code> 排序，<code>a</code> 相同再按 <code>b</code> 排序，<code>b</code> 相同再按 <code>c</code> 排序。因此查询时必须从最左列开始连续匹配：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 走索引</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> a </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> a </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> AND</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> b </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> a </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> AND</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> b </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#D73A49;--shiki-dark:#F97583"> AND</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> c </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 3</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 不走索引</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> b </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> c </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 3</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> b </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 2</span><span style="color:#D73A49;--shiki-dark:#F97583"> AND</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> c </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 3</span></span></code></pre>
+<p>MySQL 5.6 引入了<strong>索引下推（Index Condition Pushdown, ICP）</strong>：对于联合索引中无法直接用于定位的列，存储引擎层会在遍历索引时提前过滤，减少回表次数。<code>EXPLAIN</code> 中显示为 <code>Using index condition</code>。</p>
+<h3 id="分析">分析<a class="anchor-link" aria-label="Link to this section" href="#分析"><span class="icon icon-link"></span></a></h3>
+<p>面试官问 B+ 树，真正关心的是三件事：你是否理解底层结构、能否解释 SQL 行为、会不会做索引优化。</p>
+<p><strong>常见索引失效场景</strong>（面试高频追问）：</p>
+<ol>
+<li><strong>对索引列使用函数或表达式</strong>：<code>WHERE YEAR(create_time) = 2026</code> 导致全表扫描，应改为范围查询</li>
+<li><strong>隐式类型转换</strong>：<code>WHERE phone = 13800000000</code>，<code>phone</code> 是 <code>VARCHAR</code>，数字会触发转换</li>
+<li><strong><code>LIKE</code> 左模糊</strong>：<code>WHERE name LIKE '%lice'</code> 无法利用 B+ 树的有序性</li>
+<li><strong><code>OR</code> 条件中有非索引列</strong>：<code>WHERE indexed_col = 1 OR non_indexed_col = 2</code></li>
+<li><strong><code>NOT IN</code> / <code>NOT EXISTS</code></strong>：在某些场景下优化器会放弃使用索引</li>
+<li><strong>联合索引不满足最左前缀</strong>：跳过第一列直接用后面的列查询</li>
+</ol>
+<p>理解失效的本质很重要：所有失效都源于一个原因——<strong>查询条件破坏了 B+ 树的有序性</strong>，导致优化器认为全表扫描比走索引更快。</p>
+<h3 id="知识点总结">知识点总结<a class="anchor-link" aria-label="Link to this section" href="#知识点总结"><span class="icon icon-link"></span></a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>概念</th><th>一句话</th></tr></thead><tbody><tr><td>B+ 树</td><td>非叶子只存键、叶子存数据、叶子链表连接，3 层索引 17 亿行</td></tr><tr><td>聚簇索引</td><td>数据和索引物理上在一起，InnoDB 主键即聚簇索引</td></tr><tr><td>二级索引</td><td>叶子存主键值，查询需要回表</td></tr><tr><td>覆盖索引</td><td>查询字段全在索引中，不需要回表</td></tr><tr><td>最左前缀</td><td>联合索引必须从最左列连续匹配</td></tr><tr><td>索引下推</td><td>存储引擎层提前过滤，减少回表</td></tr><tr><td>索引失效</td><td>函数、隐式转换、左模糊、OR、不满足最左前缀</td></tr></tbody></table>
+<h3 id="相关知识扩展">相关知识扩展<a class="anchor-link" aria-label="Link to this section" href="#相关知识扩展"><span class="icon icon-link"></span></a></h3>
+<p><strong>索引合并（Index Merge）</strong></p>
+<p>当查询条件涉及多个单列索引时，MySQL 可能同时使用多个索引再合并结果。<code>EXPLAIN</code> 中 <code>type</code> 显示为 <code>index_merge</code>。有三种策略：<code>union</code>（取并集）、<code>intersection</code>（取交集）、<code>sort-union</code>（先排序再合并）。实践中，如果频繁触发索引合并，往往说明应该直接建联合索引。</p>
+<p><strong>MySQL 8.0 隐藏列</strong></p>
+<p>如果建表时没有显式定义主键，InnoDB 会自动添加一个 6 字节的隐藏列 <code>DB_ROW_ID</code> 作为聚簇索引。从 MySQL 8.0 开始，可以通过 <code>INFORMATION_SCHEMA.INNODB_COLUMNS</code> 查看这些隐藏列。这也解释了为什么”没有主键的表性能差”——隐藏列的生成和维护都有额外开销。</p>
+<p><strong>MySQL 8.0 降序索引</strong></p>
+<p>MySQL 8.0 之前，索引定义中的 <code>DESC</code> 被解析器接受但实际忽略（始终升序存储）。8.0 开始真正支持降序索引：</p>
+<pre class="astro-code astro-code-themes github-light github-dark" style="background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#6A737D">-- 降序索引，对 ORDER BY col DESC 的查询有显著优化</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">CREATE</span><span style="color:#D73A49;--shiki-dark:#F97583"> INDEX</span><span style="color:#6F42C1;--shiki-dark:#B392F0"> idx_created_desc</span><span style="color:#D73A49;--shiki-dark:#F97583"> ON</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> orders (user_id, created_at </span><span style="color:#D73A49;--shiki-dark:#F97583">DESC</span><span style="color:#24292E;--shiki-dark:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F97583">SELECT</span><span style="color:#D73A49;--shiki-dark:#F97583"> *</span><span style="color:#D73A49;--shiki-dark:#F97583"> FROM</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> orders </span><span style="color:#D73A49;--shiki-dark:#F97583">WHERE</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> user_id </span><span style="color:#D73A49;--shiki-dark:#F97583">=</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F97583"> ORDER BY</span><span style="color:#24292E;--shiki-dark:#E1E4E8"> created_at </span><span style="color:#D73A49;--shiki-dark:#F97583">DESC</span><span style="color:#D73A49;--shiki-dark:#F97583"> LIMIT</span><span style="color:#005CC5;--shiki-dark:#79B8FF"> 10</span><span style="color:#24292E;--shiki-dark:#E1E4E8">;</span></span></code></pre>
+<p>这对”查某用户最新订单”这类高频场景非常有用，避免了内存排序（<code>Using filesort</code>）。</p>
+<h3 id="学习路线与建议">学习路线与建议<a class="anchor-link" aria-label="Link to this section" href="#学习路线与建议"><span class="icon icon-link"></span></a></h3>
+<ol>
+<li><strong>先理解数据结构</strong>：手动画一棵 B+ 树的插入和分裂过程，搞清楚为什么 3 层能索引千万级数据。</li>
+<li><strong>再做对比实验</strong>：用 <code>EXPLAIN</code> 对比 Hash 索引（Memory 引擎）和 B+ 树索引在等值、范围查询下的执行计划差异。</li>
+<li><strong>然后掌握 EXPLAIN</strong>：重点看 <code>type</code>（<code>ref</code> > <code>range</code> > <code>index</code> > <code>ALL</code>）、<code>key</code>、<code>Extra</code>（<code>Using index</code> / <code>Using index condition</code> / <code>Using filesort</code>）三列。</li>
+<li><strong>最后结合项目</strong>：拿自己项目中的真实查询做优化，比如把回表查询改成覆盖索引、把左模糊改成前缀匹配。面试时能说出”我在 XX 项目中把查询从 200ms 优化到 5ms”，比背十遍八股文都管用。</li>
+</ol>
+<p>建议的学习顺序：B+ 树结构 → 聚簇/二级索引 → EXPLAIN → 最左前缀与失效场景 → 覆盖索引与索引下推 → 联合索引设计。每一步都带着 SQL 去验证，而不是只停留在概念层面。</p>
+<h3 id="参考文章与延伸阅读">参考文章与延伸阅读<a class="anchor-link" aria-label="Link to this section" href="#参考文章与延伸阅读"><span class="icon icon-link"></span></a></h3>
+<ul>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html">MySQL 官方文档 - InnoDB Index Types</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/index-condition-pushdown-optimization.html">MySQL 官方文档 - Index Condition Pushdown</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/8.0/en/descending-indexes.html">MySQL 官方文档 - Descending Indexes</a></li>
+<li>《高性能 MySQL》第 4 版，O’Reilly</li>
+<li>《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧</li>
+<li>《数据库系统概论》B+ 树章节，王珊、萨师煊</li>
+</ul> </div> <aside class="post-toc" data-astro-cid-gysqo7gh> <div class="toc" data-astro-cid-gysqo7gh> <h3 data-astro-cid-gysqo7gh>目录</h3> <ul data-astro-cid-gysqo7gh> <li class="toc-h1" data-astro-cid-gysqo7gh> <a href="#面试笔记：为什么用+树做索引" data-astro-cid-gysqo7gh>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#前情提要" data-astro-cid-gysqo7gh>前情提要</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#问题" data-astro-cid-gysqo7gh>问题</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-15" data-astro-cid-gysqo7gh>&quot;InnoDB 为什么用 B+ 树做索引，而不是 Hash、红黑树或者跳表？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-16" data-astro-cid-gysqo7gh>&quot;聚簇索引和非聚簇索引有什么区别？什么是回表？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-17" data-astro-cid-gysqo7gh>&quot;什么是覆盖索引？什么是最左前缀原则？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-18" data-astro-cid-gysqo7gh>&quot;索引在什么情况下会失效？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-19" data-astro-cid-gysqo7gh>&quot;索引下推（ICP）是什么？&quot;</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#回答" data-astro-cid-gysqo7gh>回答</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-29" data-astro-cid-gysqo7gh>2 层 B+ 树可索引约 144 万条数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-30" data-astro-cid-gysqo7gh>3 层可索引约 17 亿条数据</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#分析" data-astro-cid-gysqo7gh>分析</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-111" data-astro-cid-gysqo7gh>**对索引列使用函数或表达式**：`WHERE YEAR(create_time) = 2026` 导致全表扫描，应改为范围查询</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-112" data-astro-cid-gysqo7gh>**隐式类型转换**：`WHERE phone = 13800000000`，`phone` 是 `VARCHAR`，数字会触发转换</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-113" data-astro-cid-gysqo7gh>**`LIKE` 左模糊**：`WHERE name LIKE &#39;%lice&#39;` 无法利用 B+ 树的有序性</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-114" data-astro-cid-gysqo7gh>**`OR` 条件中有非索引列**：`WHERE indexed_col = 1 OR non_indexed_col = 2`</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-115" data-astro-cid-gysqo7gh>**`NOT IN` / `NOT EXISTS`**：在某些场景下优化器会放弃使用索引</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-116" data-astro-cid-gysqo7gh>**联合索引不满足最左前缀**：跳过第一列直接用后面的列查询</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#知识点总结" data-astro-cid-gysqo7gh>知识点总结</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#相关知识扩展" data-astro-cid-gysqo7gh>相关知识扩展</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#学习路线与建议" data-astro-cid-gysqo7gh>学习路线与建议</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-157" data-astro-cid-gysqo7gh>**先理解数据结构**：手动画一棵 B+ 树的插入和分裂过程，搞清楚为什么 3 层能索引千万级数据。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-158" data-astro-cid-gysqo7gh>**再做对比实验**：用 `EXPLAIN` 对比 Hash 索引（Memory 引擎）和 B+ 树索引在等值、范围查询下的执行计划差异。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-159" data-astro-cid-gysqo7gh>**然后掌握 EXPLAIN**：重点看 `type`（`ref` &gt; `range` &gt; `index` &gt; `ALL`）、`key`、`Extra`（`Using index` / `Using index condition` / `Using filesort`）三列。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-160" data-astro-cid-gysqo7gh>**最后结合项目**：拿自己项目中的真实查询做优化，比如把回表查询改成覆盖索引、把左模糊改成前缀匹配。面试时能说出&quot;我在 XX 项目中把查询从 200ms 优化到 5ms&quot;，比背十遍八股文都管用。</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#参考文章与延伸阅读" data-astro-cid-gysqo7gh>参考文章与延伸阅读</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-166" data-astro-cid-gysqo7gh>[MySQL 官方文档 - InnoDB Index Types](https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-167" data-astro-cid-gysqo7gh>[MySQL 官方文档 - Index Condition Pushdown](https://dev.mysql.com/doc/refman/8.0/en/index-condition-pushdown-optimization.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-168" data-astro-cid-gysqo7gh>[MySQL 官方文档 - Descending Indexes](https://dev.mysql.com/doc/refman/8.0/en/descending-indexes.html)</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-169" data-astro-cid-gysqo7gh>《高性能 MySQL》第 4 版，O&#39;Reilly</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-170" data-astro-cid-gysqo7gh>《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧</a> </li><li class="toc-h3" data-astro-cid-gysqo7gh> <a href="#list-171" data-astro-cid-gysqo7gh>《数据库系统概论》B+ 树章节，王珊、萨师煊</a> </li> </ul> </div> </aside> </div> </article>  </main> <footer> <p>&copy; 2025 KAMISHOW!!!!</p> </footer> </body></html> 
