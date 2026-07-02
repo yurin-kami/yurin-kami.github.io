@@ -1,4 +1,4 @@
-name: Deploy Astro site to GitHub Pages
+﻿name: Deploy Astro site to GitHub Pages
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # 将超时时间调整为60分钟，默认为360分钟总限额
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -34,3 +34,5 @@ jobs:
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'deploy: ${{ github.sha }}'
+
+
