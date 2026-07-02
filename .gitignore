@@ -40,3 +40,6 @@ backups/
 tailwindcss-*.log
 
 _theme_backup/
+
+# Claude Code
+.cc-connect/
