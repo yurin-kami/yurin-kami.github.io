@@ -2,7 +2,7 @@
 /* 定义自定义字体 */
 @font-face {
   font-family: 'FZXIANGSU16';
-  src: url('/fonts/FZXIANGSU16.TTF') format('truetype');
+  src: url('https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/fonts/FZXIANGSU16.TTF') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
@@ -18,7 +18,7 @@ body {
   display: flex;
   flex-direction: column;
   /* 背景图片设置 */
-  background-image: url('/images/background.jpg');
+  background-image: url('https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/background.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -33,7 +33,7 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/images/background.jpg');
+  background-image: url('https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/background.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

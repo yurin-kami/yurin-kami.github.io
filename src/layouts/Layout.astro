@@ -86,13 +86,13 @@ const keywords = keywordsOverride || siteConfig.keywords || [siteConfig.title];
     {/* Async load rounded fonts — Japanese pages use Gen Jyuu Gothic P, others use ChillRoundF (fix #113) */}
     {locale === 'ja' ? (
       <>
-        <link rel="stylesheet" href="/fonts/GenJyuuGothic-P-Regular/result.css" media="print" onload="this.setAttribute('media','all')" />
-        <link rel="stylesheet" href="/fonts/GenJyuuGothic-P-Bold/result.css" media="print" onload="this.setAttribute('media','all')" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/fonts/GenJyuuGothic-P-Regular/result.css" media="print" onload="this.setAttribute('media','all')" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/fonts/GenJyuuGothic-P-Bold/result.css" media="print" onload="this.setAttribute('media','all')" />
       </>
     ) : (
       <>
-        <link rel="stylesheet" href="/fonts/ChillRoundFRegular/result.css" media="print" onload="this.setAttribute('media','all')" />
-        <link rel="stylesheet" href="/fonts/ChillRoundFBold/result.css" media="print" onload="this.setAttribute('media','all')" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/fonts/ChillRoundFRegular/result.css" media="print" onload="this.setAttribute('media','all')" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/fonts/ChillRoundFBold/result.css" media="print" onload="this.setAttribute('media','all')" />
       </>
     )}
 
