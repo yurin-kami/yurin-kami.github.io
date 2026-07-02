@@ -19,7 +19,7 @@ export function slugify(filename: string): string {
 export function extractFirstImage(content: string): string {
   const imageMatch = content.match(/!\[.*?\]\((.*?)\)/);
   if (!imageMatch || !imageMatch[1]) {
-    return '/images/default-thumbnail.jpg';
+    return 'https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/default-thumbnail.jpg';
   }
 
   const src = imageMatch[1];
