@@ -1,0 +1,35 @@
+---
+import '../styles/global.css';
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/png" href="/images/fav.png" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} - KAMISHOW!!!!!</title>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/">首页</a>
+        <a href="/posts">文章</a>
+        <a href="/tags">标签</a>
+        <a href="/search">搜索</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <p>&copy; 2025 KAMISHOW!!!!</p>
+    </footer>
+  </body>
+</html>

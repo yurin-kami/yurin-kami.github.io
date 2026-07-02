@@ -1,0 +1,22 @@
+---
+import Layout from '@/components/Layout.astro';
+import Search from '@/components/Search.astro';
+import { getCollection } from 'astro:content';
+import { defaultLocale, localizedPath } from '@/i18n';
+import { encodeSlug } from '@/lib/route';
+import { buildTagPath, getPostSlug, getSortedPosts } from '@/lib/content';
+
+const posts = await getSortedPosts(defaultLocale);
+---
+
+<Layout title="搜索">
+  <h1>搜索</h1>
+  <Search
+    posts={posts}
+    getPostSlug={getPostSlug}
+    localizedPath={localizedPath}
+    buildTagPath={buildTagPath}
+    encodeSlug={encodeSlug}
+    defaultLocale={defaultLocale}
+  />
+</Layout>

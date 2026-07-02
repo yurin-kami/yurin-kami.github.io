@@ -1,0 +1,17 @@
+---
+import Layout from '@/components/Layout.astro';
+import PostItem from '@/components/PostItem.astro';
+import { defaultLocale } from '@/i18n/config';
+import { getSortedPosts } from '@/lib/content';
+
+const posts = await getSortedPosts(defaultLocale);
+---
+
+<Layout title="所有文章">
+  <h1>所有文章</h1>
+  <ul>
+    {posts.map((post) => (
+      <PostItem post={post} />
+    ))}
+  </ul>
+</Layout>

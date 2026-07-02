@@ -1,0 +1,31 @@
+---
+import { getPostSlug, getSortedPosts } from '@lib/content';
+import { defaultLocale, localeList } from '@/i18n/config';
+import PostPage from '../../post/[...slug].astro';
+
+export async function getStaticPaths() {
+  const nonDefaultLocales = localeList.filter((l) => l !== defaultLocale);
+  const paths = [];
+
+  for (const lang of nonDefaultLocales) {
+    const posts = await getSortedPosts(lang);
+    for (const post of posts) {
+      const slug = getPostSlug(post);
+      if (!slug) {
+        console.warn(`[getStaticPaths:${lang}] Skipping post "${post.id}" - no valid slug`);
+        continue;
+      }
+      paths.push({
+        params: { lang, slug },
+        props: { postId: post.id },
+      });
+    }
+  }
+
+  return paths;
+}
+
+const { postId } = Astro.props;
+// PostPage derives locale from Astro.url.pathname, which reflects *this* page's URL (e.g. /en/post/…)
+---
+<PostPage postId={postId} />

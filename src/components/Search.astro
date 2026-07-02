@@ -1,0 +1,83 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  posts: CollectionEntry<'blog'>[];
+  getPostSlug: (post: CollectionEntry<'blog'>) => string;
+  localizedPath: (path: string, locale?: string) => string;
+  buildTagPath: (tag: string) => string;
+  encodeSlug: (slug: string) => string;
+  defaultLocale: string;
+}
+
+const {
+  posts,
+  getPostSlug,
+  localizedPath,
+  buildTagPath,
+  encodeSlug,
+  defaultLocale,
+} = Astro.props;
+---
+
+<div class="search-page">
+  <h1>搜索</h1>
+  <div class="search-container">
+    <input
+      type="text"
+      id="search-input"
+      class="search-input"
+      placeholder="搜索文章..."
+    />
+  </div>
+  <ul id="search-results">
+    {posts.map((post) => {
+      const description = post.data.description || '';
+      const tags = post.data.tags || [];
+      const postSlug = getPostSlug(post);
+      const postPath = `/post/${encodeSlug(postSlug)}`;
+      const postHref = localizedPath(postPath, defaultLocale);
+      return (
+        <li class="search-result-item">
+          <a href={postHref}>
+            <h2>{post.data.title}</h2>
+          </a>
+          <p class="post-date">日期: {new Date(post.data.date).toISOString().slice(0, 10)}</p>
+          {description && <p>{description}</p>}
+          {tags.length > 0 && (
+            <div>
+              标签:
+              <span class="tag-list">
+                {tags.map((tag) => (
+                  <a href={localizedPath(buildTagPath(tag), defaultLocale)}>{tag}</a>
+                ))}
+              </span>
+            </div>
+          )}
+        </li>
+      );
+    })}
+  </ul>
+</div>
+
+<script>
+  const searchInput = document.getElementById('search-input');
+  const searchResults = document.getElementById('search-results');
+
+  if (searchInput && searchResults) {
+    const allItems = searchResults.querySelectorAll('li');
+
+    searchInput.addEventListener('input', (e) => {
+      const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+
+      allItems.forEach((item) => {
+        const text = item.textContent?.toLowerCase() || '';
+        if (query === '' || text.includes(query)) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+  }
+</script>

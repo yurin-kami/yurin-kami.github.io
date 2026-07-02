@@ -1,0 +1,40 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { extractFirstImage, slugify } from '../styles/utils';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const thumbnail = extractFirstImage(post.body);
+const filename = post.id.split('/').pop() || post.id;
+const postSlug = post.slug || slugify(filename);
+---
+
+<li class="post-item">
+  <div class="content">
+    <a href={`/posts/${postSlug}`} class="post-title-link">
+      <h2>{post.data.title}</h2>
+    </a>
+    <p class="post-date">日期: {new Date(post.data.date).toISOString().slice(0, 10)}</p>
+    {post.data.excerpt && <p class="post-excerpt">{post.data.excerpt}</p>}
+    {post.data.tags && post.data.tags.length > 0 && (
+      <div class="post-tags">
+        标签:
+        <span class="tag-list">
+          {post.data.tags.map((tag) => (
+            <a href={`/tags/${tag}`}>{tag}</a>
+          ))}
+        </span>
+      </div>
+    )}
+  </div>
+  <img
+    src={thumbnail}
+    alt={`${post.data.title} 缩略图`}
+    class="thumbnail"
+    loading="lazy"
+    onerror="this.src='/images/default-thumbnail.jpg'"
+  />
+</li>
