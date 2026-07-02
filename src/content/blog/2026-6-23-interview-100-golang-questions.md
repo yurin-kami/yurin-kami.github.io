@@ -988,7 +988,7 @@ channel，会直接从发送者那⾥接收数据；对于有缓冲channel，会
 缓冲区为空时需要阻塞等待。创建sudog结构体包装当前goroutine，加⼊到recvq等待队列，调⽤gopark进⼊阻塞
 状态。当有发送者写⼊数据时会被唤醒继续执⾏。
 从已关闭channel读取有特殊处理。如果channel已关闭且缓冲区为空，会返回零值和false标志；如果缓冲区还有数
-据，可以正常读取直到清空。这就是为什么v, ok := <-ch中的ok能判断channel状态的原因。
+据，可以正常读取直到清空。这就是为什么`v, ok ＝ <-ch`中的ok能判断channel状态的原因。
 
 ### 4.5 从⼀个已关闭Channel仍能读出数据吗？
 
@@ -1488,7 +1488,7 @@ iface是⾮空接⼜的底层实现，结构相对复杂，包含itab和data。�
     T(value)。⽽类型断⾔是运⾏期的动态检查，专门⽤于从接⼜类型中提取具体类型，语法是value.(T)
 
 安全性差别很⼤：类型转换在编译期保证安全性，⽽类型断⾔可能在运⾏时失败。所以实际开发中更常⽤安全版本
-的类型断⾔value, ok := x.(string)，通过ok判断是否成功。
+的类型断⾔value, ok \:= x.(string)，通过ok判断是否成功。
 使⽤场景不同：类型转换主要解决数值类型、字符串、切⽚等之间的转换问题；类型断⾔主要⽤于接⼜编程，当你
 拿到⼀个interface{}需要还原成具体类型时使⽤。
 底层实现也不同：类型转换通常是简单的内存重新解释或者数据格式调整；类型断⾔需要检查接⼜的底层类型信
@@ -2191,10 +2191,12 @@ gc 2 第⼆个 GC 周期
     }
 
 并通过
-    $ go tool trace trace.out
-    2019/12/30 15:50:33 Parsing trace...
-    2019/12/30 15:50:38 Splitting trace...
-    2019/12/30 15:50:45 Opening browser. Trace viewer is listening on http://127.0.0.1:51839
+```
+$ go tool trace trace.out
+2019/12/30 15:50:33 Parsing trace...
+2019/12/30 15:50:38 Splitting trace...
+2019/12/30 15:50:45 Opening browser. Trace viewer is listening on http://127.0.0.1:51839
+```
 来启动可视化界⾯：
 
 
