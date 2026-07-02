@@ -22,7 +22,6 @@
     "lint-md:fix": "lint-md ./src/content/**/*.{md,mdx} --fix",
     "lint-staged": "lint-staged",
     "change": "git cliff --bump -o CHANGELOG.md",
-    "prepare": "husky",
     "knip": "knip",
     "koharu": "npx tsx scripts/koharu.tsx",
     "save-slugs": "npx tsx scripts/save-slugs.ts",

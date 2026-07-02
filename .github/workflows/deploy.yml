@@ -24,10 +24,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install dependencies
-        run: corepack pnpm install --ignore-scripts
+        run: corepack pnpm install
 
       - name: Build
         run: pnpm build
