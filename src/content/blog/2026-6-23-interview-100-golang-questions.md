@@ -1,4 +1,4 @@
----
+﻿---
 title: "100道Golang面试题汇总（基础+并发+GMP+内存管理+垃圾回收）"
 date: "2026-6-23"
 tags: ["Go", "面试", "八股文", "GMP", "并发编程"]
@@ -40,13 +40,13 @@ Golang 针对并发进⾏了优化，⽀持协程，并且实现了⾼效的GMP�
 ### 1.3 协程和线程和进程的区别？
 
 
-进程:进程是具有⼀定独⽴功能的程序，进程是系统资源分配和调度的最⼩单位。 每个进程都有⾃⼰的独⽴
+进程\进程是具有⼀定独⽴功能的程序，进程是系统资源分配和调度的最⼩单位。 每个进程都有⾃⼰的独⽴
 内存空间，不同进程通过进程间通信来通信。由于进程⽐较重量，占据独⽴的内存，所以上下⽂进程间的切
 换开销（栈、寄存器、虚拟内存、⽂件句柄等）⽐较⼤，但相对⽐较稳定安全。
-线程:线程是进程的⼀个实体,线程是内核态,⽽且是 CPU 调度和分派的基本单位,它是⽐进程更⼩的能独⽴运
+线程\线程是进程的⼀个实体,线程是内核态,⽽且是 CPU 调度和分派的基本单位,它是⽐进程更⼩的能独⽴运
 ⾏的基本单位。线程间通信主要通过共享内存，上下⽂切换很快，资源开销较少，但相⽐进程不够稳定容易
 丢失数据。
-协程:协程是⼀种⽤户态的轻量级线程，协程的调度完全是由⽤户来控制的。协程拥有⾃⼰的寄存器上下⽂和
+协程\协程是⼀种⽤户态的轻量级线程，协程的调度完全是由⽤户来控制的。协程拥有⾃⼰的寄存器上下⽂和
 栈。 协程调度切换时，将寄存器上下⽂和栈保存到其他地⽅，在切回来的时候，恢复先前保存的寄存器上下
 ⽂和栈，直接操作栈则基本没有内核切换的开销，可以不加锁的访问全局变量，所以上下⽂的切换⾮常快。
 
@@ -64,14 +64,15 @@ make 和 new 都是⽤于内存分配的内建函数，但它们的使⽤场景�
 可以⽤于任何类型的内存分配。
 分析：
 
-    // 使⽤ make 创建 slice
-    s := make([]int, 5) // 创建⼀个⻓度为 5 的 slice
-    fmt.Println(s) // 输出: [0 0 0 0 0]
-    // 使⽤ new 创建 int 指针
-    p := new(int) // 分配内存给 int 类型
-    fmt.Println(*p) // 输出: 0 (初始值)
+```go
+// 使⽤ make 创建 slice
+s := make([]int, 5) // 创建⼀个⻓度为 5 的 slice
+fmt.Println(s) // 输出: [0 0 0 0 0]
+// 使⽤ new 创建 int 指针
+p := new(int) // 分配内存给 int 类型
+fmt.Println(*p) // 输出: 0 (初始值)
 
-make 函数创建的是数据结构（slice、map、channel）本⾝，且返回初始化后的值。⽽new 函数创建的是可以指向
+```
 任意类型的指针，返回指向未初始化零值的内存地址。
 
 ### 1.5 Golang 中数组和切⽚的区别？
@@ -140,33 +141,41 @@ strings.join也是基于strings.builder来实现的,并且可以⾃定义分隔�
 
 5种拼接⽅法的实例代码
 
-    func main(){
+```go
+func main(){
 
-    a := []string{"a", "b", "c"}
-    //⽅式1：+
+a := []string{"a", "b", "c"}
+```
 
-    ret := a[0] + a[1] + a[2]
-    //⽅式2：fmt.Sprintf
+```go
+ret := a[0] + a[1] + a[2]
+```
 
-    ret := fmt.Sprintf("%s%s%s", a[0],a[1],a[2])
-    //⽅式3：strings.Builder
-    var sb strings.Builder
+```go
+ret := fmt.Sprintf("%s%s%s", a[0],a[1],a[2])
+```
+```go
+var sb strings.Builder
 
-    sb.WriteString(a[0])
+```
     sb.WriteString(a[1])
     sb.WriteString(a[2])
-    ret := sb.String()
-    //⽅式4：bytes.Buffer
-    buf := new(bytes.Buffer)
-    buf.Write(a[0])
+```go
+ret := sb.String()
+```
+```go
+buf := new(bytes.Buffer)
+```
     buf.Write(a[1])
     buf.Write(a[2])
-    ret := buf.String()
-    //⽅式5：strings.Join
-    ret := strings.Join(a,"")
+```go
+ret := buf.String()
+```
+```go
+ret := strings.Join(a,"")
 
 
-    }
+```
 
 ### 1.8 defer 的执⾏顺序是怎样的？defer 的作⽤或者使⽤场景是什么?
 
@@ -366,18 +375,20 @@ interface 相等有以下 2 种情况
 1. 两个 interface 均等于 nil（此时 V 和 T 都处于 unset 状态）
 2. 类型 T 相同，且对应的值 V 相等。
 
-    type Stu struct {
+```go
+type Stu struct {
 
-    Name string
+```
     }
-    type StuInt interface{}
-    func main() {
-    var stu1, stu2 StuInt = &Stu{"Tom"}, &Stu{"Tom"}
-    var stu3, stu4 StuInt = Stu{"Tom"}, Stu{"Tom"}
+```go
+type StuInt interface{}
+func main() {
+var stu1, stu2 StuInt = &Stu{"Tom"}, &Stu{"Tom"}
+var stu3, stu4 StuInt = Stu{"Tom"}, Stu{"Tom"}
 
-    fmt.Println(stu1 == stu2) // false
-    fmt.Println(stu3 == stu4) // true
-    }
+fmt.Println(stu1 == stu2) // false
+fmt.Println(stu3 == stu4) // true
+```
 
 stu1 和 stu2 对应的类型是 *Stu，值是 Stu 结构体的地址，两个地址不同，因此结果为 false。
 stu3 和 stu4 对应的类型是 Stu，值是 Stu 结构体，且各字段相等，因此结果为 true。
@@ -436,21 +447,23 @@ Go 语⾔的多返回值是通过在函数调⽤栈帧上预留空间并进⾏�
 动、初始化全局变量等），⽽不需要直接使⽤包中的任何导出成员。这时，你就可以使⽤ _ 来进⾏匿名导⼊
 ⽰例：
 
-    package main
-    import (
-        
-        "fmt"
+```go
+package main
+import (
+
+```
         _ "net/http/pprof" // 导⼊ pprof 包，只为了执⾏其 init 函数注册 profiling 接⼝
     )
 
-    func main() {
+```go
+func main() {
 
-    fmt.Println("Application started. Profiling tools are likely registered.")
-    // 实际应⽤中，你可能还会启动⼀个 HTTP 服务器来暴露 pprof 接⼝
-    // go func() {
-    // log.Println(http.ListenAndServe("localhost:6060", nil))
-    // }()
-    }
+fmt.Println("Application started. Profiling tools are likely registered.")
+// 实际应⽤中，你可能还会启动⼀个 HTTP 服务器来暴露 pprof 接⼝
+// go func() {
+// log.Println(http.ListenAndServe("localhost:6060", nil))
+// }()
+```
 
 ### 1.21 Go语⾔普通指针和unsafe.Pointer有什么区别？
 
@@ -907,35 +920,40 @@ hchan定义如下：
 据。
 分析：
 
-    package main
+```go
+package main
 
 
-    import (
-        
-        "fmt"
+import (
+
+```
         "time"
     )
 
-    func goroutineA(a <-chan int) {
-    val := <-a
-    fmt.Println("goroutine A received data: ", val)
-    return
+```go
+func goroutineA(a <-chan int) {
+val := <-a
+fmt.Println("goroutine A received data: ", val)
+```
     }
-    func goroutineB(b <-chan int) {
+```go
+func goroutineB(b <-chan int) {
 
-    val := <-b
-    fmt.Println("goroutine B received data: ", val)
-    return
+val := <-b
+fmt.Println("goroutine B received data: ", val)
+```
     }
-    func main() {
+```go
+func main() {
 
-    ch := make(chan int)
-    go goroutineA(ch)
-    go goroutineB(ch)
-    ch <- 3
+ch := make(chan int)
+go goroutineA(ch)
+go goroutineB(ch)
+```
     time.Sleep(time.Second)
-    ch1 := make(chan struct{})
-    }
+```go
+ch1 := make(chan struct{})
+```
 
 在第 17 ⾏，主协程向 ch 发送了⼀个元素 3，来看下接下来会发⽣什么。
 sender 发现 ch 的 recvq ⾥有 receiver 在等待着接收，就会出队⼀个 sudog，把 recvq ⾥ first 指针的 sudo "推举"出
@@ -1505,33 +1523,37 @@ Go语⾔的interface主要有⼏个核⼼应⽤场景：
 接⼜值的零值是指动态类型和动态值都为 nil。当仅且当这两部分的值都为 nil 的情况下，这个接⼜值就才会被认为
 接⼝值 == nil。
 
-    package main
-    import "fmt"
-    type Coder interface {
+```go
+package main
+import "fmt"
+type Coder interface {
 
-    code()
+```
     }
-    type Gopher struct {
+```go
+type Gopher struct {
 
-    name string
+```
     }
-    func (g Gopher) code() {
+```go
+func (g Gopher) code() {
 
-    fmt.Printf("%s is coding\n", g.name)
-    }
+fmt.Printf("%s is coding\n", g.name)
+```
 
 
-    func main() {
-    var c Coder
+```go
+func main() {
+var c Coder
 
-    fmt.Println(c == nil)
-    fmt.Printf("c: %T, %v\n", c, c)
-    var g *Gopher
-    fmt.Println(g == nil)
-    c = g
-    fmt.Println(c == nil)
-    fmt.Printf("c: %T, %v\n", c, c)
-    }
+fmt.Println(c == nil)
+fmt.Printf("c: %T, %v\n", c, c)
+var g *Gopher
+fmt.Println(g == nil)
+c = g
+fmt.Println(c == nil)
+fmt.Printf("c: %T, %v\n", c, c)
+```
 
 程序输出：
 true
