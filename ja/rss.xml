@@ -3004,7 +3004,140 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
+前情提要
+Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
+问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中常见的问法：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
+&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
+&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
+&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
+&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
 准备面试的时候发现，Go 的 sync 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
 这篇文章是我对 sync 包相关知识的系统梳理，把</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选&lt;a href=&quot;#面试笔记go的sync包怎么用mutex和rwmutex怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;准备面试的时候发现，Go 的 &lt;code&gt;sync&lt;/code&gt; 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
@@ -3223,209 +3356,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/sync/mutex.go&quot;&gt;Go Mutex 源码分析（正常模式与饥饿模式）&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://pkg.go.dev/golang.org/x/sync/errgroup&quot;&gt;errgroup - golang.org/x/sync/errgroup&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://book.douban.com/subject/30378095/&quot;&gt;Go 并发编程实战 - 许式伟&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
-前情提要
-Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
-问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中常见的问法：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
-&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
-&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
-&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
-&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
-
-准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：JWT 和 Session 认证到底怎么选&lt;a href=&quot;#面试笔记jwt-和-session-认证到底怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;blockquote&gt;
-&lt;p&gt;准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完 CRUD 想搞清楚”登录到底发生了什么”的同学。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;认证（Authentication）解决的是”你是谁”的问题，授权（Authorization）解决的是”你能干什么”的问题。面试中这两块经常绑在一起问，但底层逻辑完全不同。Session 是最经典的方案，JWT 是前后端分离时代的宠儿，OAuth2 则是第三方登录的行业标准。理解它们的演进关系，比死记硬背强得多。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 1：Session 是怎么工作的？有什么优缺点？&lt;a href=&quot;#问题-1session-是怎么工作的有什么优缺点&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;最早做 Web 应用的时候，用户登录成功后服务端会在内存或 Redis 中创建一个 Session 对象，包含用户 ID、登录时间等信息，然后把 Session ID 通过 &lt;code&gt;Set-Cookie&lt;/code&gt; 响应头塞给浏览器。之后浏览器每次请求都会自动携带这个 Cookie，服务端拿着 Session ID 去查对应的 Session 数据，确认身份。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;优点很明确&lt;/strong&gt;：服务端掌控一切。想注销？直接删掉 Session 就行。想限制同时在线设备数？数一下 Session 个数就好。安全性方面，配合 Cookie 的 &lt;code&gt;HttpOnly&lt;/code&gt;（防 XSS 读取）、&lt;code&gt;Secure&lt;/code&gt;（仅 HTTPS 传输）、&lt;code&gt;SameSite&lt;/code&gt;（防 CSRF）属性，防御体系比较完善。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;问题也很明显&lt;/strong&gt;：Session 存在服务端，横向扩展就麻烦了。你部署了三个服务节点，用户的 Session 在节点 A 上，请求被负载均衡到节点 B，B 查不到 Session 就会拒绝。解决办法要么搞 Sticky Session（绑定用户到固定节点），要么搞 Session 共享（Redis 集中存储），都增加了运维复杂度。另外 Cookie 有跨域限制，前后端分离部署在不同域名下就很头疼。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 2：JWT 的三段结构和无状态验证是怎么回事？&lt;a href=&quot;#问题-2jwt-的三段结构和无状态验证是怎么回事&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;JWT（JSON Web Token）由三部分组成，用 &lt;code&gt;.&lt;/code&gt; 分隔：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Header&lt;/strong&gt;：声明算法类型，比如 &lt;code&gt;{&quot;alg&quot;: &quot;HS256&quot;, &quot;typ&quot;: &quot;JWT&quot;}&lt;/code&gt;，Base64URL 编码。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Payload&lt;/strong&gt;：存放声明（Claims），包括标准字段（&lt;code&gt;iss&lt;/code&gt; 签发者、&lt;code&gt;exp&lt;/code&gt; 过期时间、&lt;code&gt;sub&lt;/code&gt; 用户标识）和自定义字段（userId、role 等）。同样 Base64URL 编码。这里有个关键点：&lt;strong&gt;Payload 不是加密的&lt;/strong&gt;，任何人拿到 token 都能解码看到内容，所以绝对不能放密码之类的敏感信息。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Signature&lt;/strong&gt;：对 Header 和 Payload 的签名。服务端用密钥计算 &lt;code&gt;HMACSHA256(base64UrlEncode(header) + &quot;.&quot; + base64UrlEncode(payload), secret)&lt;/code&gt;，后续验证时重新计算并比对，判断 token 是否被篡改。&lt;/p&gt;
-&lt;p&gt;验证流程非常简洁：客户端在请求头中带上 &lt;code&gt;Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code&gt;，服务端提取 token，验证签名，检查过期时间，解析 Payload 拿到用户信息。全程不查数据库，所以叫&lt;strong&gt;无状态&lt;/strong&gt;。这让它在微服务和多节点部署中如鱼得水——任意节点拿到 token 都能独立验证。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 3：JWT 的致命伤是什么？怎么解决？&lt;a href=&quot;#问题-3jwt-的致命伤是什么怎么解决&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;JWT 最大的问题是&lt;strong&gt;无法主动失效&lt;/strong&gt;。token 一旦签发，在过期之前就一直有效。你点了”退出登录”，客户端删掉了本地存储的 token，但如果有人在这之前截获了那个 token，他依然可以用到过期为止。&lt;/p&gt;
-&lt;p&gt;这引出了一个设计上的矛盾：过期时间设短了，用户频繁被踢出要重新登录，体验极差；设长了，token 泄露后的攻击窗口就很大。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;是目前的主流方案。Access Token 短命（15 分钟到 2 小时），用于日常 API 调用；Refresh Token 长寿（7 到 30 天），用于换取新的 Access Token。流程是这样的：客户端用 Access Token 请求，服务端返回 401 表示过期，客户端自动拿 Refresh Token 去 &lt;code&gt;/auth/refresh&lt;/code&gt; 接口换新 token，然后重试原请求。整个过程对用户透明。&lt;/p&gt;
-&lt;p&gt;Refresh Token 和 Access Token 不同，它是&lt;strong&gt;有状态&lt;/strong&gt;的——存在数据库里，可以主动删除（实现真正的注销）。更安全的做法是加上&lt;strong&gt;旋转机制（Rotation）&lt;/strong&gt;：每次用 Refresh Token 换新 token 时，同时签发新的 Refresh Token 并作废旧的。如果检测到旧 Refresh Token 被重复使用，说明可能被盗用，立刻注销该用户的所有 token。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;问题 4：OAuth2 的四种模式和授权码流程？&lt;a href=&quot;#问题-4oauth2-的四种模式和授权码流程&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;OAuth2 解决的是”第三方应用如何安全地获取用户资源访问权限”。它和 JWT 不冲突——OAuth2 定义获取 token 的流程，JWT 可以作为 token 的格式。&lt;/p&gt;
-&lt;p&gt;四种授权模式中，&lt;strong&gt;授权码模式（Authorization Code）&lt;/strong&gt; 最安全也最常用，面试必问：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;用户点击”用 GitHub 登录”，跳转到 GitHub 授权页面&lt;/li&gt;
-&lt;li&gt;用户同意授权，GitHub 回调你的应用并附带一个 authorization code&lt;/li&gt;
-&lt;li&gt;你的后端拿 code + client_secret 向 GitHub 换取 Access Token&lt;/li&gt;
-&lt;li&gt;用 Access Token 调 GitHub API 拿到用户信息&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;code 只能用一次且有效期很短（通常 10 分钟），client_secret 始终在后端使用不暴露给前端。这就是为什么授权码模式最安全——敏感凭证全程不经过浏览器。&lt;/p&gt;
-&lt;p&gt;其他三种：&lt;strong&gt;简化模式（Implicit）&lt;/strong&gt; 直接在 URL fragment 返回 token，已不推荐；&lt;strong&gt;密码模式（Password）&lt;/strong&gt; 让用户把密码交给第三方应用，仅适用于高度信任的官方应用；&lt;strong&gt;客户端凭证模式（Client Credentials）&lt;/strong&gt; 应用以自己的身份获取 token，用于服务间通信，不涉及用户。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;分析：实际项目中怎么选？&lt;a href=&quot;#分析实际项目中怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;我的理解是：没有绝对的好坏，只有适不适合。&lt;strong&gt;传统 Web 应用、需要即时注销的管理后台&lt;/strong&gt;用 Session 更省心。&lt;strong&gt;前后端分离、微服务架构、移动端&lt;/strong&gt;用 JWT 更灵活。实际上很多项目两者结合——用 Session 管理登录态，用 JWT 做 API 间的无状态鉴权。&lt;/p&gt;
-&lt;p&gt;OAuth2 则是另一个维度的问题。只要涉及第三方登录或开放平台，就必须用它。而 OAuth2 颁发的 Access Token 完全可以采用 JWT 格式，兼得授权流程的安全性和无状态验证的性能优势。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;Session&lt;/strong&gt; 有状态，服务端存储，注销方便，但横向扩展需要额外方案&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;JWT&lt;/strong&gt; 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;OAuth2 授权码模式&lt;/strong&gt;是第三方登录的标准流程，code 一次性 + client_secret 后端保密&lt;/li&gt;
-&lt;li&gt;JWT 常见攻击包括 alg&lt;div&gt;&lt;/div&gt; 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期&lt;/li&gt;
-&lt;li&gt;Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段&lt;/li&gt;
-&lt;/ol&gt;
-&lt;hr /&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;双 Token 的工程实现细节&lt;/strong&gt;：Access Token 过期后前端自动刷新需要处理并发请求的竞态问题。多个请求同时收到 401，不应该同时发起多次刷新。常见做法是用一个 Promise 或锁机制，让第一个 401 触发刷新，其他请求排队等待新 token。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;OpenID Connect（OIDC）&lt;/strong&gt;：在 OAuth2 之上加了一层身份认证。OAuth2 只解决”授权”，不告诉你用户是谁；OIDC 新增了 ID Token（也是 JWT 格式），包含用户身份信息， standardized 了 &lt;code&gt;/userinfo&lt;/code&gt; 端点。简单说，OAuth2 + OIDC = 认证 + 授权。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;JWT 安全最佳实践&lt;/strong&gt;：使用 RS256 非对称签名（私钥签发、公钥验证），避免 HS256 的密钥分发问题；密钥足够长（256 位以上）并定期轮换，存在 Vault 等密钥管理服务中而非硬编码；敏感操作（如修改密码、转账）要求二次验证，不单纯依赖 token。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;如果你是初学者，建议按这个顺序理解：先搞懂 HTTP 是无状态的 -&amp;gt; 为什么需要 Cookie/Session -&amp;gt; Session 的扩展性问题 -&amp;gt; JWT 如何解决 -&amp;gt; JWT 自身的问题 -&amp;gt; 双 Token 方案 -&amp;gt; OAuth2 的授权流程。这条线串下来，面试中不管怎么追问都能接住。&lt;/p&gt;
-&lt;p&gt;动手实践比看十遍文章有用。试着自己用 Go 的 &lt;code&gt;golang-jwt&lt;/code&gt; 库实现一个登录签发 + 刷新 + 注销的完整流程，或者接入 GitHub OAuth2 做一次第三方登录。写完之后你会发现很多细节问题（token 存哪里、并发刷新怎么处理、密钥怎么管理）是看文档时根本想不到的。&lt;/p&gt;
-&lt;hr /&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://jwt.io/introduction&quot;&gt;JWT.io - Introduction to JSON Web Tokens&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc6749&quot;&gt;OAuth 2.0 授权框架 - RFC 6749&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://openid.net/specs/openid-connect-core-1_0.html&quot;&gt;OpenID Connect Core 1.0&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/&quot;&gt;Auth0 Blog - Refresh Tokens: What Are They and When to Use Them&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html&quot;&gt;OWASP JWT Cheat Sheet&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-http-evolution</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-http-evolution</guid><description>前情提要
 上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web 性能的演进史。&lt;/p&gt;
 &lt;h2&gt;面试问题&lt;a href=&quot;#面试问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -3592,7 +3523,76 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc8446&quot;&gt;RFC 8446 - TLS 1.3&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://blog.cloudflare.com/http3-the-past-present-and-future/&quot;&gt;Cloudflare - HTTP/3: The past, present, and future&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://docs.google.com/document/d/1gY9_YNDsTFHj9QgE-vLpRfGdMm2BYTdkj5n0R1VmEYQ&quot;&gt;Google - QUIC Design Document&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-architecture</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
+
+准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：JWT 和 Session 认证到底怎么选&lt;a href=&quot;#面试笔记jwt-和-session-认证到底怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完 CRUD 想搞清楚”登录到底发生了什么”的同学。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;认证（Authentication）解决的是”你是谁”的问题，授权（Authorization）解决的是”你能干什么”的问题。面试中这两块经常绑在一起问，但底层逻辑完全不同。Session 是最经典的方案，JWT 是前后端分离时代的宠儿，OAuth2 则是第三方登录的行业标准。理解它们的演进关系，比死记硬背强得多。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 1：Session 是怎么工作的？有什么优缺点？&lt;a href=&quot;#问题-1session-是怎么工作的有什么优缺点&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最早做 Web 应用的时候，用户登录成功后服务端会在内存或 Redis 中创建一个 Session 对象，包含用户 ID、登录时间等信息，然后把 Session ID 通过 &lt;code&gt;Set-Cookie&lt;/code&gt; 响应头塞给浏览器。之后浏览器每次请求都会自动携带这个 Cookie，服务端拿着 Session ID 去查对应的 Session 数据，确认身份。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;优点很明确&lt;/strong&gt;：服务端掌控一切。想注销？直接删掉 Session 就行。想限制同时在线设备数？数一下 Session 个数就好。安全性方面，配合 Cookie 的 &lt;code&gt;HttpOnly&lt;/code&gt;（防 XSS 读取）、&lt;code&gt;Secure&lt;/code&gt;（仅 HTTPS 传输）、&lt;code&gt;SameSite&lt;/code&gt;（防 CSRF）属性，防御体系比较完善。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;问题也很明显&lt;/strong&gt;：Session 存在服务端，横向扩展就麻烦了。你部署了三个服务节点，用户的 Session 在节点 A 上，请求被负载均衡到节点 B，B 查不到 Session 就会拒绝。解决办法要么搞 Sticky Session（绑定用户到固定节点），要么搞 Session 共享（Redis 集中存储），都增加了运维复杂度。另外 Cookie 有跨域限制，前后端分离部署在不同域名下就很头疼。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 2：JWT 的三段结构和无状态验证是怎么回事？&lt;a href=&quot;#问题-2jwt-的三段结构和无状态验证是怎么回事&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;JWT（JSON Web Token）由三部分组成，用 &lt;code&gt;.&lt;/code&gt; 分隔：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Header&lt;/strong&gt;：声明算法类型，比如 &lt;code&gt;{&quot;alg&quot;: &quot;HS256&quot;, &quot;typ&quot;: &quot;JWT&quot;}&lt;/code&gt;，Base64URL 编码。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Payload&lt;/strong&gt;：存放声明（Claims），包括标准字段（&lt;code&gt;iss&lt;/code&gt; 签发者、&lt;code&gt;exp&lt;/code&gt; 过期时间、&lt;code&gt;sub&lt;/code&gt; 用户标识）和自定义字段（userId、role 等）。同样 Base64URL 编码。这里有个关键点：&lt;strong&gt;Payload 不是加密的&lt;/strong&gt;，任何人拿到 token 都能解码看到内容，所以绝对不能放密码之类的敏感信息。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Signature&lt;/strong&gt;：对 Header 和 Payload 的签名。服务端用密钥计算 &lt;code&gt;HMACSHA256(base64UrlEncode(header) + &quot;.&quot; + base64UrlEncode(payload), secret)&lt;/code&gt;，后续验证时重新计算并比对，判断 token 是否被篡改。&lt;/p&gt;
+&lt;p&gt;验证流程非常简洁：客户端在请求头中带上 &lt;code&gt;Authorization: Bearer &amp;lt;token&amp;gt;&lt;/code&gt;，服务端提取 token，验证签名，检查过期时间，解析 Payload 拿到用户信息。全程不查数据库，所以叫&lt;strong&gt;无状态&lt;/strong&gt;。这让它在微服务和多节点部署中如鱼得水——任意节点拿到 token 都能独立验证。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 3：JWT 的致命伤是什么？怎么解决？&lt;a href=&quot;#问题-3jwt-的致命伤是什么怎么解决&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;JWT 最大的问题是&lt;strong&gt;无法主动失效&lt;/strong&gt;。token 一旦签发，在过期之前就一直有效。你点了”退出登录”，客户端删掉了本地存储的 token，但如果有人在这之前截获了那个 token，他依然可以用到过期为止。&lt;/p&gt;
+&lt;p&gt;这引出了一个设计上的矛盾：过期时间设短了，用户频繁被踢出要重新登录，体验极差；设长了，token 泄露后的攻击窗口就很大。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;是目前的主流方案。Access Token 短命（15 分钟到 2 小时），用于日常 API 调用；Refresh Token 长寿（7 到 30 天），用于换取新的 Access Token。流程是这样的：客户端用 Access Token 请求，服务端返回 401 表示过期，客户端自动拿 Refresh Token 去 &lt;code&gt;/auth/refresh&lt;/code&gt; 接口换新 token，然后重试原请求。整个过程对用户透明。&lt;/p&gt;
+&lt;p&gt;Refresh Token 和 Access Token 不同，它是&lt;strong&gt;有状态&lt;/strong&gt;的——存在数据库里，可以主动删除（实现真正的注销）。更安全的做法是加上&lt;strong&gt;旋转机制（Rotation）&lt;/strong&gt;：每次用 Refresh Token 换新 token 时，同时签发新的 Refresh Token 并作废旧的。如果检测到旧 Refresh Token 被重复使用，说明可能被盗用，立刻注销该用户的所有 token。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;问题 4：OAuth2 的四种模式和授权码流程？&lt;a href=&quot;#问题-4oauth2-的四种模式和授权码流程&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;OAuth2 解决的是”第三方应用如何安全地获取用户资源访问权限”。它和 JWT 不冲突——OAuth2 定义获取 token 的流程，JWT 可以作为 token 的格式。&lt;/p&gt;
+&lt;p&gt;四种授权模式中，&lt;strong&gt;授权码模式（Authorization Code）&lt;/strong&gt; 最安全也最常用，面试必问：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;用户点击”用 GitHub 登录”，跳转到 GitHub 授权页面&lt;/li&gt;
+&lt;li&gt;用户同意授权，GitHub 回调你的应用并附带一个 authorization code&lt;/li&gt;
+&lt;li&gt;你的后端拿 code + client_secret 向 GitHub 换取 Access Token&lt;/li&gt;
+&lt;li&gt;用 Access Token 调 GitHub API 拿到用户信息&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;code 只能用一次且有效期很短（通常 10 分钟），client_secret 始终在后端使用不暴露给前端。这就是为什么授权码模式最安全——敏感凭证全程不经过浏览器。&lt;/p&gt;
+&lt;p&gt;其他三种：&lt;strong&gt;简化模式（Implicit）&lt;/strong&gt; 直接在 URL fragment 返回 token，已不推荐；&lt;strong&gt;密码模式（Password）&lt;/strong&gt; 让用户把密码交给第三方应用，仅适用于高度信任的官方应用；&lt;strong&gt;客户端凭证模式（Client Credentials）&lt;/strong&gt; 应用以自己的身份获取 token，用于服务间通信，不涉及用户。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;分析：实际项目中怎么选？&lt;a href=&quot;#分析实际项目中怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我的理解是：没有绝对的好坏，只有适不适合。&lt;strong&gt;传统 Web 应用、需要即时注销的管理后台&lt;/strong&gt;用 Session 更省心。&lt;strong&gt;前后端分离、微服务架构、移动端&lt;/strong&gt;用 JWT 更灵活。实际上很多项目两者结合——用 Session 管理登录态，用 JWT 做 API 间的无状态鉴权。&lt;/p&gt;
+&lt;p&gt;OAuth2 则是另一个维度的问题。只要涉及第三方登录或开放平台，就必须用它。而 OAuth2 颁发的 Access Token 完全可以采用 JWT 格式，兼得授权流程的安全性和无状态验证的性能优势。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Session&lt;/strong&gt; 有状态，服务端存储，注销方便，但横向扩展需要额外方案&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;JWT&lt;/strong&gt; 无状态，三段结构（Header.Payload.Signature），签名防篡改，但无法主动失效&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;双 Token 机制&lt;/strong&gt;（Access Token + Refresh Token + Rotation）是 JWT 安全最佳实践&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;OAuth2 授权码模式&lt;/strong&gt;是第三方登录的标准流程，code 一次性 + client_secret 后端保密&lt;/li&gt;
+&lt;li&gt;JWT 常见攻击包括 alg&lt;div&gt;&lt;/div&gt; 攻击、算法替换攻击、重放攻击，防御核心是服务端固定算法 + HTTPS + 短有效期&lt;/li&gt;
+&lt;li&gt;Cookie 的 HttpOnly / Secure / SameSite 属性是防御 XSS 和 CSRF 的基础手段&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr /&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;双 Token 的工程实现细节&lt;/strong&gt;：Access Token 过期后前端自动刷新需要处理并发请求的竞态问题。多个请求同时收到 401，不应该同时发起多次刷新。常见做法是用一个 Promise 或锁机制，让第一个 401 触发刷新，其他请求排队等待新 token。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;OpenID Connect（OIDC）&lt;/strong&gt;：在 OAuth2 之上加了一层身份认证。OAuth2 只解决”授权”，不告诉你用户是谁；OIDC 新增了 ID Token（也是 JWT 格式），包含用户身份信息， standardized 了 &lt;code&gt;/userinfo&lt;/code&gt; 端点。简单说，OAuth2 + OIDC = 认证 + 授权。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;JWT 安全最佳实践&lt;/strong&gt;：使用 RS256 非对称签名（私钥签发、公钥验证），避免 HS256 的密钥分发问题；密钥足够长（256 位以上）并定期轮换，存在 Vault 等密钥管理服务中而非硬编码；敏感操作（如修改密码、转账）要求二次验证，不单纯依赖 token。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你是初学者，建议按这个顺序理解：先搞懂 HTTP 是无状态的 -&amp;gt; 为什么需要 Cookie/Session -&amp;gt; Session 的扩展性问题 -&amp;gt; JWT 如何解决 -&amp;gt; JWT 自身的问题 -&amp;gt; 双 Token 方案 -&amp;gt; OAuth2 的授权流程。这条线串下来，面试中不管怎么追问都能接住。&lt;/p&gt;
+&lt;p&gt;动手实践比看十遍文章有用。试着自己用 Go 的 &lt;code&gt;golang-jwt&lt;/code&gt; 库实现一个登录签发 + 刷新 + 注销的完整流程，或者接入 GitHub OAuth2 做一次第三方登录。写完之后你会发现很多细节问题（token 存哪里、并发刷新怎么处理、密钥怎么管理）是看文档时根本想不到的。&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://jwt.io/introduction&quot;&gt;JWT.io - Introduction to JSON Web Tokens&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc6749&quot;&gt;OAuth 2.0 授权框架 - RFC 6749&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://openid.net/specs/openid-connect-core-1_0.html&quot;&gt;OpenID Connect Core 1.0&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/&quot;&gt;Auth0 Blog - Refresh Tokens: What Are They and When to Use Them&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html&quot;&gt;OWASP JWT Cheat Sheet&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-architecture</guid><description>前情提要
 聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka 核心架构组件理清楚：Broker、Topic、Partition、Replica、Consumer Group，顺便聊聊分区策略和 Rebalance 机制。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -4014,137 +4014,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://kafka.apache.org/documentation/#producerconfigs_acks&quot;&gt;Kafka 可靠性最佳实践：acks、副本与ISR&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/&quot;&gt;Exactly-Once Semantics in Apache Kafka&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Kafka 权威指南》第 4 章：Kafka 生产者 &amp;amp; 第 6 章：可靠的数据传输&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-microservices-architecture</guid><description>前情提要
-最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。
-问题：微服务到底解决了什么问题？</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。&lt;/p&gt;
-&lt;h2&gt;问题：微服务到底解决了什么问题？&lt;a href=&quot;#问题微服务到底解决了什么问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试官的经典问法是「微服务架构的优缺点」和「什么时候该用微服务」。这个问题看起来简单，但如果没有实际踩过坑，很容易答成教科书式的罗列。我觉得更好的回答方式是从&lt;strong&gt;痛点出发&lt;/strong&gt;：单体架构在项目规模增长之后会遇到什么问题，微服务又是怎么解决这些问题的。&lt;/p&gt;
-&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;单体 vs 微服务 vs 模块化单体&lt;a href=&quot;#单体-vs-微服务-vs-模块化单体&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;单体架构（Monolith）&lt;/strong&gt; 是最直觉的方式：所有功能模块跑在同一个进程里，共享同一个数据库。优点是开发简单、调试方便、部署也快，一个二进制文件丢上去就跑。缺点也很明显——代码膨胀之后编译变慢，模块之间耦合严重，改一行代码就得全量部署，某个模块的流量高峰也得整体扩容。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;微服务架构&lt;/strong&gt; 把系统拆成多个独立部署的服务，每个服务有自己的数据库和技术栈。核心优势：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;独立部署：一个服务发版不影响其他服务&lt;/li&gt;
-&lt;li&gt;技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需&lt;/li&gt;
-&lt;li&gt;按需扩展：热点服务单独水平扩容，不浪费资源&lt;/li&gt;
-&lt;li&gt;故障隔离：订单服务挂了，用户服务还能正常响应&lt;/li&gt;
-&lt;li&gt;团队自治：每个小团队全权负责自己的服务&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;代价是复杂度飙升——分布式事务、网络延迟、运维成本、链路追踪，每一个都是硬骨头。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;模块化单体（Modular Monolith）&lt;/strong&gt; 是两者的折中：代码还在一个仓库里，但按业务域严格划分模块，模块之间通过接口通信，不能直接访问对方的数据库表。部署时是一个整体，但逻辑上已经具备了微服务的边界感。对于大多数中小团队，这其实是更务实的选择。&lt;/p&gt;
-&lt;h3&gt;微服务拆分原则&lt;a href=&quot;#微服务拆分原则&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;拆微服务最怕的是「拆得太细」或者「拆得不对」。几条核心原则：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;单一职责&lt;/strong&gt;：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;高内聚低耦合&lt;/strong&gt;：服务内部功能紧密相关，服务之间尽量通过事件或接口通信&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;按业务领域拆分（DDD）&lt;/strong&gt;：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;按团队拆分&lt;/strong&gt;：Conway 定律告诉我们，系统架构会趋向于组织结构&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;服务间通信方式的选择也很关键：REST 简单通用，gRPC 高性能适合内部通信，消息队列（Kafka/RabbitMQ）适合异步解耦，GraphQL 适合前端灵活查询。&lt;/p&gt;
-&lt;h3&gt;服务注册与发现&lt;a href=&quot;#服务注册与发现&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;服务多了之后，手动维护地址列表不现实。服务注册发现就是解决这个问题的：服务启动时把自己注册到注册中心（Consul、etcd、Nacos），其他服务通过注册中心发现目标地址。客户端负载均衡配合健康检查，自动剔除不健康实例。&lt;/p&gt;
-&lt;h3&gt;API 网关&lt;a href=&quot;#api-网关&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;微服务对外暴露统一入口。网关承担的职责包括：路由转发、认证鉴权、限流、协议转换、日志聚合。常见方案有 Kong、Envoy、Go 自研网关等。好处是客户端不需要知道后面有多少个服务，也避免了跨域和安全策略分散的问题。&lt;/p&gt;
-&lt;h3&gt;熔断、限流与降级&lt;a href=&quot;#熔断限流与降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;这三个是微服务稳定性的三板斧，面试也经常考：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;限流&lt;/strong&gt;控制请求速率，常见算法有四种：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;固定窗口计数器：实现简单，但有边界突发问题&lt;/li&gt;
-&lt;li&gt;滑动窗口：解决边界突发，实现略复杂&lt;/li&gt;
-&lt;li&gt;漏桶算法：固定速率处理，平滑流量但无法应对突发&lt;/li&gt;
-&lt;li&gt;令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;实际项目中 gRPC 拦截器用令牌桶限制单用户 QPS，Redis + Lua 脚本做分布式限流是比较常见的做法。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;熔断&lt;/strong&gt;的思路类似保险丝：当某个下游服务的错误率超过阈值，自动切断调用，快速失败，等一段时间后再尝试恢复（半开状态探测）。防止一个慢服务拖垮整个系统。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;降级&lt;/strong&gt;是主动放弃非核心功能来保核心链路。比如大促期间关闭评论功能，把资源让给下单和支付。&lt;/p&gt;
-&lt;h3&gt;链路追踪&lt;a href=&quot;#链路追踪&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;一个请求可能经过五六个服务，出了问题怎么定位？分布式链路追踪的思路是给每个请求分配一个全局唯一的 &lt;code&gt;traceID&lt;/code&gt;，在服务间透传，每个服务记录自己的 &lt;code&gt;span&lt;/code&gt;（操作名、耗时、状态）。最终在 Jaeger 或 Zipkin 的 UI 里就能看到完整的调用链路和每段耗时。&lt;/p&gt;
-&lt;p&gt;Rinne-IM 的做法是客户端生成 traceID 放进 gRPC Metadata，服务端拦截器提取后注入 context，下游的 DB 查询、Redis 操作、Kafka 发送都自动携带这个 traceID。配合结构化日志（&lt;code&gt;slog&lt;/code&gt; JSON 输出），排查延迟瓶颈非常高效。&lt;/p&gt;
-&lt;h2&gt;分析：什么时候不该用微服务？&lt;a href=&quot;#分析什么时候不该用微服务&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试不能只说好处，面试官更想听你的判断力。以下场景建议&lt;strong&gt;不要&lt;/strong&gt;上微服务：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率&lt;/li&gt;
-&lt;li&gt;业务边界不清晰——拆错了比不拆更痛苦&lt;/li&gt;
-&lt;li&gt;没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑&lt;/li&gt;
-&lt;li&gt;数据一致性要求极高——分布式事务的代价远比想象中高&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Martin Fowler 提过一个建议：先做单体，等团队规模和业务复杂度到了需要拆分的时候，再逐步拆。这就是所谓的「单体优先（Monolith First）」策略。&lt;/p&gt;
-&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;单体架构&lt;/td&gt;&lt;td&gt;简单直接，适合小团队和早期项目&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;微服务&lt;/td&gt;&lt;td&gt;独立部署和扩展，但运维复杂度高&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;模块化单体&lt;/td&gt;&lt;td&gt;逻辑拆分、物理合并，务实的中间路线&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;DDD 限界上下文&lt;/td&gt;&lt;td&gt;服务拆分的理论依据&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;服务注册发现&lt;/td&gt;&lt;td&gt;Consul/etcd/Nacos，解决服务地址管理&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;API 网关&lt;/td&gt;&lt;td&gt;统一入口，路由/认证/限流&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;限流&lt;/td&gt;&lt;td&gt;令牌桶最常用，控制请求速率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;熔断&lt;/td&gt;&lt;td&gt;快速失败，防止级联故障&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;降级&lt;/td&gt;&lt;td&gt;牺牲非核心功能保核心链路&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;链路追踪&lt;/td&gt;&lt;td&gt;traceID 透传 + span 记录，Jaeger/Zipkin&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h2&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;Service Mesh（服务网格）&lt;a href=&quot;#service-mesh服务网格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;当服务数量多到一定程度，每个服务都要写熔断、限流、链路追踪的代码，太累了。Service Mesh 把这些横切关注点下沉到基础设施层：每个服务旁边挂一个 Sidecar Proxy（数据平面），由控制平面统一管理配置、路由、负载均衡和熔断降级。主流实现是 Istio 和 Linkerd。好处是业务代码完全不需要关心服务治理逻辑，缺点是引入了一层额外的复杂度和性能开销。&lt;/p&gt;
-&lt;h3&gt;Serverless&lt;a href=&quot;#serverless&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;比微服务更极端的抽象——连服务都不需要管了，直接写函数。云厂商（AWS Lambda、阿里云函数计算）负责运行、扩缩容和计费。适合事件驱动、突发流量的场景，比如图片处理、定时任务。但冷启动延迟和厂商锁定是目前的主要限制。&lt;/p&gt;
-&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先扎实单体&lt;/strong&gt;：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解 DDD&lt;/strong&gt;：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手拆一次&lt;/strong&gt;：拿自己的项目试试按业务域拆分，体会拆分的边界感&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;学一个服务框架&lt;/strong&gt;：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;了解 Service Mesh&lt;/strong&gt;：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;监控先行&lt;/strong&gt;：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/bliki/MonolithFirst.html&quot;&gt;MonolithFirst&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/microservices/&quot;&gt;Microservices Resource Guide&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Sam Newman - &lt;em&gt;Building Microservices&lt;/em&gt; (O’Reilly)&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://istio.io/latest/docs/&quot;&gt;Istio 官方文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go-zero.dev/&quot;&gt;go-zero 微服务框架&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.domainlanguage.com/ddd/&quot;&gt;DDD 领域驱动设计 - Eric Evans&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Google SRE Book - &lt;a href=&quot;https://sre.google/sre-book/table-of-contents/&quot;&gt;Managing Critical State&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
+&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
 
 准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。
 
@@ -4342,7 +4212,137 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
 &lt;li&gt;《数据库系统概论》B+ 树章节，王珊、萨师煊&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-microservices-architecture</guid><description>前情提要
+最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。
+问题：微服务到底解决了什么问题？</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。&lt;/p&gt;
+&lt;h2&gt;问题：微服务到底解决了什么问题？&lt;a href=&quot;#问题微服务到底解决了什么问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试官的经典问法是「微服务架构的优缺点」和「什么时候该用微服务」。这个问题看起来简单，但如果没有实际踩过坑，很容易答成教科书式的罗列。我觉得更好的回答方式是从&lt;strong&gt;痛点出发&lt;/strong&gt;：单体架构在项目规模增长之后会遇到什么问题，微服务又是怎么解决这些问题的。&lt;/p&gt;
+&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;单体 vs 微服务 vs 模块化单体&lt;a href=&quot;#单体-vs-微服务-vs-模块化单体&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;单体架构（Monolith）&lt;/strong&gt; 是最直觉的方式：所有功能模块跑在同一个进程里，共享同一个数据库。优点是开发简单、调试方便、部署也快，一个二进制文件丢上去就跑。缺点也很明显——代码膨胀之后编译变慢，模块之间耦合严重，改一行代码就得全量部署，某个模块的流量高峰也得整体扩容。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;微服务架构&lt;/strong&gt; 把系统拆成多个独立部署的服务，每个服务有自己的数据库和技术栈。核心优势：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;独立部署：一个服务发版不影响其他服务&lt;/li&gt;
+&lt;li&gt;技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需&lt;/li&gt;
+&lt;li&gt;按需扩展：热点服务单独水平扩容，不浪费资源&lt;/li&gt;
+&lt;li&gt;故障隔离：订单服务挂了，用户服务还能正常响应&lt;/li&gt;
+&lt;li&gt;团队自治：每个小团队全权负责自己的服务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;代价是复杂度飙升——分布式事务、网络延迟、运维成本、链路追踪，每一个都是硬骨头。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;模块化单体（Modular Monolith）&lt;/strong&gt; 是两者的折中：代码还在一个仓库里，但按业务域严格划分模块，模块之间通过接口通信，不能直接访问对方的数据库表。部署时是一个整体，但逻辑上已经具备了微服务的边界感。对于大多数中小团队，这其实是更务实的选择。&lt;/p&gt;
+&lt;h3&gt;微服务拆分原则&lt;a href=&quot;#微服务拆分原则&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;拆微服务最怕的是「拆得太细」或者「拆得不对」。几条核心原则：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;单一职责&lt;/strong&gt;：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;高内聚低耦合&lt;/strong&gt;：服务内部功能紧密相关，服务之间尽量通过事件或接口通信&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;按业务领域拆分（DDD）&lt;/strong&gt;：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;按团队拆分&lt;/strong&gt;：Conway 定律告诉我们，系统架构会趋向于组织结构&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;服务间通信方式的选择也很关键：REST 简单通用，gRPC 高性能适合内部通信，消息队列（Kafka/RabbitMQ）适合异步解耦，GraphQL 适合前端灵活查询。&lt;/p&gt;
+&lt;h3&gt;服务注册与发现&lt;a href=&quot;#服务注册与发现&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;服务多了之后，手动维护地址列表不现实。服务注册发现就是解决这个问题的：服务启动时把自己注册到注册中心（Consul、etcd、Nacos），其他服务通过注册中心发现目标地址。客户端负载均衡配合健康检查，自动剔除不健康实例。&lt;/p&gt;
+&lt;h3&gt;API 网关&lt;a href=&quot;#api-网关&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;微服务对外暴露统一入口。网关承担的职责包括：路由转发、认证鉴权、限流、协议转换、日志聚合。常见方案有 Kong、Envoy、Go 自研网关等。好处是客户端不需要知道后面有多少个服务，也避免了跨域和安全策略分散的问题。&lt;/p&gt;
+&lt;h3&gt;熔断、限流与降级&lt;a href=&quot;#熔断限流与降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这三个是微服务稳定性的三板斧，面试也经常考：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;限流&lt;/strong&gt;控制请求速率，常见算法有四种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;固定窗口计数器：实现简单，但有边界突发问题&lt;/li&gt;
+&lt;li&gt;滑动窗口：解决边界突发，实现略复杂&lt;/li&gt;
+&lt;li&gt;漏桶算法：固定速率处理，平滑流量但无法应对突发&lt;/li&gt;
+&lt;li&gt;令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;实际项目中 gRPC 拦截器用令牌桶限制单用户 QPS，Redis + Lua 脚本做分布式限流是比较常见的做法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;熔断&lt;/strong&gt;的思路类似保险丝：当某个下游服务的错误率超过阈值，自动切断调用，快速失败，等一段时间后再尝试恢复（半开状态探测）。防止一个慢服务拖垮整个系统。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;降级&lt;/strong&gt;是主动放弃非核心功能来保核心链路。比如大促期间关闭评论功能，把资源让给下单和支付。&lt;/p&gt;
+&lt;h3&gt;链路追踪&lt;a href=&quot;#链路追踪&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一个请求可能经过五六个服务，出了问题怎么定位？分布式链路追踪的思路是给每个请求分配一个全局唯一的 &lt;code&gt;traceID&lt;/code&gt;，在服务间透传，每个服务记录自己的 &lt;code&gt;span&lt;/code&gt;（操作名、耗时、状态）。最终在 Jaeger 或 Zipkin 的 UI 里就能看到完整的调用链路和每段耗时。&lt;/p&gt;
+&lt;p&gt;Rinne-IM 的做法是客户端生成 traceID 放进 gRPC Metadata，服务端拦截器提取后注入 context，下游的 DB 查询、Redis 操作、Kafka 发送都自动携带这个 traceID。配合结构化日志（&lt;code&gt;slog&lt;/code&gt; JSON 输出），排查延迟瓶颈非常高效。&lt;/p&gt;
+&lt;h2&gt;分析：什么时候不该用微服务？&lt;a href=&quot;#分析什么时候不该用微服务&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试不能只说好处，面试官更想听你的判断力。以下场景建议&lt;strong&gt;不要&lt;/strong&gt;上微服务：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率&lt;/li&gt;
+&lt;li&gt;业务边界不清晰——拆错了比不拆更痛苦&lt;/li&gt;
+&lt;li&gt;没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑&lt;/li&gt;
+&lt;li&gt;数据一致性要求极高——分布式事务的代价远比想象中高&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Martin Fowler 提过一个建议：先做单体，等团队规模和业务复杂度到了需要拆分的时候，再逐步拆。这就是所谓的「单体优先（Monolith First）」策略。&lt;/p&gt;
+&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;单体架构&lt;/td&gt;&lt;td&gt;简单直接，适合小团队和早期项目&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;微服务&lt;/td&gt;&lt;td&gt;独立部署和扩展，但运维复杂度高&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;模块化单体&lt;/td&gt;&lt;td&gt;逻辑拆分、物理合并，务实的中间路线&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;DDD 限界上下文&lt;/td&gt;&lt;td&gt;服务拆分的理论依据&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;服务注册发现&lt;/td&gt;&lt;td&gt;Consul/etcd/Nacos，解决服务地址管理&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;API 网关&lt;/td&gt;&lt;td&gt;统一入口，路由/认证/限流&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;限流&lt;/td&gt;&lt;td&gt;令牌桶最常用，控制请求速率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;熔断&lt;/td&gt;&lt;td&gt;快速失败，防止级联故障&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;降级&lt;/td&gt;&lt;td&gt;牺牲非核心功能保核心链路&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;链路追踪&lt;/td&gt;&lt;td&gt;traceID 透传 + span 记录，Jaeger/Zipkin&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;Service Mesh（服务网格）&lt;a href=&quot;#service-mesh服务网格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当服务数量多到一定程度，每个服务都要写熔断、限流、链路追踪的代码，太累了。Service Mesh 把这些横切关注点下沉到基础设施层：每个服务旁边挂一个 Sidecar Proxy（数据平面），由控制平面统一管理配置、路由、负载均衡和熔断降级。主流实现是 Istio 和 Linkerd。好处是业务代码完全不需要关心服务治理逻辑，缺点是引入了一层额外的复杂度和性能开销。&lt;/p&gt;
+&lt;h3&gt;Serverless&lt;a href=&quot;#serverless&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;比微服务更极端的抽象——连服务都不需要管了，直接写函数。云厂商（AWS Lambda、阿里云函数计算）负责运行、扩缩容和计费。适合事件驱动、突发流量的场景，比如图片处理、定时任务。但冷启动延迟和厂商锁定是目前的主要限制。&lt;/p&gt;
+&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先扎实单体&lt;/strong&gt;：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解 DDD&lt;/strong&gt;：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手拆一次&lt;/strong&gt;：拿自己的项目试试按业务域拆分，体会拆分的边界感&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;学一个服务框架&lt;/strong&gt;：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;了解 Service Mesh&lt;/strong&gt;：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;监控先行&lt;/strong&gt;：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/bliki/MonolithFirst.html&quot;&gt;MonolithFirst&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/microservices/&quot;&gt;Microservices Resource Guide&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Sam Newman - &lt;em&gt;Building Microservices&lt;/em&gt; (O’Reilly)&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://istio.io/latest/docs/&quot;&gt;Istio 官方文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go-zero.dev/&quot;&gt;go-zero 微服务框架&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.domainlanguage.com/ddd/&quot;&gt;DDD 领域驱动设计 - Eric Evans&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Google SRE Book - &lt;a href=&quot;https://sre.google/sre-book/table-of-contents/&quot;&gt;Managing Critical State&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
 
 上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 FOR UPDATE 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。
 
