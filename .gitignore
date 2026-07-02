@@ -43,3 +43,5 @@ _theme_backup/
 
 # Claude Code
 .cc-connect/
+
+.cache/
