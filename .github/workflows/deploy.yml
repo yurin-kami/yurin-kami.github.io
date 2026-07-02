@@ -1,4 +1,4 @@
-﻿name: Deploy Astro site to GitHub Pages
+name: Deploy Astro site to GitHub Pages
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          run_install: false
+          version: 9
 
       - run: pnpm install --frozen-lockfile
 
@@ -34,4 +34,3 @@ jobs:
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'deploy: ${{ github.sha }}'
-
