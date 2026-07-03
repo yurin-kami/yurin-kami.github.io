@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet href="/rss/feed.xsl" type="text/xsl"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>KAMISHOW!!!!!</title><description>小柳香穗的博客</description><link>https://yurin-kami.github.io</link><language>ja</language><item><title>100道Golang面试题汇总（基础+并发+GMP+内存管理+垃圾回收）</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-23-interview-100-golang-questions</link><guid isPermaLink="false">ja:content/blog/2026-6-23-interview-100-golang-questions</guid><description>100道+Golang面试题（基础+数据类型+并发+GMP+内存管理+垃圾回收）
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet href="/rss/feed.xsl" type="text/xsl"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>KAMISHOW!!!!!</title><description>小柳香穗的博客</description><link>https://yurin-kami.github.io</link><language>ja</language><item><title>100道Golang面试题汇总（基础+并发+GMP+内存管理+垃圾回收）</title><link>https://yurin-kami.github.io/ja/post/2026-6-23-interview-100-golang-questions</link><guid isPermaLink="false">ja:2026-6-23-interview-100-golang-questions</guid><description>100道+Golang面试题（基础+数据类型+并发+GMP+内存管理+垃圾回收）
 这篇⽂章把 Go ⾯试中最常考的知识点都整理进来了，从基础语法到并发编程，再到内存管理和垃圾回收，基本覆盖了你在 Go ⾯试中会遇到的绝⼤多数问题。每道题尽量把背后的原理讲清楚，不只是给⼀个结论。</description><pubDate>Tue, 23 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;100道+Golang面试题（基础+数据类型+并发+GMP+内存管理+垃圾回收）&lt;a href=&quot;#100道golang面试题基础数据类型并发gmp内存管理垃圾回收&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;这篇⽂章把 Go ⾯试中最常考的知识点都整理进来了，从基础语法到并发编程，再到内存管理和垃圾回收，基本覆盖了你在 Go ⾯试中会遇到的绝⼤多数问题。每道题尽量把背后的原理讲清楚，不只是给⼀个结论。
 ⼏个特别值得花时间搞透的模块：
@@ -2143,7 +2143,7 @@ $ go run main.go&lt;/p&gt;
 &lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
 &lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
 &lt;span&gt;&lt;span&gt;wg.Wait()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;</content:encoded><category>tag:Go</category><category>tag:面试</category><category>tag:八股文</category><category>tag:GMP</category><category>tag:并发编程</category></item><item><title>面试笔记：分布式事务的四种解决方案怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-distributed-transaction</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-distributed-transaction</guid><description>前情提要
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;</content:encoded><category>tag:Go</category><category>tag:面试</category><category>tag:八股文</category><category>tag:GMP</category><category>tag:并发编程</category></item><item><title>面试笔记：分布式事务的四种解决方案怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-distributed-transaction</link><guid isPermaLink="false">ja:2026-6-13-interview-distributed-transaction</guid><description>前情提要
 在单机数据库里，事务靠 ACID 就能搞定。但系统一旦拆成微服务，一个业务流程往往要跨多个服务、多个数据库——这时候本地事务就不够用了，我们需要分布式事务来保证数据一致性。
 这篇笔记整理自面试中最高频的分布式事务问题：四种主流方案分别是什么？各自适用什么场景？面试时该怎么组织回答？
 问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -2307,7 +2307,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;DTM（Go 分布式事务框架）：&lt;a href=&quot;https://github.com/dtm-labs/dtm&quot;&gt;https://github.com/dtm-labs/dtm&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;Chris Richardson, &lt;em&gt;Pattern: Saga&lt;/em&gt;, &lt;a href=&quot;https://microservices.io/patterns/data/saga.html&quot;&gt;https://microservices.io/patterns/data/saga.html&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;周志明, &lt;em&gt;凤凰架构&lt;/em&gt;, 第 16 章：分布式事务&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式事务</category><category>tag:2PC</category><category>tag:Saga</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go后端常考的五大设计模式</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-design-patterns-go</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-design-patterns-go</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式事务</category><category>tag:2PC</category><category>tag:Saga</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go后端常考的五大设计模式</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-design-patterns-go</link><guid isPermaLink="false">ja:2026-6-13-interview-design-patterns-go</guid><description>前情提要
 设计模式在 Go 后端面试里的考察频率很高，但和 Java 那边不太一样——Go 没有继承、没有泛型泛滥，很多经典模式的写法更轻量。面试官一般不会让你背 23 种设计模式的 UML 图，而是挑几个在 Go</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;设计模式在 Go 后端面试里的考察频率很高，但和 Java 那边不太一样——Go 没有继承、没有泛型泛滥，很多经典模式的写法更轻量。面试官一般不会让你背 23 种设计模式的 UML 图，而是挑几个在 Go 项目中真正高频使用的模式深挖：你怎么实现的、为什么这么做、有没有踩坑。这篇笔记把五个最常考的模式逐个过一遍，每个都配上可以直接跑的 Go 代码。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -2493,7 +2493,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/google/wire&quot;&gt;Google Wire - Compile-time Dependency Injection for Go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html&quot;&gt;Go 项目中的 Clean Architecture 实践&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://gin-gonic.com/docs/examples/using-middleware/&quot;&gt;Gin 框架中间件原理分析&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:设计模式</category><category>tag:Go</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：分布式锁用Redis还是ZooKeeper实现</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-distributed-lock</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-distributed-lock</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:设计模式</category><category>tag:Go</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：分布式锁用Redis还是ZooKeeper实现</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-distributed-lock</link><guid isPermaLink="false">ja:2026-6-13-interview-distributed-lock</guid><description>前情提要
 在单机环境下，我们用 sync.Mutex 或 sync.RWMutex 就能解决并发资源竞争问题。但一旦系统扩展到多个实例同时运行，本地锁就彻底失效了——每个进程都有自己独立的内存空间，锁无法跨节点感知。这时候我们就需要一个”所有人都能看见”的锁机制，也就是分布式锁。</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在单机环境下，我们用 &lt;code&gt;sync.Mutex&lt;/code&gt; 或 &lt;code&gt;sync.RWMutex&lt;/code&gt; 就能解决并发资源竞争问题。但一旦系统扩展到多个实例同时运行，本地锁就彻底失效了——每个进程都有自己独立的内存空间，锁无法跨节点感知。这时候我们就需要一个”所有人都能看见”的锁机制，也就是&lt;strong&gt;分布式锁&lt;/strong&gt;。&lt;/p&gt;
 &lt;p&gt;这篇笔记整理自我准备面试时对分布式锁的系统梳理，覆盖 Redis、ZooKeeper、etcd 三种主流实现方案，以及围绕它们的经典争论。&lt;/p&gt;
@@ -2663,7 +2663,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;Apache Curator: &lt;a href=&quot;https://curator.apache.org/curator-recipes/shared-lock.html&quot;&gt;Shared Lock 文档&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;etcd 官方: &lt;a href=&quot;https://etcd.io/docs/v3.5/dev-guide/recipes/#lock&quot;&gt;Lock recipe&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
 在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。
 问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。&lt;/p&gt;
@@ -2745,7 +2745,131 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-context</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">ja:2026-6-13-interview-go-garbage-collection</guid><description>前情提要
+写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。
+问题
+面试官常见的问法：
+
+“Go</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试官常见的问法：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“Go 的垃圾回收是怎么工作的？”&lt;/li&gt;
+&lt;li&gt;“讲讲三色标记算法”&lt;/li&gt;
+&lt;li&gt;“GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？”&lt;/li&gt;
+&lt;li&gt;“Go 为什么选择并发 GC 而不是 Stop The World？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;考察的核心是：你是否理解 Go 运行时的垃圾回收算法原理、GC 的四个阶段如何衔接、写屏障解决什么问题，以及生产环境中如何通过参数控制 GC 行为。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 使用的是&lt;strong&gt;三色标记清除算法（Tri-color Mark and Sweep）&lt;/strong&gt;，配合&lt;strong&gt;并发标记&lt;/strong&gt;和&lt;strong&gt;写屏障&lt;/strong&gt;，在保证正确性的前提下尽量降低 STW（Stop The World）时间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;三色标记&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 把堆上的每个对象看作三种颜色之一：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;白色 — 未被标记，GC 结束时仍为白色的对象将被回收&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;灰色 — 自身已被标记，但引用的子对象还没扫描完&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;黑色 — 自身和所有子对象都已扫描完毕，不会再被回收&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;可以这样理解：白色是”还没查到”，灰色是”查了一半”，黑色是”查完了，确认存活”。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 的四个阶段&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;整个 GC 周期分为四步，其中只有短暂的 STW，大部分时间和用户程序并发执行：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;阶段 1: 标记准备（Mark Setup）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 开启写屏障&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 将 GC 阶段切换到 _GCmark&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - STW：暂停所有 Goroutine（极短）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 2: 并发标记（Concurrent Mark）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - GC Goroutine 和用户 Goroutine 并发执行&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 从根对象（全局变量、栈上的局部变量等）出发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 白色 → 灰色 → 黑色，逐步扫描整个对象图&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 3: 标记终止（Mark Termination）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - STW：再次暂停所有 Goroutine&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 处理剩余的灰色对象，确保标记完整&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 关闭写屏障，切换到清除阶段&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 4: 并发清除（Concurrent Sweep）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 回收所有仍为白色的对象&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 与用户程序并发执行，不影响业务逻辑&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;用伪代码表示并发标记的核心循环：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; gcMark&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    markRoots&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 从根对象开始标记&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        obj &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; getGreyObject&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 取一个灰色对象&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; obj &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;            break&lt;/span&gt;&lt;span&gt;               // 没有灰色对象了，标记完成&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        scanObject&lt;/span&gt;&lt;span&gt;(obj)         &lt;/span&gt;&lt;span&gt;// 扫描它的子对象，标灰，自身标黑&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;写屏障（Write Barrier）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;并发标记阶段有个棘手问题：GC 和用户程序同时跑，用户程序可能修改指针引用，导致对象漏标或错标。Dijkstra 提出的写屏障方案解决了这个问题——每次程序修改指针时，先把旧值”着色”（放入灰色队列），保证不会被误回收。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 混合写屏障：赋值时自动触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; writeBarrier&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;slot&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt;unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;ptr&lt;/span&gt;&lt;span&gt; unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    shade&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;slot)   &lt;/span&gt;&lt;span&gt;// 将旧值标记为灰色，保护它不被回收&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    *&lt;/span&gt;&lt;span&gt;slot &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ptr    &lt;/span&gt;&lt;span&gt;// 然后写入新值&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Go 1.8+ 使用的是&lt;strong&gt;混合写屏障（Hybrid Write Barrier）&lt;/strong&gt;，结合了 Dijkstra 插入屏障和 Yuasa 删除屏障的优点，消除了重新扫描栈的需要，进一步缩短了 STW 时间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 触发条件&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 不是随便触发的，有三种触发方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;1. 内存分配达到阈值 — 由 GOGC 控制，默认 100%&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;2. 定时触发         — 默认 2 分钟没有 GC 则强制触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;3. 手动触发         — 调用 runtime.GC()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;GOGC 与 GOMEMLIMIT 调优&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;GOGC&lt;/code&gt; 控制 GC 触发的激进程度，含义是”堆内存增长到上次 GC 后存活对象大小的多少百分比时触发下一次 GC”：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;   # 默认值，堆增长到存活对象的 2 倍时触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;50&lt;/span&gt;&lt;span&gt;    # 更频繁回收，CPU 开销增大，内存占用降低&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;200&lt;/span&gt;&lt;span&gt;   # 更少触发，CPU 开销降低，内存占用增大&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;off&lt;/span&gt;&lt;span&gt;   # 关闭 GC（危险，仅用于特殊场景）&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Go 1.19 引入了 &lt;code&gt;GOMEMLIMIT&lt;/code&gt;，这是一个&lt;strong&gt;软性内存上限&lt;/strong&gt;。当堆内存接近这个值时，GC 会更积极地触发，避免 OOM。相比 GOGC 只控制比率，GOMEMLIMIT 直接约束绝对值，在容器环境中尤其有用：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 代码中设置&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;debug.&lt;/span&gt;&lt;span&gt;SetMemoryLimit&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;1&lt;/span&gt;&lt;span&gt; &amp;lt;&amp;lt;&lt;/span&gt;&lt;span&gt; 30&lt;/span&gt;&lt;span&gt;)  &lt;/span&gt;&lt;span&gt;// 1GB 软上限&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 或环境变量&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// GOMEMLIMIT=1GiB&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;生产环境调优的一般建议：先用 GOMEMLIMIT 兜底防止 OOM，再用 GOGC 微调 CPU 与内存的平衡。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;为什么 Go 选择并发 GC 而非纯 STW？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;纯 STW 的 GC 实现简单，但暂停时间和堆大小成正比——堆越大，暂停越久。对于追求低延迟的服务端程序（Web 服务、RPC 服务等），几百毫秒的 STW 是不可接受的。Go 的设计目标是让 GC 暂停控制在亚毫秒级别，因此选择了并发标记的方案：大部分标记工作和用户程序并行，只在关键的切换点做极短的 STW。&lt;/p&gt;
+&lt;p&gt;代价是并发 GC 会消耗一部分 CPU 资源（默认约 25%），并且需要写屏障来保证正确性。Go 团队认为这个取舍是值得的——大多数服务对延迟的敏感度远高于对吞吐的敏感度。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 对延迟的影响&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 对延迟的影响主要来自三个方面：短暂的 STW 暂停、并发标记期间的 CPU 竞争、以及写屏障带来的赋值开销。Go 1.5 以来 GC 暂停时间从几十毫秒逐步降到亚毫秒，Go 1.19 的 GOMEMLIMIT 进一步减少了”突发大量 GC”的概率。在延迟敏感的场景下，合理设置 GOGC（比如降低到 50）和 GOMEMLIMIT 可以有效减少 GC 引起的毛刺。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;三色标记&lt;/strong&gt;：白色（待回收）、灰色（扫描中）、黑色（存活确认）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;四个阶段&lt;/strong&gt;：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写屏障&lt;/strong&gt;：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;触发条件&lt;/strong&gt;：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOGC&lt;/strong&gt;：控制 GC 触发比率，默认 100%&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOMEMLIMIT&lt;/strong&gt;：Go 1.19 引入，软性内存上限，防止 OOM&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;逃逸分析（Escape Analysis）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 编译器在编译期分析变量的生命周期：如果一个变量的引用不会”逃逸”出当前函数，就直接分配在栈上而非堆上。栈上的变量随函数返回自动回收，不经过 GC。减少堆分配是降低 GC 压力的根本手段。可以用 &lt;code&gt;go build -gcflags=&quot;-m&quot;&lt;/code&gt; 查看逃逸分析结果。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;pprof 内存分析&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;runtime/pprof&lt;/code&gt; 和 &lt;code&gt;net/http/pprof&lt;/code&gt; 是 Go 自带的性能分析工具。通过 heap profile 可以看到当前堆上的内存分配情况，找出哪些函数分配了最多的内存，从而针对性地优化：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;# 采集堆内存 profile&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/heap&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;# 查看 GC 暂停时间统计&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/gc&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;GC 的 25% CPU 目标&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 的 GC 调度器会尽量把 GC 的 CPU 占用控制在 25% 以内。当分配速率过高、GC 来不及回收时，运行时会插入辅助标记（mark assist），让正在分配内存的 Goroutine 帮忙做一些标记工作，防止堆无限增长。这也是为什么高分配速率的服务有时会观察到吞吐下降。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先搞懂三色标记&lt;/strong&gt;：这是 GC 的理论基础，理解白/灰/黑的状态转换&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;记住四个阶段&lt;/strong&gt;：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解写屏障&lt;/strong&gt;：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手调优&lt;/strong&gt;：用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;面试表达&lt;/strong&gt;：按”算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段”的顺序讲，层次分明&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/&quot;&gt;Go 语言设计与实现 - 垃圾回收&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/design/1750-gc-elimination&quot;&gt;Go 1.5 并发 GC 设计文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/ismmkeynote&quot;&gt;Getting to Go: The Journey of Go’s Garbage Collector&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:2026-6-13-interview-go-context</guid><description>前情提要
 在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 context.WithTimeout，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 &lt;code&gt;context.WithTimeout&lt;/code&gt;，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context 的设计思想、使用方式和常见陷阱做一次完整的梳理。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -2880,264 +3004,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/context/context.go&quot;&gt;Go 标准库源码 src/context/context.go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#context&quot;&gt;Uber Go Style Guide - Context&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://medium.com/@cep21/how-to-correctly-use-context-context-in-go-1-7-8f2c0fafdf39&quot;&gt;Jack Lindamood - How to correctly use context.Context&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-garbage-collection</guid><description>前情提要
-写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。
-问题
-面试官常见的问法：
-
-“Go</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试官常见的问法：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“Go 的垃圾回收是怎么工作的？”&lt;/li&gt;
-&lt;li&gt;“讲讲三色标记算法”&lt;/li&gt;
-&lt;li&gt;“GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？”&lt;/li&gt;
-&lt;li&gt;“Go 为什么选择并发 GC 而不是 Stop The World？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;考察的核心是：你是否理解 Go 运行时的垃圾回收算法原理、GC 的四个阶段如何衔接、写屏障解决什么问题，以及生产环境中如何通过参数控制 GC 行为。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Go 使用的是&lt;strong&gt;三色标记清除算法（Tri-color Mark and Sweep）&lt;/strong&gt;，配合&lt;strong&gt;并发标记&lt;/strong&gt;和&lt;strong&gt;写屏障&lt;/strong&gt;，在保证正确性的前提下尽量降低 STW（Stop The World）时间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三色标记&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 把堆上的每个对象看作三种颜色之一：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;白色 — 未被标记，GC 结束时仍为白色的对象将被回收&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;灰色 — 自身已被标记，但引用的子对象还没扫描完&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;黑色 — 自身和所有子对象都已扫描完毕，不会再被回收&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;可以这样理解：白色是”还没查到”，灰色是”查了一半”，黑色是”查完了，确认存活”。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 的四个阶段&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;整个 GC 周期分为四步，其中只有短暂的 STW，大部分时间和用户程序并发执行：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;阶段 1: 标记准备（Mark Setup）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 开启写屏障&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 将 GC 阶段切换到 _GCmark&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - STW：暂停所有 Goroutine（极短）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 2: 并发标记（Concurrent Mark）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - GC Goroutine 和用户 Goroutine 并发执行&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 从根对象（全局变量、栈上的局部变量等）出发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 白色 → 灰色 → 黑色，逐步扫描整个对象图&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 3: 标记终止（Mark Termination）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - STW：再次暂停所有 Goroutine&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 处理剩余的灰色对象，确保标记完整&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 关闭写屏障，切换到清除阶段&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 4: 并发清除（Concurrent Sweep）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 回收所有仍为白色的对象&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 与用户程序并发执行，不影响业务逻辑&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;用伪代码表示并发标记的核心循环：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; gcMark&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    markRoots&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 从根对象开始标记&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        obj &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; getGreyObject&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 取一个灰色对象&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; obj &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;            break&lt;/span&gt;&lt;span&gt;               // 没有灰色对象了，标记完成&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        scanObject&lt;/span&gt;&lt;span&gt;(obj)         &lt;/span&gt;&lt;span&gt;// 扫描它的子对象，标灰，自身标黑&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;写屏障（Write Barrier）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;并发标记阶段有个棘手问题：GC 和用户程序同时跑，用户程序可能修改指针引用，导致对象漏标或错标。Dijkstra 提出的写屏障方案解决了这个问题——每次程序修改指针时，先把旧值”着色”（放入灰色队列），保证不会被误回收。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 混合写屏障：赋值时自动触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; writeBarrier&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;slot&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt;unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;ptr&lt;/span&gt;&lt;span&gt; unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    shade&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;slot)   &lt;/span&gt;&lt;span&gt;// 将旧值标记为灰色，保护它不被回收&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    *&lt;/span&gt;&lt;span&gt;slot &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ptr    &lt;/span&gt;&lt;span&gt;// 然后写入新值&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Go 1.8+ 使用的是&lt;strong&gt;混合写屏障（Hybrid Write Barrier）&lt;/strong&gt;，结合了 Dijkstra 插入屏障和 Yuasa 删除屏障的优点，消除了重新扫描栈的需要，进一步缩短了 STW 时间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 触发条件&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 不是随便触发的，有三种触发方式：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;1. 内存分配达到阈值 — 由 GOGC 控制，默认 100%&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;2. 定时触发         — 默认 2 分钟没有 GC 则强制触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;3. 手动触发         — 调用 runtime.GC()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;GOGC 与 GOMEMLIMIT 调优&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;GOGC&lt;/code&gt; 控制 GC 触发的激进程度，含义是”堆内存增长到上次 GC 后存活对象大小的多少百分比时触发下一次 GC”：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;   # 默认值，堆增长到存活对象的 2 倍时触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;50&lt;/span&gt;&lt;span&gt;    # 更频繁回收，CPU 开销增大，内存占用降低&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;200&lt;/span&gt;&lt;span&gt;   # 更少触发，CPU 开销降低，内存占用增大&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;off&lt;/span&gt;&lt;span&gt;   # 关闭 GC（危险，仅用于特殊场景）&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Go 1.19 引入了 &lt;code&gt;GOMEMLIMIT&lt;/code&gt;，这是一个&lt;strong&gt;软性内存上限&lt;/strong&gt;。当堆内存接近这个值时，GC 会更积极地触发，避免 OOM。相比 GOGC 只控制比率，GOMEMLIMIT 直接约束绝对值，在容器环境中尤其有用：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 代码中设置&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;debug.&lt;/span&gt;&lt;span&gt;SetMemoryLimit&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;1&lt;/span&gt;&lt;span&gt; &amp;lt;&amp;lt;&lt;/span&gt;&lt;span&gt; 30&lt;/span&gt;&lt;span&gt;)  &lt;/span&gt;&lt;span&gt;// 1GB 软上限&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 或环境变量&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// GOMEMLIMIT=1GiB&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;生产环境调优的一般建议：先用 GOMEMLIMIT 兜底防止 OOM，再用 GOGC 微调 CPU 与内存的平衡。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;为什么 Go 选择并发 GC 而非纯 STW？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;纯 STW 的 GC 实现简单，但暂停时间和堆大小成正比——堆越大，暂停越久。对于追求低延迟的服务端程序（Web 服务、RPC 服务等），几百毫秒的 STW 是不可接受的。Go 的设计目标是让 GC 暂停控制在亚毫秒级别，因此选择了并发标记的方案：大部分标记工作和用户程序并行，只在关键的切换点做极短的 STW。&lt;/p&gt;
-&lt;p&gt;代价是并发 GC 会消耗一部分 CPU 资源（默认约 25%），并且需要写屏障来保证正确性。Go 团队认为这个取舍是值得的——大多数服务对延迟的敏感度远高于对吞吐的敏感度。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 对延迟的影响&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 对延迟的影响主要来自三个方面：短暂的 STW 暂停、并发标记期间的 CPU 竞争、以及写屏障带来的赋值开销。Go 1.5 以来 GC 暂停时间从几十毫秒逐步降到亚毫秒，Go 1.19 的 GOMEMLIMIT 进一步减少了”突发大量 GC”的概率。在延迟敏感的场景下，合理设置 GOGC（比如降低到 50）和 GOMEMLIMIT 可以有效减少 GC 引起的毛刺。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;三色标记&lt;/strong&gt;：白色（待回收）、灰色（扫描中）、黑色（存活确认）&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;四个阶段&lt;/strong&gt;：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;写屏障&lt;/strong&gt;：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;触发条件&lt;/strong&gt;：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOGC&lt;/strong&gt;：控制 GC 触发比率，默认 100%&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOMEMLIMIT&lt;/strong&gt;：Go 1.19 引入，软性内存上限，防止 OOM&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;逃逸分析（Escape Analysis）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 编译器在编译期分析变量的生命周期：如果一个变量的引用不会”逃逸”出当前函数，就直接分配在栈上而非堆上。栈上的变量随函数返回自动回收，不经过 GC。减少堆分配是降低 GC 压力的根本手段。可以用 &lt;code&gt;go build -gcflags=&quot;-m&quot;&lt;/code&gt; 查看逃逸分析结果。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;pprof 内存分析&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;runtime/pprof&lt;/code&gt; 和 &lt;code&gt;net/http/pprof&lt;/code&gt; 是 Go 自带的性能分析工具。通过 heap profile 可以看到当前堆上的内存分配情况，找出哪些函数分配了最多的内存，从而针对性地优化：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;# 采集堆内存 profile&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/heap&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;# 查看 GC 暂停时间统计&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/gc&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;GC 的 25% CPU 目标&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 的 GC 调度器会尽量把 GC 的 CPU 占用控制在 25% 以内。当分配速率过高、GC 来不及回收时，运行时会插入辅助标记（mark assist），让正在分配内存的 Goroutine 帮忙做一些标记工作，防止堆无限增长。这也是为什么高分配速率的服务有时会观察到吞吐下降。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先搞懂三色标记&lt;/strong&gt;：这是 GC 的理论基础，理解白/灰/黑的状态转换&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;记住四个阶段&lt;/strong&gt;：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解写屏障&lt;/strong&gt;：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手调优&lt;/strong&gt;：用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;面试表达&lt;/strong&gt;：按”算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段”的顺序讲，层次分明&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/&quot;&gt;Go 语言设计与实现 - 垃圾回收&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/design/1750-gc-elimination&quot;&gt;Go 1.5 并发 GC 设计文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/ismmkeynote&quot;&gt;Getting to Go: The Journey of Go’s Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
-前情提要
-Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
-问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中常见的问法：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
-&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
-&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
-&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
-&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">ja:2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
 准备面试的时候发现，Go 的 sync 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
 这篇文章是我对 sync 包相关知识的系统梳理，把</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选&lt;a href=&quot;#面试笔记go的sync包怎么用mutex和rwmutex怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;准备面试的时候发现，Go 的 &lt;code&gt;sync&lt;/code&gt; 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
@@ -3356,7 +3223,140 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/sync/mutex.go&quot;&gt;Go Mutex 源码分析（正常模式与饥饿模式）&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://pkg.go.dev/golang.org/x/sync/errgroup&quot;&gt;errgroup - golang.org/x/sync/errgroup&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://book.douban.com/subject/30378095/&quot;&gt;Go 并发编程实战 - 许式伟&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-http-evolution</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:sync</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Goroutine和线程到底有什么区别</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-goroutine-vs-thread</link><guid isPermaLink="false">ja:2026-6-13-interview-goroutine-vs-thread</guid><description>面试笔记：Goroutine和线程到底有什么区别
+前情提要
+Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。
+问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Goroutine和线程到底有什么区别&lt;a href=&quot;#面试笔记goroutine和线程到底有什么区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别”往往是面试官抛出的第一个热身问题。看似基础，但要答得有条理、有深度并不容易。这篇笔记把这个问题单独拆出来，从表面对比到底层原理做一次完整的梳理。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中常见的问法：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“Goroutine 和操作系统线程有什么区别？Go 是怎么做到高并发的？”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这个问题表面上在问两者的差异，实际上考察的是你对 &lt;strong&gt;Go runtime 调度机制&lt;/strong&gt;的理解深度。面试官期望听到的不只是”轻量级”三个字，而是你能从栈管理、调度方式、线程复用等维度展开说明。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;h4&gt;一句话概括&lt;a href=&quot;#一句话概括&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Goroutine 是 Go runtime 管理的&lt;strong&gt;用户态轻量级协程&lt;/strong&gt;，而线程是操作系统内核管理的执行单元。Goroutine 的创建、销毁和调度都不需要陷入内核态，这是它”轻”的根本原因。&lt;/p&gt;
+&lt;h4&gt;对比表格&lt;a href=&quot;#对比表格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;特性&lt;/th&gt;&lt;th&gt;Goroutine&lt;/th&gt;&lt;th&gt;OS Thread&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;初始栈大小&lt;/td&gt;&lt;td&gt;2KB&lt;/td&gt;&lt;td&gt;1-8MB（通常固定）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;栈增长&lt;/td&gt;&lt;td&gt;动态增长，最大 1GB，可收缩&lt;/td&gt;&lt;td&gt;固定大小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;创建开销&lt;/td&gt;&lt;td&gt;~0.3us&lt;/td&gt;&lt;td&gt;~10-100us&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;上下文切换&lt;/td&gt;&lt;td&gt;~100ns（用户态）&lt;/td&gt;&lt;td&gt;~1-10us（内核态）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;调度方&lt;/td&gt;&lt;td&gt;Go runtime（GMP 模型）&lt;/td&gt;&lt;td&gt;操作系统内核&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;并发数量&lt;/td&gt;&lt;td&gt;轻松百万级&lt;/td&gt;&lt;td&gt;通常几千到几万&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h4&gt;为什么 Goroutine 更轻量&lt;a href=&quot;#为什么-goroutine-更轻量&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;有四个关键机制在支撑：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 动态栈管理&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的栈从 2KB 起步，按需增长，空闲时还能收缩。这意味着启动一个 goroutine 几乎不占什么内存，而线程上来就要分配 MB 级别的固定栈空间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. 用户态调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的调度完全在用户空间完成，不涉及系统调用。Go runtime 通过 GMP 模型自行管理哪些 goroutine 在哪些线程上运行。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. 复用线程（M&lt;/strong&gt;&lt;/p&gt;&lt;div&gt;&lt;/div&gt;&lt;strong&gt; 调度）&lt;/strong&gt;&lt;p&gt;&lt;/p&gt;
+&lt;p&gt;多个 Goroutine 复用同一批 OS 线程。当某个 G 因系统调用阻塞时，runtime 会将 M（线程）和 P（逻辑处理器）解绑，让 P 去绑定空闲的 M 继续执行其他 G，保证并发度不下降。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;4. 内存池化&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Goroutine 的 &lt;code&gt;g&lt;/code&gt; 结构体在退出后不会立即释放，而是放入池中复用，避免频繁分配和回收。&lt;/p&gt;
+&lt;h4&gt;GMP 调度模型速览&lt;a href=&quot;#gmp-调度模型速览&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;GMP 是 Go scheduler 的核心，三个组件各司其职：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;G（Goroutine）&lt;/strong&gt;：包含栈、指令指针、状态等，存放在 P 的本地队列或全局队列中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;M（Machine）&lt;/strong&gt;：对应一个 OS 线程，负责执行 G 中的代码。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;P（Processor）&lt;/strong&gt;：逻辑处理器，维护一个本地 G 队列。P 的数量默认等于 CPU 核数，由 &lt;code&gt;GOMAXPROCS&lt;/code&gt; 控制。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 查看当前 P 的数量&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(runtime.&lt;/span&gt;&lt;span&gt;GOMAXPROCS&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;))&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 每个 P 维护本地队列，M 从 P 中取 G 执行&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 当本地队列为空时，P 会从全局队列或其他 P 的队列中&quot;窃取&quot;任务&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;调度器还有一个重要的机制——&lt;strong&gt;工作窃取（work stealing）&lt;/strong&gt;：当某个 P 的本地队列空了，它会从其他 P 的队列中偷一半 G 过来执行，保证各 CPU 核负载均衡。&lt;/p&gt;
+&lt;h4&gt;代码示例&lt;a href=&quot;#代码示例&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h4&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 启动 goroutine 极其简单&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    fmt.&lt;/span&gt;&lt;span&gt;Println&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;hello from goroutine&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 轻松启动 10 万个 goroutine&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 100000&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;id&lt;/span&gt;&lt;span&gt; int&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // 每个 goroutine 只占 2KB 初始栈&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }(i)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果用 OS 线程做同样的事，10 万个线程 x 2MB 栈 = 200GB 内存，根本不现实。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;面试官为什么关心这个问题？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这道题是一道”入口题”，面试官可以通过它判断你的知识边界在哪里。答得好，后续的 GMP 细节、channel 实现、并发模式等问题都能自然展开；答得浅，面试官可能会直接跳到下一个话题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;容易踩的坑：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;只说”轻量级”不解释原因&lt;/strong&gt; —— 面试官追问”为什么轻”就卡住了。至少要能说出动态栈和用户态调度两点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混淆协程和 goroutine&lt;/strong&gt; —— goroutine 是 Go 对协程的具体实现，不要笼统地说”协程就是轻量级线程”。不同语言的协程实现差异很大。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;忽略线程复用&lt;/strong&gt; —— 很多人只记得”goroutine 多路复用到少量线程上”，但说不清阻塞时 runtime 怎么处理 M 和 P 的解绑。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOMAXPROCS 的容器陷阱&lt;/strong&gt; —— 在 K8s 容器中，Go 1.21 之前需要手动根据 cgroup CPU limit 设置 &lt;code&gt;GOMAXPROCS&lt;/code&gt;，否则默认会读到宿主机的核数。Go 1.21+ 会自动读取 cgroup 配额。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Goroutine&lt;/strong&gt;：Go runtime 管理的用户态协程，拥有独立的动态栈，初始 2KB，按需增长至最大 1GB。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GMP 模型&lt;/strong&gt;：Go 的 M&lt;div&gt;&lt;/div&gt; 调度模型，G 是协程，M 是 OS 线程，P 是逻辑处理器。P 的数量决定并行度。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用户态调度&lt;/strong&gt;：goroutine 的创建、切换、销毁都在用户空间完成，不陷入内核，避免了系统调用的开销。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工作窃取&lt;/strong&gt;：当某个 P 的本地队列为空时，调度器会从其他 P 的队列中窃取一半任务，实现负载均衡。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动态栈&lt;/strong&gt;：goroutine 的栈可以随运行时需求增长和收缩，不同于线程的固定栈分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;1. Go 调度器的抢占式调度&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 1.14 引入了基于信号的异步抢占式调度。在此之前，goroutine 只能通过主动让出（如函数调用、channel 操作）来释放 CPU，一个死循环的 goroutine 会独占整个 M。1.14 之后，runtime 会周期性地通过 &lt;code&gt;SIGURG&lt;/code&gt; 信号检查并抢占长时间运行的 goroutine，解决了调度饥饿问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2. Goroutine 泄漏检测&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;goroutine 泄漏是 Go 项目中常见的隐患——一个 goroutine 永远阻塞在某处，永远不会退出，栈内存也无法回收。可以使用 &lt;code&gt;runtime.NumGoroutine()&lt;/code&gt; 做运行时监控，或者在测试中引入 &lt;code&gt;go.uber.org/goleak&lt;/code&gt; 来检测泄漏的 goroutine。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. Goroutine vs 其他语言的协程&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Java 21 的 Virtual Thread（虚拟线程）、Kotlin 的 Coroutine、Rust 的 async/await 都是在尝试解决类似的问题。但 Go 的方案最”激进”——直接在 runtime 层面实现了完整的 M&lt;/p&gt;&lt;div&gt;&lt;/div&gt; 调度和抢占机制，开发者几乎不需要关心底层调度细节。&lt;p&gt;&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先读官方文档&lt;/strong&gt;：&lt;a href=&quot;https://go.dev/doc/effective_go&quot;&gt;Effective Go&lt;/a&gt; 中关于 goroutine 和 channel 的章节是入门必读。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解 GMP 调度器&lt;/strong&gt;：推荐 Dmitry Vyukov 的 &lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler design doc&lt;/a&gt;，以及 Morsing 的博客文章。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实验&lt;/strong&gt;：写一个程序启动 100 万个 goroutine，观察内存占用和调度行为，用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 查看 GC 表现。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;阅读 runtime 源码&lt;/strong&gt;：&lt;code&gt;runtime/proc.go&lt;/code&gt; 是调度器的核心实现，结合 GDB 或 &lt;code&gt;dlv&lt;/code&gt; 调试器跟踪 &lt;code&gt;schedule()&lt;/code&gt; 函数。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/effective_go#goroutines&quot;&gt;Go goroutine 官方文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/src/runtime/proc.go&quot;&gt;Go scheduler: M&lt;div&gt;&lt;/div&gt; scheduling and work stealing&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://morsmachine.dk/go-scheduler&quot;&gt;Morsing - The Go Scheduler&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.14#runtime&quot;&gt;Go 1.14 Release Notes - Asynchronous Preemption&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/goleak&quot;&gt;uber-go/goleak - Goroutine leak detector&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：HTTP/1.1、HTTP/2和HTTP/3有什么区别</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-http-evolution</link><guid isPermaLink="false">ja:2026-6-13-interview-http-evolution</guid><description>前情提要
 上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;上一篇整理完 TCP 三次握手之后，自然就到了应用层的核心协议——HTTP。面试官问完 TCP 之后，几乎一定会追问：“HTTP/1.1、HTTP/2、HTTP/3 有什么区别？HTTPS 的握手流程是什么？TLS 1.3 做了什么改进？“这三个问题串在一起，其实就是一部 Web 性能的演进史。&lt;/p&gt;
 &lt;h2&gt;面试问题&lt;a href=&quot;#面试问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -3523,7 +3523,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://datatracker.ietf.org/doc/html/rfc8446&quot;&gt;RFC 8446 - TLS 1.3&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://blog.cloudflare.com/http3-the-past-present-and-future/&quot;&gt;Cloudflare - HTTP/3: The past, present, and future&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://docs.google.com/document/d/1gY9_YNDsTFHj9QgE-vLpRfGdMm2BYTdkj5n0R1VmEYQ&quot;&gt;Google - QUIC Design Document&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
+&lt;/ul&gt;</content:encoded><category>tag:HTTP</category><category>tag:网络编程</category><category>tag:HTTPS</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：JWT和Session认证到底怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-jwt-session-auth</link><guid isPermaLink="false">ja:2026-6-13-interview-jwt-session-auth</guid><description>面试笔记：JWT 和 Session 认证到底怎么选
 
 准备后端面试的过程中，认证安全这块几乎必问。从 Session 到 JWT 再到 OAuth2，面试官喜欢层层递进地追问。我把这块知识从头到尾梳理了一遍，踩了一些坑，也弄明白了一些之前模棱两可的概念。这篇笔记适合正在准备面试、或者刚做完</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：JWT 和 Session 认证到底怎么选&lt;a href=&quot;#面试笔记jwt-和-session-认证到底怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
@@ -3592,7 +3592,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://openid.net/specs/openid-connect-core-1_0.html&quot;&gt;OpenID Connect Core 1.0&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://auth0.com/blog/refresh-tokens-what-are-they-and-when-to-use-them/&quot;&gt;Auth0 Blog - Refresh Tokens: What Are They and When to Use Them&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html&quot;&gt;OWASP JWT Cheat Sheet&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-architecture</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:JWT</category><category>tag:Session</category><category>tag:认证</category><category>tag:OAuth2</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka的核心架构组件是怎么回事</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-kafka-architecture</link><guid isPermaLink="false">ja:2026-6-13-interview-kafka-architecture</guid><description>前情提要
 聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;聊完 Go 并发和数据库，面试还有一个高频话题——消息队列，而 Kafka 几乎是消息队列领域的”必修课”。无论是做 IM、日志采集还是事件驱动架构，Kafka 的身影无处不在。这篇笔记把 Kafka 核心架构组件理清楚：Broker、Topic、Partition、Replica、Consumer Group，顺便聊聊分区策略和 Rebalance 机制。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -3709,7 +3709,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://www.oreilly.com/library/view/kafka-the-definitive/9781492043072/&quot;&gt;Kafka 权威指南（Kafka: The Definitive Guide）&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://cwiki.apache.org/confluence/display/KAFKA/KIP-500%3A+Replace+ZooKeeper+with+a+Self-Managed+Metadata+Quorum&quot;&gt;KIP-500: Replace ZooKeeper with a Self-Managed Metadata Quorum&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/&quot;&gt;Kafka Consumer Group Rebalance 详解 — Confluent Blog&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息队列</category><category>tag:架构</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka为什么这么快</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-high-performance</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-high-performance</guid><description>面试笔记：Kafka为什么这么快
+&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息队列</category><category>tag:架构</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka为什么这么快</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-kafka-high-performance</link><guid isPermaLink="false">ja:2026-6-13-interview-kafka-high-performance</guid><description>面试笔记：Kafka为什么这么快
 前情提要
 在准备 Go 后端面试的过程中，Kafka 几乎是绕不开的话题。很多面试官不会只停留在”Kafka 是什么、怎么用”，而是直接追问底层原理——“Kafka 为什么吞吐量能比 RabbitMQ 高一个数量级？“我第一反应是”零拷贝”，但被追问</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Kafka为什么这么快&lt;a href=&quot;#面试笔记kafka为什么这么快&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -3889,7 +3889,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://developer.ibm.com/articles/j-zerocopy/&quot;&gt;零拷贝技术详解 - IBM Developer&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://rocketmq.apache.org/docs/domainModel/00main&quot;&gt;RocketMQ 官方文档 - 架构设计&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://dataintensive.net/&quot;&gt;数据密集型应用系统设计（Designing Data-Intensive Applications）&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:高性能</category><category>tag:零拷贝</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka怎么保证消息不丢失</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-kafka-message-reliability</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-kafka-message-reliability</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:高性能</category><category>tag:零拷贝</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Kafka怎么保证消息不丢失</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-kafka-message-reliability</link><guid isPermaLink="false">ja:2026-6-13-interview-kafka-message-reliability</guid><description>前情提要
 在分布式消息队列的面试中，Kafka 的可靠性几乎是必考的一环。很多同学能聊清楚 Partition、Consumer Group 的基本概念，但一旦被追问”消息真的不会丢吗”、“acks=all 就够了吗”、“exactly-once</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在分布式消息队列的面试中，Kafka 的可靠性几乎是必考的一环。很多同学能聊清楚 Partition、Consumer Group 的基本概念，但一旦被追问”消息真的不会丢吗”、“acks=all 就够了吗”、“exactly-once 是怎么做到的”，就容易说不到位。这篇笔记从生产者、Broker、消费者三端出发，把 Kafka 消息可靠性的完整链路梳理一遍。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -4014,7 +4014,137 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://kafka.apache.org/documentation/#producerconfigs_acks&quot;&gt;Kafka 可靠性最佳实践：acks、副本与ISR&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/&quot;&gt;Exactly-Once Semantics in Apache Kafka&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Kafka 权威指南》第 4 章：Kafka 生产者 &amp;amp; 第 6 章：可靠的数据传输&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
+&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:2026-6-13-interview-microservices-architecture</guid><description>前情提要
+最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。
+问题：微服务到底解决了什么问题？</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。&lt;/p&gt;
+&lt;h2&gt;问题：微服务到底解决了什么问题？&lt;a href=&quot;#问题微服务到底解决了什么问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试官的经典问法是「微服务架构的优缺点」和「什么时候该用微服务」。这个问题看起来简单，但如果没有实际踩过坑，很容易答成教科书式的罗列。我觉得更好的回答方式是从&lt;strong&gt;痛点出发&lt;/strong&gt;：单体架构在项目规模增长之后会遇到什么问题，微服务又是怎么解决这些问题的。&lt;/p&gt;
+&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;单体 vs 微服务 vs 模块化单体&lt;a href=&quot;#单体-vs-微服务-vs-模块化单体&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;单体架构（Monolith）&lt;/strong&gt; 是最直觉的方式：所有功能模块跑在同一个进程里，共享同一个数据库。优点是开发简单、调试方便、部署也快，一个二进制文件丢上去就跑。缺点也很明显——代码膨胀之后编译变慢，模块之间耦合严重，改一行代码就得全量部署，某个模块的流量高峰也得整体扩容。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;微服务架构&lt;/strong&gt; 把系统拆成多个独立部署的服务，每个服务有自己的数据库和技术栈。核心优势：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;独立部署：一个服务发版不影响其他服务&lt;/li&gt;
+&lt;li&gt;技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需&lt;/li&gt;
+&lt;li&gt;按需扩展：热点服务单独水平扩容，不浪费资源&lt;/li&gt;
+&lt;li&gt;故障隔离：订单服务挂了，用户服务还能正常响应&lt;/li&gt;
+&lt;li&gt;团队自治：每个小团队全权负责自己的服务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;代价是复杂度飙升——分布式事务、网络延迟、运维成本、链路追踪，每一个都是硬骨头。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;模块化单体（Modular Monolith）&lt;/strong&gt; 是两者的折中：代码还在一个仓库里，但按业务域严格划分模块，模块之间通过接口通信，不能直接访问对方的数据库表。部署时是一个整体，但逻辑上已经具备了微服务的边界感。对于大多数中小团队，这其实是更务实的选择。&lt;/p&gt;
+&lt;h3&gt;微服务拆分原则&lt;a href=&quot;#微服务拆分原则&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;拆微服务最怕的是「拆得太细」或者「拆得不对」。几条核心原则：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;单一职责&lt;/strong&gt;：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;高内聚低耦合&lt;/strong&gt;：服务内部功能紧密相关，服务之间尽量通过事件或接口通信&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;按业务领域拆分（DDD）&lt;/strong&gt;：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;按团队拆分&lt;/strong&gt;：Conway 定律告诉我们，系统架构会趋向于组织结构&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;服务间通信方式的选择也很关键：REST 简单通用，gRPC 高性能适合内部通信，消息队列（Kafka/RabbitMQ）适合异步解耦，GraphQL 适合前端灵活查询。&lt;/p&gt;
+&lt;h3&gt;服务注册与发现&lt;a href=&quot;#服务注册与发现&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;服务多了之后，手动维护地址列表不现实。服务注册发现就是解决这个问题的：服务启动时把自己注册到注册中心（Consul、etcd、Nacos），其他服务通过注册中心发现目标地址。客户端负载均衡配合健康检查，自动剔除不健康实例。&lt;/p&gt;
+&lt;h3&gt;API 网关&lt;a href=&quot;#api-网关&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;微服务对外暴露统一入口。网关承担的职责包括：路由转发、认证鉴权、限流、协议转换、日志聚合。常见方案有 Kong、Envoy、Go 自研网关等。好处是客户端不需要知道后面有多少个服务，也避免了跨域和安全策略分散的问题。&lt;/p&gt;
+&lt;h3&gt;熔断、限流与降级&lt;a href=&quot;#熔断限流与降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这三个是微服务稳定性的三板斧，面试也经常考：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;限流&lt;/strong&gt;控制请求速率，常见算法有四种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;固定窗口计数器：实现简单，但有边界突发问题&lt;/li&gt;
+&lt;li&gt;滑动窗口：解决边界突发，实现略复杂&lt;/li&gt;
+&lt;li&gt;漏桶算法：固定速率处理，平滑流量但无法应对突发&lt;/li&gt;
+&lt;li&gt;令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;实际项目中 gRPC 拦截器用令牌桶限制单用户 QPS，Redis + Lua 脚本做分布式限流是比较常见的做法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;熔断&lt;/strong&gt;的思路类似保险丝：当某个下游服务的错误率超过阈值，自动切断调用，快速失败，等一段时间后再尝试恢复（半开状态探测）。防止一个慢服务拖垮整个系统。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;降级&lt;/strong&gt;是主动放弃非核心功能来保核心链路。比如大促期间关闭评论功能，把资源让给下单和支付。&lt;/p&gt;
+&lt;h3&gt;链路追踪&lt;a href=&quot;#链路追踪&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一个请求可能经过五六个服务，出了问题怎么定位？分布式链路追踪的思路是给每个请求分配一个全局唯一的 &lt;code&gt;traceID&lt;/code&gt;，在服务间透传，每个服务记录自己的 &lt;code&gt;span&lt;/code&gt;（操作名、耗时、状态）。最终在 Jaeger 或 Zipkin 的 UI 里就能看到完整的调用链路和每段耗时。&lt;/p&gt;
+&lt;p&gt;Rinne-IM 的做法是客户端生成 traceID 放进 gRPC Metadata，服务端拦截器提取后注入 context，下游的 DB 查询、Redis 操作、Kafka 发送都自动携带这个 traceID。配合结构化日志（&lt;code&gt;slog&lt;/code&gt; JSON 输出），排查延迟瓶颈非常高效。&lt;/p&gt;
+&lt;h2&gt;分析：什么时候不该用微服务？&lt;a href=&quot;#分析什么时候不该用微服务&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试不能只说好处，面试官更想听你的判断力。以下场景建议&lt;strong&gt;不要&lt;/strong&gt;上微服务：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率&lt;/li&gt;
+&lt;li&gt;业务边界不清晰——拆错了比不拆更痛苦&lt;/li&gt;
+&lt;li&gt;没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑&lt;/li&gt;
+&lt;li&gt;数据一致性要求极高——分布式事务的代价远比想象中高&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Martin Fowler 提过一个建议：先做单体，等团队规模和业务复杂度到了需要拆分的时候，再逐步拆。这就是所谓的「单体优先（Monolith First）」策略。&lt;/p&gt;
+&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;单体架构&lt;/td&gt;&lt;td&gt;简单直接，适合小团队和早期项目&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;微服务&lt;/td&gt;&lt;td&gt;独立部署和扩展，但运维复杂度高&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;模块化单体&lt;/td&gt;&lt;td&gt;逻辑拆分、物理合并，务实的中间路线&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;DDD 限界上下文&lt;/td&gt;&lt;td&gt;服务拆分的理论依据&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;服务注册发现&lt;/td&gt;&lt;td&gt;Consul/etcd/Nacos，解决服务地址管理&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;API 网关&lt;/td&gt;&lt;td&gt;统一入口，路由/认证/限流&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;限流&lt;/td&gt;&lt;td&gt;令牌桶最常用，控制请求速率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;熔断&lt;/td&gt;&lt;td&gt;快速失败，防止级联故障&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;降级&lt;/td&gt;&lt;td&gt;牺牲非核心功能保核心链路&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;链路追踪&lt;/td&gt;&lt;td&gt;traceID 透传 + span 记录，Jaeger/Zipkin&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;Service Mesh（服务网格）&lt;a href=&quot;#service-mesh服务网格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当服务数量多到一定程度，每个服务都要写熔断、限流、链路追踪的代码，太累了。Service Mesh 把这些横切关注点下沉到基础设施层：每个服务旁边挂一个 Sidecar Proxy（数据平面），由控制平面统一管理配置、路由、负载均衡和熔断降级。主流实现是 Istio 和 Linkerd。好处是业务代码完全不需要关心服务治理逻辑，缺点是引入了一层额外的复杂度和性能开销。&lt;/p&gt;
+&lt;h3&gt;Serverless&lt;a href=&quot;#serverless&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;比微服务更极端的抽象——连服务都不需要管了，直接写函数。云厂商（AWS Lambda、阿里云函数计算）负责运行、扩缩容和计费。适合事件驱动、突发流量的场景，比如图片处理、定时任务。但冷启动延迟和厂商锁定是目前的主要限制。&lt;/p&gt;
+&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先扎实单体&lt;/strong&gt;：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解 DDD&lt;/strong&gt;：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手拆一次&lt;/strong&gt;：拿自己的项目试试按业务域拆分，体会拆分的边界感&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;学一个服务框架&lt;/strong&gt;：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;了解 Service Mesh&lt;/strong&gt;：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;监控先行&lt;/strong&gt;：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/bliki/MonolithFirst.html&quot;&gt;MonolithFirst&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/microservices/&quot;&gt;Microservices Resource Guide&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Sam Newman - &lt;em&gt;Building Microservices&lt;/em&gt; (O’Reilly)&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://istio.io/latest/docs/&quot;&gt;Istio 官方文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go-zero.dev/&quot;&gt;go-zero 微服务框架&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.domainlanguage.com/ddd/&quot;&gt;DDD 领域驱动设计 - Eric Evans&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Google SRE Book - &lt;a href=&quot;https://sre.google/sre-book/table-of-contents/&quot;&gt;Managing Critical State&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
 
 准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。
 
@@ -4212,137 +4342,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
 &lt;li&gt;《数据库系统概论》B+ 树章节，王珊、萨师煊&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-microservices-architecture</guid><description>前情提要
-最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。
-问题：微服务到底解决了什么问题？</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。&lt;/p&gt;
-&lt;h2&gt;问题：微服务到底解决了什么问题？&lt;a href=&quot;#问题微服务到底解决了什么问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试官的经典问法是「微服务架构的优缺点」和「什么时候该用微服务」。这个问题看起来简单，但如果没有实际踩过坑，很容易答成教科书式的罗列。我觉得更好的回答方式是从&lt;strong&gt;痛点出发&lt;/strong&gt;：单体架构在项目规模增长之后会遇到什么问题，微服务又是怎么解决这些问题的。&lt;/p&gt;
-&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;单体 vs 微服务 vs 模块化单体&lt;a href=&quot;#单体-vs-微服务-vs-模块化单体&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;单体架构（Monolith）&lt;/strong&gt; 是最直觉的方式：所有功能模块跑在同一个进程里，共享同一个数据库。优点是开发简单、调试方便、部署也快，一个二进制文件丢上去就跑。缺点也很明显——代码膨胀之后编译变慢，模块之间耦合严重，改一行代码就得全量部署，某个模块的流量高峰也得整体扩容。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;微服务架构&lt;/strong&gt; 把系统拆成多个独立部署的服务，每个服务有自己的数据库和技术栈。核心优势：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;独立部署：一个服务发版不影响其他服务&lt;/li&gt;
-&lt;li&gt;技术栈灵活：Go 写高性能网关，Python 做数据分析，各取所需&lt;/li&gt;
-&lt;li&gt;按需扩展：热点服务单独水平扩容，不浪费资源&lt;/li&gt;
-&lt;li&gt;故障隔离：订单服务挂了，用户服务还能正常响应&lt;/li&gt;
-&lt;li&gt;团队自治：每个小团队全权负责自己的服务&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;代价是复杂度飙升——分布式事务、网络延迟、运维成本、链路追踪，每一个都是硬骨头。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;模块化单体（Modular Monolith）&lt;/strong&gt; 是两者的折中：代码还在一个仓库里，但按业务域严格划分模块，模块之间通过接口通信，不能直接访问对方的数据库表。部署时是一个整体，但逻辑上已经具备了微服务的边界感。对于大多数中小团队，这其实是更务实的选择。&lt;/p&gt;
-&lt;h3&gt;微服务拆分原则&lt;a href=&quot;#微服务拆分原则&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;拆微服务最怕的是「拆得太细」或者「拆得不对」。几条核心原则：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;单一职责&lt;/strong&gt;：每个服务只做一件事，但「一件事」的粒度要靠业务判断，不是越细越好&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;高内聚低耦合&lt;/strong&gt;：服务内部功能紧密相关，服务之间尽量通过事件或接口通信&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;按业务领域拆分（DDD）&lt;/strong&gt;：用限界上下文（Bounded Context）来划定服务边界，比如用户域、订单域、支付域&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;按团队拆分&lt;/strong&gt;：Conway 定律告诉我们，系统架构会趋向于组织结构&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;服务间通信方式的选择也很关键：REST 简单通用，gRPC 高性能适合内部通信，消息队列（Kafka/RabbitMQ）适合异步解耦，GraphQL 适合前端灵活查询。&lt;/p&gt;
-&lt;h3&gt;服务注册与发现&lt;a href=&quot;#服务注册与发现&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;服务多了之后，手动维护地址列表不现实。服务注册发现就是解决这个问题的：服务启动时把自己注册到注册中心（Consul、etcd、Nacos），其他服务通过注册中心发现目标地址。客户端负载均衡配合健康检查，自动剔除不健康实例。&lt;/p&gt;
-&lt;h3&gt;API 网关&lt;a href=&quot;#api-网关&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;微服务对外暴露统一入口。网关承担的职责包括：路由转发、认证鉴权、限流、协议转换、日志聚合。常见方案有 Kong、Envoy、Go 自研网关等。好处是客户端不需要知道后面有多少个服务，也避免了跨域和安全策略分散的问题。&lt;/p&gt;
-&lt;h3&gt;熔断、限流与降级&lt;a href=&quot;#熔断限流与降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;这三个是微服务稳定性的三板斧，面试也经常考：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;限流&lt;/strong&gt;控制请求速率，常见算法有四种：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;固定窗口计数器：实现简单，但有边界突发问题&lt;/li&gt;
-&lt;li&gt;滑动窗口：解决边界突发，实现略复杂&lt;/li&gt;
-&lt;li&gt;漏桶算法：固定速率处理，平滑流量但无法应对突发&lt;/li&gt;
-&lt;li&gt;令牌桶算法：固定速率生成令牌，允许一定程度的突发（桶中积累的令牌）&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;实际项目中 gRPC 拦截器用令牌桶限制单用户 QPS，Redis + Lua 脚本做分布式限流是比较常见的做法。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;熔断&lt;/strong&gt;的思路类似保险丝：当某个下游服务的错误率超过阈值，自动切断调用，快速失败，等一段时间后再尝试恢复（半开状态探测）。防止一个慢服务拖垮整个系统。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;降级&lt;/strong&gt;是主动放弃非核心功能来保核心链路。比如大促期间关闭评论功能，把资源让给下单和支付。&lt;/p&gt;
-&lt;h3&gt;链路追踪&lt;a href=&quot;#链路追踪&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;一个请求可能经过五六个服务，出了问题怎么定位？分布式链路追踪的思路是给每个请求分配一个全局唯一的 &lt;code&gt;traceID&lt;/code&gt;，在服务间透传，每个服务记录自己的 &lt;code&gt;span&lt;/code&gt;（操作名、耗时、状态）。最终在 Jaeger 或 Zipkin 的 UI 里就能看到完整的调用链路和每段耗时。&lt;/p&gt;
-&lt;p&gt;Rinne-IM 的做法是客户端生成 traceID 放进 gRPC Metadata，服务端拦截器提取后注入 context，下游的 DB 查询、Redis 操作、Kafka 发送都自动携带这个 traceID。配合结构化日志（&lt;code&gt;slog&lt;/code&gt; JSON 输出），排查延迟瓶颈非常高效。&lt;/p&gt;
-&lt;h2&gt;分析：什么时候不该用微服务？&lt;a href=&quot;#分析什么时候不该用微服务&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试不能只说好处，面试官更想听你的判断力。以下场景建议&lt;strong&gt;不要&lt;/strong&gt;上微服务：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;团队不到 10 人，项目处于 MVP 阶段——运维成本会吃掉开发效率&lt;/li&gt;
-&lt;li&gt;业务边界不清晰——拆错了比不拆更痛苦&lt;/li&gt;
-&lt;li&gt;没有基础设施支撑——没有 CI/CD、没有容器编排、没有监控体系，微服务就是给自己挖坑&lt;/li&gt;
-&lt;li&gt;数据一致性要求极高——分布式事务的代价远比想象中高&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Martin Fowler 提过一个建议：先做单体，等团队规模和业务复杂度到了需要拆分的时候，再逐步拆。这就是所谓的「单体优先（Monolith First）」策略。&lt;/p&gt;
-&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;单体架构&lt;/td&gt;&lt;td&gt;简单直接，适合小团队和早期项目&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;微服务&lt;/td&gt;&lt;td&gt;独立部署和扩展，但运维复杂度高&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;模块化单体&lt;/td&gt;&lt;td&gt;逻辑拆分、物理合并，务实的中间路线&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;DDD 限界上下文&lt;/td&gt;&lt;td&gt;服务拆分的理论依据&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;服务注册发现&lt;/td&gt;&lt;td&gt;Consul/etcd/Nacos，解决服务地址管理&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;API 网关&lt;/td&gt;&lt;td&gt;统一入口，路由/认证/限流&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;限流&lt;/td&gt;&lt;td&gt;令牌桶最常用，控制请求速率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;熔断&lt;/td&gt;&lt;td&gt;快速失败，防止级联故障&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;降级&lt;/td&gt;&lt;td&gt;牺牲非核心功能保核心链路&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;链路追踪&lt;/td&gt;&lt;td&gt;traceID 透传 + span 记录，Jaeger/Zipkin&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h2&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;Service Mesh（服务网格）&lt;a href=&quot;#service-mesh服务网格&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;当服务数量多到一定程度，每个服务都要写熔断、限流、链路追踪的代码，太累了。Service Mesh 把这些横切关注点下沉到基础设施层：每个服务旁边挂一个 Sidecar Proxy（数据平面），由控制平面统一管理配置、路由、负载均衡和熔断降级。主流实现是 Istio 和 Linkerd。好处是业务代码完全不需要关心服务治理逻辑，缺点是引入了一层额外的复杂度和性能开销。&lt;/p&gt;
-&lt;h3&gt;Serverless&lt;a href=&quot;#serverless&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;比微服务更极端的抽象——连服务都不需要管了，直接写函数。云厂商（AWS Lambda、阿里云函数计算）负责运行、扩缩容和计费。适合事件驱动、突发流量的场景，比如图片处理、定时任务。但冷启动延迟和厂商锁定是目前的主要限制。&lt;/p&gt;
-&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先扎实单体&lt;/strong&gt;：把分层架构（Controller - Service - Repository）和依赖注入搞清楚，这是所有架构的基础&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解 DDD&lt;/strong&gt;：不需要一上来就全套 DDD，但限界上下文、聚合根、领域事件这些概念要知道&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手拆一次&lt;/strong&gt;：拿自己的项目试试按业务域拆分，体会拆分的边界感&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;学一个服务框架&lt;/strong&gt;：go-zero、go-micro 或者 Kratos，了解服务注册发现、熔断限流的开箱即用方案&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;了解 Service Mesh&lt;/strong&gt;：Istio + Envoy 是趋势，至少要知道 Sidecar 模式的工作原理&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;监控先行&lt;/strong&gt;：Prometheus + Grafana + Jaeger，可观测性是微服务的前提而不是锦上添花&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/bliki/MonolithFirst.html&quot;&gt;MonolithFirst&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Martin Fowler - &lt;a href=&quot;https://martinfowler.com/microservices/&quot;&gt;Microservices Resource Guide&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Sam Newman - &lt;em&gt;Building Microservices&lt;/em&gt; (O’Reilly)&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://istio.io/latest/docs/&quot;&gt;Istio 官方文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go-zero.dev/&quot;&gt;go-zero 微服务框架&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://www.domainlanguage.com/ddd/&quot;&gt;DDD 领域驱动设计 - Eric Evans&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;Google SRE Book - &lt;a href=&quot;https://sre.google/sre-book/table-of-contents/&quot;&gt;Managing Critical State&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
 
 上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 FOR UPDATE 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。
 
@@ -4483,7 +4483,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model and Locking&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
 整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。
 问题
 
@@ -4616,7 +4616,7 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 章：事务和并发控制&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 6 章：事务与 MVCC 实现细节&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cache-problems</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cache-problems</guid><description>前情提要
 最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
 问题
 面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
@@ -4782,7 +4782,7 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/content/blog/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:content/blog/2026-6-13-interview-redis-cluster</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cluster</guid><description>前情提要
 单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster 集群，分别解决数据冗余、自动故障转移和水平扩展三个层次的问题。面试中经常一轮追问到底：“主从怎么同步数据的？哨兵怎么选主？Cluster 的 16384 个槽什么意思？“这篇笔记把三种方案一次打通。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
