@@ -101,6 +101,10 @@ export function getPostDescriptionWithSummary(post: BlogPost, locale: string = d
 function computeSlugFromPath(filePath: string | undefined): string | undefined {
   if (!filePath) return undefined;
   const withoutExt = filePath.replace(/\.\w+$/, '');
+  // Strip everything up to and including the 'blog/' segment
+  const blogMatch = withoutExt.match(/(?:^|\/)(?:src\/)?content\/blog\/(.+)/);
+  if (blogMatch) return decodeURIComponent(blogMatch[1]) || undefined;
+  // Fallback: strip first segment
   const segments = withoutExt.split('/');
   if (segments.length <= 1) return undefined;
   const slug = segments.slice(1).map((s) => decodeURIComponent(s)).join('/');

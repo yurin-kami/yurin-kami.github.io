@@ -34,6 +34,12 @@ export function getSlugLocaleInfo(slug: string): SlugLocaleInfo {
     console.warn(`[getSlugLocaleInfo] Called with undefined/empty slug from getPostLocale - check post.slug`);
     return { locale: defaultLocale, localeFreeSlug: '' };
   }
+
+  // Normalize: strip 'content/blog/' prefix that Astro's glob loader may leave
+  // when the collection base is './src/content/blog' but the loader doesn't
+  // fully strip it from the generated slug (affects posts without a `link` field).
+  slug = slug.replace(/^content\/blog\//, '');
+
   const firstSlash = slug.indexOf('/');
   if (firstSlash === -1) {
     // No slash → single-segment slug, always default locale
