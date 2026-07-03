@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import yaml from '@rollup/plugin-yaml';
@@ -193,6 +194,49 @@ export default defineConfig({
   integrations: [
     react(),
     sitemap(),
+    // Astro 5 CSS code splitting fix: inject _slug_*.css into all pages
+    // because Layout.astro's global styles (from src/styles/index.css) are bundled
+    // into _slug_*.css which Astro only links on dynamic-route pages, not on all
+    // pages that use Layout.astro. This integration copies the _slug_ CSS to a
+    // stable path and links it on every page.
+    {
+      name: 'inject-slug-css',
+      hooks: {
+        'astro:build:done': ({ dir }) => {
+          const distDir = fileURLToPath(dir);
+          const astroDir = path.join(distDir, '_astro');
+
+          let slugCss = null;
+          try {
+            const files = fs.readdirSync(astroDir);
+            slugCss = files.find(f => f.startsWith('_slug_') && f.endsWith('.css'));
+          } catch {
+            return;
+          }
+          if (!slugCss) return;
+
+          const cssLink = `<link rel="stylesheet" href="/_astro/${slugCss}">`;
+
+          // Walk all HTML files and inject the CSS link
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir)) {
+              const fp = path.join(dir, entry);
+              const stat = fs.statSync(fp);
+              if (stat.isDirectory()) {
+                walk(fp);
+              } else if (entry.endsWith('.html')) {
+                let content = fs.readFileSync(fp, 'utf-8');
+                if (!content.includes(`/_astro/${slugCss}`)) {
+                  content = content.replace('</head>', `${cssLink}</head>`);
+                  fs.writeFileSync(fp, content, 'utf-8');
+                }
+              }
+            }
+          }
+          walk(distDir);
+        },
+      },
+    },
     icon({
       include: {
         gg: ['*'],
