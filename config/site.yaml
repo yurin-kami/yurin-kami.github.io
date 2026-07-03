@@ -225,30 +225,30 @@ friends:
         image: https://your-blog.com/avatar.jpg # 头像链接
         color: "#ffc0cb" # 主题色（可选）
   data: # 友链列表
-    - site: 余弦の博客
-      url: https://blog.cosine.ren
-      owner: cos
-      desc: FE / ACG / 手工 / 深色模式强迫症 / INFP / 兴趣广泛养两只猫的老宅女 / remote
-      image: https://blog.cosine.ren/img/avatar.webp
-      color: "#ed788b"
+    # - site: 余弦の博客
+    #   url: https://blog.cosine.ren
+    #   owner: cos
+    #   desc: FE / ACG / 手工 / 深色模式强迫症 / INFP / 兴趣广泛养两只猫的老宅女 / remote
+    #   image: https://blog.cosine.ren/img/avatar.webp
+    #   color: "#ed788b"
     - site: 示例博客 A
       url: https://example-a.com
       owner: Alice
       desc: 一个热爱技术的开发者
       image: https://api.dicebear.com/7.x/avataaars/svg?seed=Alice
       color: "#BEDCFF"
-    - site: 示例博客 B
-      url: https://example-b.com
-      owner: Bob
-      desc: 分享生活与技术的小站
-      image: https://api.dicebear.com/7.x/avataaars/svg?seed=Bob
-      color: "#FBC1CC"
-    - site: 示例博客 C
-      url: https://example-c.com
-      owner: Carol
-      desc: 记录学习与成长的地方
-      image: https://api.dicebear.com/7.x/avataaars/svg?seed=Carol
-      color: "#ABDCFF"
+    # - site: 示例博客 B
+    #   url: https://example-b.com
+    #   owner: Bob
+    #   desc: 分享生活与技术的小站
+    #   image: https://api.dicebear.com/7.x/avataaars/svg?seed=Bob
+    #   color: "#FBC1CC"
+    # - site: 示例博客 C
+    #   url: https://example-c.com
+    #   owner: Carol
+    #   desc: 记录学习与成长的地方
+    #   image: https://api.dicebear.com/7.x/avataaars/svg?seed=Carol
+    #   color: "#ABDCFF"
 
 # =============================================================================
 # Announcements
@@ -626,9 +626,9 @@ christmas:
 #   icon: 导航图标，Iconify 格式（可选，默认：ri:bilibili-fill）
 # -----------------------------------------------------------------------------
 bangumi:
-  userId: ""
-  # label: 追番
-  # icon: ri:bilibili-fill
+  userId: "zhenxiakami"
+  label: 追番
+  icon: ri:bilibili-fill
 
 # =============================================================================
 # Development Tools (Dev Only)
@@ -645,7 +645,7 @@ bangumi:
 #     - urlTemplate: URL 模板，支持占位符 {path}（文件绝对路径）
 # -----------------------------------------------------------------------------
 dev:
-  localProjectPath: "/Users/yourname/path/to/astro-koharu" # 请修改为你的项目绝对路径
+  localProjectPath: "A:/dev_pjs/KamiShow-----" # 请修改为你的项目绝对路径
   contentRelativePath: "src/content/blog"
   editors:
     - id: vscode
