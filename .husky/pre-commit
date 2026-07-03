@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+export PATH="$PATH:/a/dev_env/nodejs"
+pnpm lint-staged
