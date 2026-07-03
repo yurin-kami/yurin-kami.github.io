@@ -2663,89 +2663,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;Apache Curator: &lt;a href=&quot;https://curator.apache.org/curator-recipes/shared-lock.html&quot;&gt;Shared Lock 文档&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;etcd 官方: &lt;a href=&quot;https://etcd.io/docs/v3.5/dev-guide/recipes/#lock&quot;&gt;Lock recipe&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
-在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。
-问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中关于 Channel 的提问方式通常有以下几种：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“说一下 Channel 的底层数据结构”&lt;/li&gt;
-&lt;li&gt;“有缓冲和无缓冲 Channel 有什么区别？”&lt;/li&gt;
-&lt;li&gt;“Channel 什么情况下会死锁？怎么避免？”&lt;/li&gt;
-&lt;li&gt;“什么时候用 Channel，什么时候用 Mutex？”&lt;/li&gt;
-&lt;li&gt;“select 是怎么工作的？nil channel 和 closed channel 各自有什么行为？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这些问题看似基础，但要答出深度，需要把源码层面的实现和使用层面的经验结合起来。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;有缓冲 vs 无缓冲&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;无缓冲 Channel（&lt;code&gt;make(chan int)&lt;/code&gt;）要求发送方和接收方同时就绪才能完成通信，本质上是一个同步握手。有缓冲 Channel（&lt;code&gt;make(chan int, 10)&lt;/code&gt;）内部维护一个环形队列，发送方在缓冲区未满时可以直接写入而不阻塞，接收方在缓冲区非空时可以直接读取而不阻塞。一句话总结：无缓冲是”打电话”，双方必须同时在线；有缓冲是”发短信”，发完就走，对方有空再看。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三种典型使用模式&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;第一种是 fan-out（扇出）。一个生产者往 Channel 写，多个消费者竞争读取，天然实现了工作池模型：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;jobs &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; Job&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 5&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        for&lt;/span&gt;&lt;span&gt; job &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; jobs {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;            process&lt;/span&gt;&lt;span&gt;(job)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;第二种是同步屏障。用无缓冲 Channel 做 goroutine 之间的同步信号，比 WaitGroup 更轻量：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{})&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    doWork&lt;/span&gt;&lt;span&gt;()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    close&lt;/span&gt;&lt;span&gt;(done)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;// 等待完成&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;第三种是背压控制（backpressure）。有缓冲 Channel 天然限制了并发量——缓冲区满了生产者就会阻塞，避免了无限堆积：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;sem &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}, &lt;/span&gt;&lt;span&gt;10&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 最多 10 个并发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; _, task &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; tasks {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    sem &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}{}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;t&lt;/span&gt;&lt;span&gt; Task&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() { &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;sem }()&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        handle&lt;/span&gt;&lt;span&gt;(t)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }(task)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;hchan 底层结构简述&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Channel 在运行时的核心结构是 &lt;code&gt;hchan&lt;/code&gt;，关键字段包括：&lt;code&gt;buf&lt;/code&gt;（指向环形缓冲区的指针）、&lt;code&gt;sendx&lt;/code&gt; 和 &lt;code&gt;recvx&lt;/code&gt;（发送和接收的索引位置）、&lt;code&gt;sendq&lt;/code&gt; 和 &lt;code&gt;recvq&lt;/code&gt;（阻塞的发送者和接收者等待队列，由 &lt;code&gt;sudog&lt;/code&gt; 链表构成）、&lt;code&gt;lock&lt;/code&gt;（互斥锁保护所有操作）。发送时优先找等待中的接收者直接传递数据，其次写入缓冲区，都没有就把自己挂起。接收的逻辑对称。关闭 Channel 时会唤醒所有等待的接收者（它们收到零值）和所有等待的发送者（它们直接 panic）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;死锁场景和避免方法&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;最常见的死锁是”发送了但没人收”或者”想收但没人发”。比如主 goroutine 里往无缓冲 Channel 发送数据，却没有另一个 goroutine 来接收，程序直接 panic &lt;code&gt;fatal error: all goroutines are asleep - deadlock!&lt;/code&gt;。另一种典型场景是两个 goroutine 互相等待对方先发消息。避免死锁的核心原则：确保每个 Channel 操作都有对应的配对操作，善用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;context&lt;/code&gt; 做超时和取消，不要在没有退出机制的情况下让 goroutine 永久阻塞在 Channel 上。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;什么时候该用 Channel，什么时候该用 Mutex？这是面试中区分”会用”和”理解”的关键问题。&lt;/p&gt;
-&lt;p&gt;Channel 擅长的是 goroutine 之间的&lt;strong&gt;通信和协调&lt;/strong&gt;——传递数据所有权、发送信号、编排执行顺序。典型场景是生产者-消费者、流水线（pipeline）、任务分发。&lt;/p&gt;
-&lt;p&gt;Mutex 擅长的是保护&lt;strong&gt;共享状态&lt;/strong&gt;——当你需要在多个 goroutine 之间安全地读写同一个变量时，锁是更直接的选择。比如计数器、缓存 map、配置项。&lt;/p&gt;
-&lt;p&gt;一个常见的反模式是用 Channel 来模拟锁的行为（发一个值表示”拿锁”，收一个值表示”释放锁”），这样做不仅代码复杂，性能也更差。经验法则：&lt;strong&gt;通信选 Channel，共享状态选 Mutex&lt;/strong&gt;。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;无缓冲 Channel 是同步的，有缓冲 Channel 在缓冲区范围内是异步的&lt;/li&gt;
-&lt;li&gt;Channel 底层是 &lt;code&gt;hchan&lt;/code&gt; 结构体 + 环形缓冲区 + &lt;code&gt;sudog&lt;/code&gt; 等待队列 + 互斥锁&lt;/li&gt;
-&lt;li&gt;向已关闭的 Channel 发送数据会 panic，从已关闭的 Channel 读取会收到零值&lt;/li&gt;
-&lt;li&gt;nil Channel 上的任何操作都会永久阻塞&lt;/li&gt;
-&lt;li&gt;关闭 Channel 会唤醒所有等待方，发送方 panic，接收方收到零值&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;select&lt;/code&gt; 随机选择一个就绪的 case 执行，没有就绪的则阻塞或走 default&lt;/li&gt;
-&lt;li&gt;死锁的根源是缺少配对操作，用 context 和超时机制防御&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;select 多路复用&lt;/strong&gt;：&lt;code&gt;select&lt;/code&gt; 的底层通过 &lt;code&gt;runtime.selectgo&lt;/code&gt; 实现，它会随机打乱 case 顺序后遍历，防止某个 Channel 永远优先（饥饿问题）。如果多个 case 同时就绪，随机选一个执行；没有就绪的且有 &lt;code&gt;default&lt;/code&gt;，走 default；没有 default 就阻塞。一个实用技巧是用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;time.After&lt;/code&gt; 做超时控制，避免 goroutine 永久卡死。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;nil channel 的行为&lt;/strong&gt;：未初始化的 Channel（值为 nil）上，发送和接收都会永久阻塞。这个特性可以用来做”动态禁用”——比如把一个 case 对应的 Channel 设为 nil，select 就会自动跳过它。但也要注意，如果你忘记初始化 Channel 就直接使用，程序会静默卡死，没有任何 panic 提示。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;closed channel 的行为&lt;/strong&gt;：关闭后发送会 panic，但接收不会——它会立即返回零值，&lt;code&gt;ok&lt;/code&gt; 标识为 &lt;code&gt;false&lt;/code&gt;。这衍生出一个常用模式：用 &lt;code&gt;for range&lt;/code&gt; 遍历 Channel，发送方 &lt;code&gt;close&lt;/code&gt; 之后循环自动退出。需要注意的是 Channel 只能关闭一次，重复关闭同样会 panic。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先动手踩坑&lt;/strong&gt;：写几个会死锁的小程序，观察 panic 信息，比看文档印象更深&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;读 runtime 源码&lt;/strong&gt;：&lt;code&gt;src/runtime/chan.go&lt;/code&gt; 不长，&lt;code&gt;hchan&lt;/code&gt;、&lt;code&gt;chansend&lt;/code&gt;、&lt;code&gt;chanrecv&lt;/code&gt;、&lt;code&gt;closechan&lt;/code&gt; 四个函数看懂就够&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;掌握 select 的各种用法&lt;/strong&gt;：超时、心跳、fan-in、nil channel 禁用，这些是日常开发高频场景&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;结合 context 一起学&lt;/strong&gt;：Channel 的生命周期管理离不开 context，两者一起理解才完整&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;写一个 worker pool 或 pipeline&lt;/strong&gt;：把 fan-out、背压、优雅关闭全部串起来，是最好的综合练习&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/ref/spec#Channel_types&quot;&gt;Go 官方文档 - Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://gobyexample.com/channels&quot;&gt;Go by Example: Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/runtime/chan.go&quot;&gt;Go 运行时源码 src/runtime/chan.go&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:2026-6-13-interview-go-context</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:分布式系统</category><category>tag:分布式锁</category><category>tag:Redis</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-context</link><guid isPermaLink="false">ja:2026-6-13-interview-go-context</guid><description>前情提要
 在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 context.WithTimeout，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 &lt;code&gt;context.WithTimeout&lt;/code&gt;，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context 的设计思想、使用方式和常见陷阱做一次完整的梳理。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -2880,7 +2798,89 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/context/context.go&quot;&gt;Go 标准库源码 src/context/context.go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#context&quot;&gt;Uber Go Style Guide - Context&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://medium.com/@cep21/how-to-correctly-use-context-context-in-go-1-7-8f2c0fafdf39&quot;&gt;Jack Lindamood - How to correctly use context.Context&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">ja:2026-6-13-interview-go-garbage-collection</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Channel的使用场景和常见陷阱</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-channel-pitfalls</link><guid isPermaLink="false">ja:2026-6-13-interview-go-channel-pitfalls</guid><description>前情提要
+在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。
+问题</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在准备后端面试的过程中，Channel 几乎是 Go 并发编程的必考题。很多时候我们只知道”用 channel 传递数据”，但面试官真正想考察的是你对底层结构的理解、对使用模式的判断力，以及踩坑经验。这篇笔记把 Channel 的核心知识点做一次系统梳理，既是复习，也是备忘。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中关于 Channel 的提问方式通常有以下几种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“说一下 Channel 的底层数据结构”&lt;/li&gt;
+&lt;li&gt;“有缓冲和无缓冲 Channel 有什么区别？”&lt;/li&gt;
+&lt;li&gt;“Channel 什么情况下会死锁？怎么避免？”&lt;/li&gt;
+&lt;li&gt;“什么时候用 Channel，什么时候用 Mutex？”&lt;/li&gt;
+&lt;li&gt;“select 是怎么工作的？nil channel 和 closed channel 各自有什么行为？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些问题看似基础，但要答出深度，需要把源码层面的实现和使用层面的经验结合起来。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;有缓冲 vs 无缓冲&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;无缓冲 Channel（&lt;code&gt;make(chan int)&lt;/code&gt;）要求发送方和接收方同时就绪才能完成通信，本质上是一个同步握手。有缓冲 Channel（&lt;code&gt;make(chan int, 10)&lt;/code&gt;）内部维护一个环形队列，发送方在缓冲区未满时可以直接写入而不阻塞，接收方在缓冲区非空时可以直接读取而不阻塞。一句话总结：无缓冲是”打电话”，双方必须同时在线；有缓冲是”发短信”，发完就走，对方有空再看。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;三种典型使用模式&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第一种是 fan-out（扇出）。一个生产者往 Channel 写，多个消费者竞争读取，天然实现了工作池模型：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;jobs &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; Job&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; i &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 0&lt;/span&gt;&lt;span&gt;; i &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 5&lt;/span&gt;&lt;span&gt;; i&lt;/span&gt;&lt;span&gt;++&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        for&lt;/span&gt;&lt;span&gt; job &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; jobs {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;            process&lt;/span&gt;&lt;span&gt;(job)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第二种是同步屏障。用无缓冲 Channel 做 goroutine 之间的同步信号，比 WaitGroup 更轻量：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{})&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    doWork&lt;/span&gt;&lt;span&gt;()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    close&lt;/span&gt;&lt;span&gt;(done)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;done &lt;/span&gt;&lt;span&gt;// 等待完成&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三种是背压控制（backpressure）。有缓冲 Channel 天然限制了并发量——缓冲区满了生产者就会阻塞，避免了无限堆积：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;sem &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; make&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;chan&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}, &lt;/span&gt;&lt;span&gt;10&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 最多 10 个并发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;for&lt;/span&gt;&lt;span&gt; _, task &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; tasks {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    sem &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt;{}{}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;t&lt;/span&gt;&lt;span&gt; Task&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() { &lt;/span&gt;&lt;span&gt;&amp;lt;-&lt;/span&gt;&lt;span&gt;sem }()&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        handle&lt;/span&gt;&lt;span&gt;(t)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }(task)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;hchan 底层结构简述&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Channel 在运行时的核心结构是 &lt;code&gt;hchan&lt;/code&gt;，关键字段包括：&lt;code&gt;buf&lt;/code&gt;（指向环形缓冲区的指针）、&lt;code&gt;sendx&lt;/code&gt; 和 &lt;code&gt;recvx&lt;/code&gt;（发送和接收的索引位置）、&lt;code&gt;sendq&lt;/code&gt; 和 &lt;code&gt;recvq&lt;/code&gt;（阻塞的发送者和接收者等待队列，由 &lt;code&gt;sudog&lt;/code&gt; 链表构成）、&lt;code&gt;lock&lt;/code&gt;（互斥锁保护所有操作）。发送时优先找等待中的接收者直接传递数据，其次写入缓冲区，都没有就把自己挂起。接收的逻辑对称。关闭 Channel 时会唤醒所有等待的接收者（它们收到零值）和所有等待的发送者（它们直接 panic）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;死锁场景和避免方法&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;最常见的死锁是”发送了但没人收”或者”想收但没人发”。比如主 goroutine 里往无缓冲 Channel 发送数据，却没有另一个 goroutine 来接收，程序直接 panic &lt;code&gt;fatal error: all goroutines are asleep - deadlock!&lt;/code&gt;。另一种典型场景是两个 goroutine 互相等待对方先发消息。避免死锁的核心原则：确保每个 Channel 操作都有对应的配对操作，善用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;context&lt;/code&gt; 做超时和取消，不要在没有退出机制的情况下让 goroutine 永久阻塞在 Channel 上。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;什么时候该用 Channel，什么时候该用 Mutex？这是面试中区分”会用”和”理解”的关键问题。&lt;/p&gt;
+&lt;p&gt;Channel 擅长的是 goroutine 之间的&lt;strong&gt;通信和协调&lt;/strong&gt;——传递数据所有权、发送信号、编排执行顺序。典型场景是生产者-消费者、流水线（pipeline）、任务分发。&lt;/p&gt;
+&lt;p&gt;Mutex 擅长的是保护&lt;strong&gt;共享状态&lt;/strong&gt;——当你需要在多个 goroutine 之间安全地读写同一个变量时，锁是更直接的选择。比如计数器、缓存 map、配置项。&lt;/p&gt;
+&lt;p&gt;一个常见的反模式是用 Channel 来模拟锁的行为（发一个值表示”拿锁”，收一个值表示”释放锁”），这样做不仅代码复杂，性能也更差。经验法则：&lt;strong&gt;通信选 Channel，共享状态选 Mutex&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;无缓冲 Channel 是同步的，有缓冲 Channel 在缓冲区范围内是异步的&lt;/li&gt;
+&lt;li&gt;Channel 底层是 &lt;code&gt;hchan&lt;/code&gt; 结构体 + 环形缓冲区 + &lt;code&gt;sudog&lt;/code&gt; 等待队列 + 互斥锁&lt;/li&gt;
+&lt;li&gt;向已关闭的 Channel 发送数据会 panic，从已关闭的 Channel 读取会收到零值&lt;/li&gt;
+&lt;li&gt;nil Channel 上的任何操作都会永久阻塞&lt;/li&gt;
+&lt;li&gt;关闭 Channel 会唤醒所有等待方，发送方 panic，接收方收到零值&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;select&lt;/code&gt; 随机选择一个就绪的 case 执行，没有就绪的则阻塞或走 default&lt;/li&gt;
+&lt;li&gt;死锁的根源是缺少配对操作，用 context 和超时机制防御&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;select 多路复用&lt;/strong&gt;：&lt;code&gt;select&lt;/code&gt; 的底层通过 &lt;code&gt;runtime.selectgo&lt;/code&gt; 实现，它会随机打乱 case 顺序后遍历，防止某个 Channel 永远优先（饥饿问题）。如果多个 case 同时就绪，随机选一个执行；没有就绪的且有 &lt;code&gt;default&lt;/code&gt;，走 default；没有 default 就阻塞。一个实用技巧是用 &lt;code&gt;select&lt;/code&gt; + &lt;code&gt;time.After&lt;/code&gt; 做超时控制，避免 goroutine 永久卡死。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;nil channel 的行为&lt;/strong&gt;：未初始化的 Channel（值为 nil）上，发送和接收都会永久阻塞。这个特性可以用来做”动态禁用”——比如把一个 case 对应的 Channel 设为 nil，select 就会自动跳过它。但也要注意，如果你忘记初始化 Channel 就直接使用，程序会静默卡死，没有任何 panic 提示。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;closed channel 的行为&lt;/strong&gt;：关闭后发送会 panic，但接收不会——它会立即返回零值，&lt;code&gt;ok&lt;/code&gt; 标识为 &lt;code&gt;false&lt;/code&gt;。这衍生出一个常用模式：用 &lt;code&gt;for range&lt;/code&gt; 遍历 Channel，发送方 &lt;code&gt;close&lt;/code&gt; 之后循环自动退出。需要注意的是 Channel 只能关闭一次，重复关闭同样会 panic。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先动手踩坑&lt;/strong&gt;：写几个会死锁的小程序，观察 panic 信息，比看文档印象更深&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;读 runtime 源码&lt;/strong&gt;：&lt;code&gt;src/runtime/chan.go&lt;/code&gt; 不长，&lt;code&gt;hchan&lt;/code&gt;、&lt;code&gt;chansend&lt;/code&gt;、&lt;code&gt;chanrecv&lt;/code&gt;、&lt;code&gt;closechan&lt;/code&gt; 四个函数看懂就够&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;掌握 select 的各种用法&lt;/strong&gt;：超时、心跳、fan-in、nil channel 禁用，这些是日常开发高频场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结合 context 一起学&lt;/strong&gt;：Channel 的生命周期管理离不开 context，两者一起理解才完整&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写一个 worker pool 或 pipeline&lt;/strong&gt;：把 fan-out、背压、优雅关闭全部串起来，是最好的综合练习&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/ref/spec#Channel_types&quot;&gt;Go 官方文档 - Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://gobyexample.com/channels&quot;&gt;Go by Example: Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/runtime/chan.go&quot;&gt;Go 运行时源码 src/runtime/chan.go&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">ja:2026-6-13-interview-go-garbage-collection</guid><description>前情提要
 写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。
 问题
 面试官常见的问法：
@@ -4014,7 +4014,205 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://kafka.apache.org/documentation/#producerconfigs_acks&quot;&gt;Kafka 可靠性最佳实践：acks、副本与ISR&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/&quot;&gt;Exactly-Once Semantics in Apache Kafka&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Kafka 权威指南》第 4 章：Kafka 生产者 &amp;amp; 第 6 章：可靠的数据传输&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:2026-6-13-interview-microservices-architecture</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Kafka</category><category>tag:消息可靠性</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
+
+准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。
+
+前情提要
+索引是 MySQL</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：MySQL InnoDB 为什么用 B+ 树做索引&lt;a href=&quot;#面试笔记mysql-innodb-为什么用-b-树做索引&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;索引是 MySQL 面试中出场率最高的知识点，没有之一。几乎每一轮面试都会问：你用的是什么索引、为什么选 B+ 树、联合索引怎么走、什么时候会失效。我之前背过”叶子节点用链表连接”这种标准答案，但面试官一旦追问”那跳表不行吗”、“覆盖索引和普通索引有什么区别”，就只能支支吾吾。&lt;/p&gt;
+&lt;p&gt;后来我把 B+ 树相关的知识从数据结构层面到 SQL 优化层面做了一次完整的串联，发现这些问题其实是同一条逻辑链上的不同环节。把这条链理清，面试时不管怎么追问都能接住。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中关于 B+ 树索引的常见问法：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“InnoDB 为什么用 B+ 树做索引，而不是 Hash、红黑树或者跳表？”&lt;/li&gt;
+&lt;li&gt;“聚簇索引和非聚簇索引有什么区别？什么是回表？”&lt;/li&gt;
+&lt;li&gt;“什么是覆盖索引？什么是最左前缀原则？”&lt;/li&gt;
+&lt;li&gt;“索引在什么情况下会失效？”&lt;/li&gt;
+&lt;li&gt;“索引下推（ICP）是什么？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些问题看似独立，其实都围绕一个核心：&lt;strong&gt;B+ 树的结构决定了 InnoDB 索引的全部行为&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;B+ 树的结构&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;B+ 树是一棵平衡多路搜索树。核心特征：非叶子节点只存键值不存数据，叶子节点存储数据指针，叶子节点之间用双向链表连接。InnoDB 默认每个页 16KB，假设主键为 &lt;code&gt;BIGINT&lt;/code&gt;（8 字节），加上指针开销，一个非叶子节点大约能存 1200 个键。这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2 层 B+ 树可索引约 144 万条数据&lt;/li&gt;
+&lt;li&gt;3 层可索引约 17 亿条数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;千万级数据的表，树高只有 3 层，查询最多 3 次磁盘 I/O。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;          [10 | 20]&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;         /    |    \&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    [1,5]  [10,15]  [20,25]&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;      |       |        |&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    data    data     data&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;   ←──── 叶子节点链表 ────→&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;为什么不用其他数据结构？&lt;/strong&gt;&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;数据结构&lt;/th&gt;&lt;th&gt;等值查询&lt;/th&gt;&lt;th&gt;范围查询&lt;/th&gt;&lt;th&gt;树高（千万级）&lt;/th&gt;&lt;th&gt;磁盘 I/O&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Hash 表&lt;/td&gt;&lt;td&gt;O(1)&lt;/td&gt;&lt;td&gt;不支持&lt;/td&gt;&lt;td&gt;-&lt;/td&gt;&lt;td&gt;1 次（但不支持范围）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;红黑树&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;~24 层&lt;/td&gt;&lt;td&gt;24 次，不可接受&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;跳表&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;概率性，最坏退化&lt;/td&gt;&lt;td&gt;不稳定&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;B 树&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;比 B+ 树高&lt;/td&gt;&lt;td&gt;每个节点存数据，扇出小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;strong&gt;B+ 树&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;O(log N)&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;支持&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;3 层&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;3 次&lt;/strong&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;Hash 等值最快但完全不支持范围查询和排序；红黑树是二叉树，千万级数据树高约 24 层，每层一次 I/O；跳表是概率平衡结构，最坏情况会退化成链表；B 树每个节点都存数据，导致单个页能存的键值更少，树更高。B+ 树在”矮”和”范围查询”两个维度上同时做到了最优。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;聚簇索引 vs 非聚簇索引&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;InnoDB 的主键索引是聚簇索引：数据行直接存储在 B+ 树的叶子节点上，数据和索引物理上在一起。每张表只能有一个聚簇索引。&lt;/p&gt;
+&lt;p&gt;二级索引（非聚簇索引）的叶子节点存储的不是数据行，而是主键值。通过二级索引查询时，先找到主键，再到聚簇索引中查找完整数据行，这个过程叫&lt;strong&gt;回表&lt;/strong&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;聚簇索引（主键）：          二级索引（name）：&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;| PK  | name  | age |      |name | PK  |&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;| 1   | Alice | 30  |      |Alice| 1   |&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;| 2   | Bob   | 25  |      |Bob  | 2   |&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;| 3   | Carol | 35  |      |Carol| 3   |&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;覆盖索引&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;如果查询的字段恰好都在某个二级索引中，就不需要回表，这叫覆盖索引。&lt;code&gt;EXPLAIN&lt;/code&gt; 中 &lt;code&gt;Extra&lt;/code&gt; 列会显示 &lt;code&gt;Using index&lt;/code&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 联合索引 (name, age)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;CREATE&lt;/span&gt;&lt;span&gt; INDEX&lt;/span&gt;&lt;span&gt; idx_name_age&lt;/span&gt;&lt;span&gt; ON&lt;/span&gt;&lt;span&gt; users (&lt;/span&gt;&lt;span&gt;name&lt;/span&gt;&lt;span&gt;, age);&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 覆盖索引：只需要扫描索引，不回表&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt;, age &lt;/span&gt;&lt;span&gt;FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; &apos;Alice&apos;&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 非覆盖索引：需要回表取 email 字段&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt;, email &lt;/span&gt;&lt;span&gt;FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; &apos;Alice&apos;&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;最左前缀原则&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;联合索引 &lt;code&gt;(a, b, c)&lt;/code&gt; 在 B+ 树中的排序规则是：先按 &lt;code&gt;a&lt;/code&gt; 排序，&lt;code&gt;a&lt;/code&gt; 相同再按 &lt;code&gt;b&lt;/code&gt; 排序，&lt;code&gt;b&lt;/code&gt; 相同再按 &lt;code&gt;c&lt;/code&gt; 排序。因此查询时必须从最左列开始连续匹配：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 走索引&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 不走索引&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;MySQL 5.6 引入了&lt;strong&gt;索引下推（Index Condition Pushdown, ICP）&lt;/strong&gt;：对于联合索引中无法直接用于定位的列，存储引擎层会在遍历索引时提前过滤，减少回表次数。&lt;code&gt;EXPLAIN&lt;/code&gt; 中显示为 &lt;code&gt;Using index condition&lt;/code&gt;。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试官问 B+ 树，真正关心的是三件事：你是否理解底层结构、能否解释 SQL 行为、会不会做索引优化。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;常见索引失效场景&lt;/strong&gt;（面试高频追问）：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;对索引列使用函数或表达式&lt;/strong&gt;：&lt;code&gt;WHERE YEAR(create_time) = 2026&lt;/code&gt; 导致全表扫描，应改为范围查询&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;隐式类型转换&lt;/strong&gt;：&lt;code&gt;WHERE phone = 13800000000&lt;/code&gt;，&lt;code&gt;phone&lt;/code&gt; 是 &lt;code&gt;VARCHAR&lt;/code&gt;，数字会触发转换&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;LIKE&lt;/code&gt; 左模糊&lt;/strong&gt;：&lt;code&gt;WHERE name LIKE &apos;%lice&apos;&lt;/code&gt; 无法利用 B+ 树的有序性&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;OR&lt;/code&gt; 条件中有非索引列&lt;/strong&gt;：&lt;code&gt;WHERE indexed_col = 1 OR non_indexed_col = 2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;NOT IN&lt;/code&gt; / &lt;code&gt;NOT EXISTS&lt;/code&gt;&lt;/strong&gt;：在某些场景下优化器会放弃使用索引&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;联合索引不满足最左前缀&lt;/strong&gt;：跳过第一列直接用后面的列查询&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;理解失效的本质很重要：所有失效都源于一个原因——&lt;strong&gt;查询条件破坏了 B+ 树的有序性&lt;/strong&gt;，导致优化器认为全表扫描比走索引更快。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;B+ 树&lt;/td&gt;&lt;td&gt;非叶子只存键、叶子存数据、叶子链表连接，3 层索引 17 亿行&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;聚簇索引&lt;/td&gt;&lt;td&gt;数据和索引物理上在一起，InnoDB 主键即聚簇索引&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;二级索引&lt;/td&gt;&lt;td&gt;叶子存主键值，查询需要回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;覆盖索引&lt;/td&gt;&lt;td&gt;查询字段全在索引中，不需要回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;最左前缀&lt;/td&gt;&lt;td&gt;联合索引必须从最左列连续匹配&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;索引下推&lt;/td&gt;&lt;td&gt;存储引擎层提前过滤，减少回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;索引失效&lt;/td&gt;&lt;td&gt;函数、隐式转换、左模糊、OR、不满足最左前缀&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;索引合并（Index Merge）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当查询条件涉及多个单列索引时，MySQL 可能同时使用多个索引再合并结果。&lt;code&gt;EXPLAIN&lt;/code&gt; 中 &lt;code&gt;type&lt;/code&gt; 显示为 &lt;code&gt;index_merge&lt;/code&gt;。有三种策略：&lt;code&gt;union&lt;/code&gt;（取并集）、&lt;code&gt;intersection&lt;/code&gt;（取交集）、&lt;code&gt;sort-union&lt;/code&gt;（先排序再合并）。实践中，如果频繁触发索引合并，往往说明应该直接建联合索引。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MySQL 8.0 隐藏列&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;如果建表时没有显式定义主键，InnoDB 会自动添加一个 6 字节的隐藏列 &lt;code&gt;DB_ROW_ID&lt;/code&gt; 作为聚簇索引。从 MySQL 8.0 开始，可以通过 &lt;code&gt;INFORMATION_SCHEMA.INNODB_COLUMNS&lt;/code&gt; 查看这些隐藏列。这也解释了为什么”没有主键的表性能差”——隐藏列的生成和维护都有额外开销。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MySQL 8.0 降序索引&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;MySQL 8.0 之前，索引定义中的 &lt;code&gt;DESC&lt;/code&gt; 被解析器接受但实际忽略（始终升序存储）。8.0 开始真正支持降序索引：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 降序索引，对 ORDER BY col DESC 的查询有显著优化&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;CREATE&lt;/span&gt;&lt;span&gt; INDEX&lt;/span&gt;&lt;span&gt; idx_created_desc&lt;/span&gt;&lt;span&gt; ON&lt;/span&gt;&lt;span&gt; orders (user_id, created_at &lt;/span&gt;&lt;span&gt;DESC&lt;/span&gt;&lt;span&gt;);&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; orders &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; user_id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; ORDER BY&lt;/span&gt;&lt;span&gt; created_at &lt;/span&gt;&lt;span&gt;DESC&lt;/span&gt;&lt;span&gt; LIMIT&lt;/span&gt;&lt;span&gt; 10&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这对”查某用户最新订单”这类高频场景非常有用，避免了内存排序（&lt;code&gt;Using filesort&lt;/code&gt;）。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先理解数据结构&lt;/strong&gt;：手动画一棵 B+ 树的插入和分裂过程，搞清楚为什么 3 层能索引千万级数据。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;再做对比实验&lt;/strong&gt;：用 &lt;code&gt;EXPLAIN&lt;/code&gt; 对比 Hash 索引（Memory 引擎）和 B+ 树索引在等值、范围查询下的执行计划差异。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;然后掌握 EXPLAIN&lt;/strong&gt;：重点看 &lt;code&gt;type&lt;/code&gt;（&lt;code&gt;ref&lt;/code&gt; &amp;gt; &lt;code&gt;range&lt;/code&gt; &amp;gt; &lt;code&gt;index&lt;/code&gt; &amp;gt; &lt;code&gt;ALL&lt;/code&gt;）、&lt;code&gt;key&lt;/code&gt;、&lt;code&gt;Extra&lt;/code&gt;（&lt;code&gt;Using index&lt;/code&gt; / &lt;code&gt;Using index condition&lt;/code&gt; / &lt;code&gt;Using filesort&lt;/code&gt;）三列。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;最后结合项目&lt;/strong&gt;：拿自己项目中的真实查询做优化，比如把回表查询改成覆盖索引、把左模糊改成前缀匹配。面试时能说出”我在 XX 项目中把查询从 200ms 优化到 5ms”，比背十遍八股文都管用。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;建议的学习顺序：B+ 树结构 → 聚簇/二级索引 → EXPLAIN → 最左前缀与失效场景 → 覆盖索引与索引下推 → 联合索引设计。每一步都带着 SQL 去验证，而不是只停留在概念层面。&lt;/p&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html&quot;&gt;MySQL 官方文档 - InnoDB Index Types&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/index-condition-pushdown-optimization.html&quot;&gt;MySQL 官方文档 - Index Condition Pushdown&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/descending-indexes.html&quot;&gt;MySQL 官方文档 - Descending Indexes&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
+&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
+&lt;li&gt;《数据库系统概论》B+ 树章节，王珊、萨师煊&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：微服务和单体架构怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-microservices-architecture</link><guid isPermaLink="false">ja:2026-6-13-interview-microservices-architecture</guid><description>前情提要
 最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。
 问题：微服务到底解决了什么问题？</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;最近准备二面，发现架构设计类问题几乎必问。之前整理的八股文里微服务部分比较零散，这次把单体、微服务、模块化单体三种架构的对比，以及服务治理的核心概念串一遍，算是给自己做一次系统性的复习。&lt;/p&gt;
@@ -4285,205 +4483,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model and Locking&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
-
-准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。
-
-前情提要
-索引是 MySQL</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：MySQL InnoDB 为什么用 B+ 树做索引&lt;a href=&quot;#面试笔记mysql-innodb-为什么用-b-树做索引&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;blockquote&gt;
-&lt;p&gt;准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;索引是 MySQL 面试中出场率最高的知识点，没有之一。几乎每一轮面试都会问：你用的是什么索引、为什么选 B+ 树、联合索引怎么走、什么时候会失效。我之前背过”叶子节点用链表连接”这种标准答案，但面试官一旦追问”那跳表不行吗”、“覆盖索引和普通索引有什么区别”，就只能支支吾吾。&lt;/p&gt;
-&lt;p&gt;后来我把 B+ 树相关的知识从数据结构层面到 SQL 优化层面做了一次完整的串联，发现这些问题其实是同一条逻辑链上的不同环节。把这条链理清，面试时不管怎么追问都能接住。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中关于 B+ 树索引的常见问法：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“InnoDB 为什么用 B+ 树做索引，而不是 Hash、红黑树或者跳表？”&lt;/li&gt;
-&lt;li&gt;“聚簇索引和非聚簇索引有什么区别？什么是回表？”&lt;/li&gt;
-&lt;li&gt;“什么是覆盖索引？什么是最左前缀原则？”&lt;/li&gt;
-&lt;li&gt;“索引在什么情况下会失效？”&lt;/li&gt;
-&lt;li&gt;“索引下推（ICP）是什么？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这些问题看似独立，其实都围绕一个核心：&lt;strong&gt;B+ 树的结构决定了 InnoDB 索引的全部行为&lt;/strong&gt;。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;B+ 树的结构&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;B+ 树是一棵平衡多路搜索树。核心特征：非叶子节点只存键值不存数据，叶子节点存储数据指针，叶子节点之间用双向链表连接。InnoDB 默认每个页 16KB，假设主键为 &lt;code&gt;BIGINT&lt;/code&gt;（8 字节），加上指针开销，一个非叶子节点大约能存 1200 个键。这意味着：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2 层 B+ 树可索引约 144 万条数据&lt;/li&gt;
-&lt;li&gt;3 层可索引约 17 亿条数据&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;千万级数据的表，树高只有 3 层，查询最多 3 次磁盘 I/O。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;          [10 | 20]&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;         /    |    \&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    [1,5]  [10,15]  [20,25]&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;      |       |        |&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    data    data     data&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;   ←──── 叶子节点链表 ────→&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;为什么不用其他数据结构？&lt;/strong&gt;&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;数据结构&lt;/th&gt;&lt;th&gt;等值查询&lt;/th&gt;&lt;th&gt;范围查询&lt;/th&gt;&lt;th&gt;树高（千万级）&lt;/th&gt;&lt;th&gt;磁盘 I/O&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Hash 表&lt;/td&gt;&lt;td&gt;O(1)&lt;/td&gt;&lt;td&gt;不支持&lt;/td&gt;&lt;td&gt;-&lt;/td&gt;&lt;td&gt;1 次（但不支持范围）&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;红黑树&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;~24 层&lt;/td&gt;&lt;td&gt;24 次，不可接受&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;跳表&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;概率性，最坏退化&lt;/td&gt;&lt;td&gt;不稳定&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;B 树&lt;/td&gt;&lt;td&gt;O(log N)&lt;/td&gt;&lt;td&gt;支持&lt;/td&gt;&lt;td&gt;比 B+ 树高&lt;/td&gt;&lt;td&gt;每个节点存数据，扇出小&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;strong&gt;B+ 树&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;O(log N)&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;支持&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;3 层&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;&lt;strong&gt;3 次&lt;/strong&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;Hash 等值最快但完全不支持范围查询和排序；红黑树是二叉树，千万级数据树高约 24 层，每层一次 I/O；跳表是概率平衡结构，最坏情况会退化成链表；B 树每个节点都存数据，导致单个页能存的键值更少，树更高。B+ 树在”矮”和”范围查询”两个维度上同时做到了最优。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;聚簇索引 vs 非聚簇索引&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;InnoDB 的主键索引是聚簇索引：数据行直接存储在 B+ 树的叶子节点上，数据和索引物理上在一起。每张表只能有一个聚簇索引。&lt;/p&gt;
-&lt;p&gt;二级索引（非聚簇索引）的叶子节点存储的不是数据行，而是主键值。通过二级索引查询时，先找到主键，再到聚簇索引中查找完整数据行，这个过程叫&lt;strong&gt;回表&lt;/strong&gt;。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;聚簇索引（主键）：          二级索引（name）：&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;| PK  | name  | age |      |name | PK  |&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;| 1   | Alice | 30  |      |Alice| 1   |&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;| 2   | Bob   | 25  |      |Bob  | 2   |&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;| 3   | Carol | 35  |      |Carol| 3   |&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;+-----+-------+-----+      +-----+-----+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;覆盖索引&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;如果查询的字段恰好都在某个二级索引中，就不需要回表，这叫覆盖索引。&lt;code&gt;EXPLAIN&lt;/code&gt; 中 &lt;code&gt;Extra&lt;/code&gt; 列会显示 &lt;code&gt;Using index&lt;/code&gt;。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 联合索引 (name, age)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;CREATE&lt;/span&gt;&lt;span&gt; INDEX&lt;/span&gt;&lt;span&gt; idx_name_age&lt;/span&gt;&lt;span&gt; ON&lt;/span&gt;&lt;span&gt; users (&lt;/span&gt;&lt;span&gt;name&lt;/span&gt;&lt;span&gt;, age);&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 覆盖索引：只需要扫描索引，不回表&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt;, age &lt;/span&gt;&lt;span&gt;FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; &apos;Alice&apos;&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 非覆盖索引：需要回表取 email 字段&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt;, email &lt;/span&gt;&lt;span&gt;FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; &apos;Alice&apos;&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;最左前缀原则&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;联合索引 &lt;code&gt;(a, b, c)&lt;/code&gt; 在 B+ 树中的排序规则是：先按 &lt;code&gt;a&lt;/code&gt; 排序，&lt;code&gt;a&lt;/code&gt; 相同再按 &lt;code&gt;b&lt;/code&gt; 排序，&lt;code&gt;b&lt;/code&gt; 相同再按 &lt;code&gt;c&lt;/code&gt; 排序。因此查询时必须从最左列开始连续匹配：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 走索引&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; a &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 不走索引&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; b &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; c &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 3&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;MySQL 5.6 引入了&lt;strong&gt;索引下推（Index Condition Pushdown, ICP）&lt;/strong&gt;：对于联合索引中无法直接用于定位的列，存储引擎层会在遍历索引时提前过滤，减少回表次数。&lt;code&gt;EXPLAIN&lt;/code&gt; 中显示为 &lt;code&gt;Using index condition&lt;/code&gt;。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试官问 B+ 树，真正关心的是三件事：你是否理解底层结构、能否解释 SQL 行为、会不会做索引优化。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;常见索引失效场景&lt;/strong&gt;（面试高频追问）：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;对索引列使用函数或表达式&lt;/strong&gt;：&lt;code&gt;WHERE YEAR(create_time) = 2026&lt;/code&gt; 导致全表扫描，应改为范围查询&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;隐式类型转换&lt;/strong&gt;：&lt;code&gt;WHERE phone = 13800000000&lt;/code&gt;，&lt;code&gt;phone&lt;/code&gt; 是 &lt;code&gt;VARCHAR&lt;/code&gt;，数字会触发转换&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;&lt;code&gt;LIKE&lt;/code&gt; 左模糊&lt;/strong&gt;：&lt;code&gt;WHERE name LIKE &apos;%lice&apos;&lt;/code&gt; 无法利用 B+ 树的有序性&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;&lt;code&gt;OR&lt;/code&gt; 条件中有非索引列&lt;/strong&gt;：&lt;code&gt;WHERE indexed_col = 1 OR non_indexed_col = 2&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;&lt;code&gt;NOT IN&lt;/code&gt; / &lt;code&gt;NOT EXISTS&lt;/code&gt;&lt;/strong&gt;：在某些场景下优化器会放弃使用索引&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;联合索引不满足最左前缀&lt;/strong&gt;：跳过第一列直接用后面的列查询&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;理解失效的本质很重要：所有失效都源于一个原因——&lt;strong&gt;查询条件破坏了 B+ 树的有序性&lt;/strong&gt;，导致优化器认为全表扫描比走索引更快。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;B+ 树&lt;/td&gt;&lt;td&gt;非叶子只存键、叶子存数据、叶子链表连接，3 层索引 17 亿行&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;聚簇索引&lt;/td&gt;&lt;td&gt;数据和索引物理上在一起，InnoDB 主键即聚簇索引&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;二级索引&lt;/td&gt;&lt;td&gt;叶子存主键值，查询需要回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;覆盖索引&lt;/td&gt;&lt;td&gt;查询字段全在索引中，不需要回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;最左前缀&lt;/td&gt;&lt;td&gt;联合索引必须从最左列连续匹配&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;索引下推&lt;/td&gt;&lt;td&gt;存储引擎层提前过滤，减少回表&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;索引失效&lt;/td&gt;&lt;td&gt;函数、隐式转换、左模糊、OR、不满足最左前缀&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;索引合并（Index Merge）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当查询条件涉及多个单列索引时，MySQL 可能同时使用多个索引再合并结果。&lt;code&gt;EXPLAIN&lt;/code&gt; 中 &lt;code&gt;type&lt;/code&gt; 显示为 &lt;code&gt;index_merge&lt;/code&gt;。有三种策略：&lt;code&gt;union&lt;/code&gt;（取并集）、&lt;code&gt;intersection&lt;/code&gt;（取交集）、&lt;code&gt;sort-union&lt;/code&gt;（先排序再合并）。实践中，如果频繁触发索引合并，往往说明应该直接建联合索引。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;MySQL 8.0 隐藏列&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;如果建表时没有显式定义主键，InnoDB 会自动添加一个 6 字节的隐藏列 &lt;code&gt;DB_ROW_ID&lt;/code&gt; 作为聚簇索引。从 MySQL 8.0 开始，可以通过 &lt;code&gt;INFORMATION_SCHEMA.INNODB_COLUMNS&lt;/code&gt; 查看这些隐藏列。这也解释了为什么”没有主键的表性能差”——隐藏列的生成和维护都有额外开销。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;MySQL 8.0 降序索引&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;MySQL 8.0 之前，索引定义中的 &lt;code&gt;DESC&lt;/code&gt; 被解析器接受但实际忽略（始终升序存储）。8.0 开始真正支持降序索引：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 降序索引，对 ORDER BY col DESC 的查询有显著优化&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;CREATE&lt;/span&gt;&lt;span&gt; INDEX&lt;/span&gt;&lt;span&gt; idx_created_desc&lt;/span&gt;&lt;span&gt; ON&lt;/span&gt;&lt;span&gt; orders (user_id, created_at &lt;/span&gt;&lt;span&gt;DESC&lt;/span&gt;&lt;span&gt;);&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; orders &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; user_id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; ORDER BY&lt;/span&gt;&lt;span&gt; created_at &lt;/span&gt;&lt;span&gt;DESC&lt;/span&gt;&lt;span&gt; LIMIT&lt;/span&gt;&lt;span&gt; 10&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这对”查某用户最新订单”这类高频场景非常有用，避免了内存排序（&lt;code&gt;Using filesort&lt;/code&gt;）。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先理解数据结构&lt;/strong&gt;：手动画一棵 B+ 树的插入和分裂过程，搞清楚为什么 3 层能索引千万级数据。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;再做对比实验&lt;/strong&gt;：用 &lt;code&gt;EXPLAIN&lt;/code&gt; 对比 Hash 索引（Memory 引擎）和 B+ 树索引在等值、范围查询下的执行计划差异。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;然后掌握 EXPLAIN&lt;/strong&gt;：重点看 &lt;code&gt;type&lt;/code&gt;（&lt;code&gt;ref&lt;/code&gt; &amp;gt; &lt;code&gt;range&lt;/code&gt; &amp;gt; &lt;code&gt;index&lt;/code&gt; &amp;gt; &lt;code&gt;ALL&lt;/code&gt;）、&lt;code&gt;key&lt;/code&gt;、&lt;code&gt;Extra&lt;/code&gt;（&lt;code&gt;Using index&lt;/code&gt; / &lt;code&gt;Using index condition&lt;/code&gt; / &lt;code&gt;Using filesort&lt;/code&gt;）三列。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;最后结合项目&lt;/strong&gt;：拿自己项目中的真实查询做优化，比如把回表查询改成覆盖索引、把左模糊改成前缀匹配。面试时能说出”我在 XX 项目中把查询从 200ms 优化到 5ms”，比背十遍八股文都管用。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;建议的学习顺序：B+ 树结构 → 聚簇/二级索引 → EXPLAIN → 最左前缀与失效场景 → 覆盖索引与索引下推 → 联合索引设计。每一步都带着 SQL 去验证，而不是只停留在概念层面。&lt;/p&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html&quot;&gt;MySQL 官方文档 - InnoDB Index Types&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/index-condition-pushdown-optimization.html&quot;&gt;MySQL 官方文档 - Index Condition Pushdown&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/descending-indexes.html&quot;&gt;MySQL 官方文档 - Descending Indexes&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
-&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
-&lt;li&gt;《数据库系统概论》B+ 树章节，王珊、萨师煊&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">ja:2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
 整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。
 问题
 
@@ -4616,7 +4616,173 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 章：事务和并发控制&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 6 章：事务与 MVCC 实现细节&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cluster</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cache-problems</guid><description>前情提要
+最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
+问题
+面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。&lt;/p&gt;
+&lt;h2&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试官通常会这样问：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;什么是缓存穿透、缓存击穿、缓存雪崩？分别怎么解决？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这道题考的不只是定义，更是你能否在实际架构中识别风险并选择合适的方案。&lt;/p&gt;
+&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;一、三个问题的定义和区别&lt;a href=&quot;#一三个问题的定义和区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;缓存穿透&lt;/strong&gt;：客户端查询一个根本不存在的数据，缓存永远 miss，每次请求都直接打到数据库。攻击者可以用大量随机 key 发起攻击，导致数据库压力骤增。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缓存击穿&lt;/strong&gt;：某个热点 key 在过期失效的瞬间，大量并发请求同时 miss 缓存，一起查数据库。它和穿透的区别是：这个数据是真实存在的，只是恰好缓存过期了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缓存雪崩&lt;/strong&gt;：大量 key 在同一时间集中过期，或者 Redis 本身宕机，导致几乎所有请求都落到数据库。雪崩是”面”的问题，击穿是”点”的问题。&lt;/p&gt;
+&lt;p&gt;一句话总结：穿透是”查无此 key”，击穿是”热点 key 刚好过期”，雪崩是”大批 key 同时过期”。&lt;/p&gt;
+&lt;h3&gt;二、缓存穿透：布隆过滤器 + 缓存空值&lt;a href=&quot;#二缓存穿透布隆过滤器--缓存空值&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：缓存空值。&lt;/strong&gt; 当数据库也查不到时，在缓存中写入一个空值（或特殊标记），设置较短的 TTL（比如 60 秒）。下次同样的请求直接命中缓存，返回空结果。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;!=&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, &lt;/span&gt;&lt;span&gt;&quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;60&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second) &lt;/span&gt;&lt;span&gt;// 缓存空值，短 TTL&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;优点是简单有效；缺点是攻击者用大量随机 key 请求时，缓存会被空值填满。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案二：布隆过滤器。&lt;/strong&gt; 在缓存前置一层布隆过滤器，将所有合法的 key 预加载进去。请求先过布隆过滤器，判断不存在的 key 直接拦截，不会到达缓存和数据库。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key1&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key2&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) (&lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; !&lt;/span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Contains&lt;/span&gt;&lt;span&gt;(key) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, ErrKeyNotFound &lt;/span&gt;&lt;span&gt;// 直接返回&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    // 正常查缓存和数据库...&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;布隆过滤器有一定误判率（可能把不存在的 key 判断为存在），但绝不会漏掉存在的 key。实际工程中可直接使用 Redis 的 &lt;code&gt;RedisBloom&lt;/code&gt; 模块。&lt;/p&gt;
+&lt;h3&gt;三、缓存击穿：互斥锁 + 逻辑过期&lt;a href=&quot;#三缓存击穿互斥锁--逻辑过期&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：互斥锁（SETNX）。&lt;/strong&gt; 当缓存 miss 时，不直接查数据库，而是先尝试获取分布式锁。只有拿到锁的那个请求去查数据库并回填缓存，其他请求等待后重试。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    lockKey &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; &quot;lock:&quot;&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; key&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; acquireLock&lt;/span&gt;&lt;span&gt;(lockKey) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; releaseLock&lt;/span&gt;&lt;span&gt;(lockKey)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // Double Check：拿到锁后再查一次缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, err &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // 查数据库，写缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    } &lt;/span&gt;&lt;span&gt;else&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(key) &lt;/span&gt;&lt;span&gt;// 重试&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;注意拿到锁之后要做 Double Check，因为可能有其他请求已经回填了缓存。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案二：逻辑过期。&lt;/strong&gt; 不在 Redis 上设置 TTL，而是在 value 中嵌入一个逻辑过期时间。读取时发现逻辑过期了，就异步触发缓存更新，当前请求直接返回旧数据。好处是不会阻塞任何请求，代价是短时间内可能读到稍旧的数据。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;type&lt;/span&gt;&lt;span&gt; CacheEntry&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    Value     &lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    ExpireAt  &lt;/span&gt;&lt;span&gt;time&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Time&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 永不过期，靠 value 里的 ExpireAt 判断&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, entry, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 后台定时刷新热点数据&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    ticker &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; time.&lt;/span&gt;&lt;span&gt;NewTicker&lt;/span&gt;&lt;span&gt;(time.Hour)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; ticker.C {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(hotKey)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(hotKey, &lt;/span&gt;&lt;span&gt;CacheEntry&lt;/span&gt;&lt;span&gt;{val, time.&lt;/span&gt;&lt;span&gt;Now&lt;/span&gt;&lt;span&gt;().&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(time.Hour)}, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级&lt;a href=&quot;#四缓存雪崩随机-ttl--多级缓存--熔断降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：TTL 加随机偏移。&lt;/strong&gt; 写入缓存时，在基础 TTL 上叠加一个随机值，避免大批 key 同时过期。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;baseTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 3600&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;randomTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; rand.&lt;/span&gt;&lt;span&gt;Intn&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;600&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 0~600 秒&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, time.&lt;/span&gt;&lt;span&gt;Duration&lt;/span&gt;&lt;span&gt;(baseTTL&lt;/span&gt;&lt;span&gt;+&lt;/span&gt;&lt;span&gt;randomTTL)&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;方案二：多级缓存。&lt;/strong&gt; 在 Redis 前面再加一层本地缓存（进程内 LRU），作为 L1 缓存。即使 Redis 短暂不可用，本地缓存仍能挡住大部分请求。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// L1：本地缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, ok &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; localCache.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; ok { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// L2：Redis&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// L3：数据库&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, _ &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在 Rinne-IM 项目中，我用的就是”本地 LRU + Redis”两级缓存架构，热数据命中率达到 99.2%。即使 Redis 短暂不可用，本地缓存依然可以兜底。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案三：熔断降级。&lt;/strong&gt; 当数据库压力过大或 Redis 完全宕机时，通过熔断器直接返回默认值或拒绝请求，防止数据库被彻底打垮。常用的库有 &lt;code&gt;gobreaker&lt;/code&gt;（Go）和 &lt;code&gt;sentinel&lt;/code&gt;。&lt;/p&gt;
+&lt;h2&gt;分析与思考&lt;a href=&quot;#分析与思考&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试时回答这三个问题，除了给出方案，最好能说清楚方案之间的取舍：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;缓存空值 vs 布隆过滤器&lt;/strong&gt;：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;互斥锁 vs 逻辑过期&lt;/strong&gt;：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;随机 TTL 是最廉价的雪崩防御&lt;/strong&gt;，几乎零成本，所有项目都应该默认加上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;问题&lt;/th&gt;&lt;th&gt;触发条件&lt;/th&gt;&lt;th&gt;核心影响&lt;/th&gt;&lt;th&gt;推荐方案&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;缓存穿透&lt;/td&gt;&lt;td&gt;查询不存在的 key&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;布隆过滤器、缓存空值&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存击穿&lt;/td&gt;&lt;td&gt;热点 key 过期&lt;/td&gt;&lt;td&gt;瞬时并发打 DB&lt;/td&gt;&lt;td&gt;互斥锁、逻辑过期&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存雪崩&lt;/td&gt;&lt;td&gt;大量 key 同时过期 / Redis 宕机&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;随机 TTL、多级缓存、熔断降级&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2&gt;相关知识扩展：缓存一致性&lt;a href=&quot;#相关知识扩展缓存一致性&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;解决了”三兄弟”之后，面试官往往会追问：缓存和数据库之间的一致性怎么保证？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;延迟双删&lt;/strong&gt;：先删缓存，再更新数据库，等一小段时间（比如 500ms）后再删一次缓存。第二次删除是为了清除在更新数据库期间被其他请求回填的旧数据。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Update&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;val&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第一次删除&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    db.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val)            &lt;/span&gt;&lt;span&gt;// 更新数据库&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;500&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第二次删除&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个方案简单但有缺陷：延迟时间不好定，太短删不干净，太长影响性能。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Canal + Binlog 订阅&lt;/strong&gt;：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这也是目前大厂用得最多的方案。缺点是引入了额外的中间件，有一定的运维成本和延迟（通常毫秒级，可以接受）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Cache Aside Pattern（旁路模式）&lt;/strong&gt;：最常用的读写策略。读操作先查缓存，miss 则查数据库并回填缓存；写操作先更新数据库，再删除缓存。注意是”删除缓存”而不是”更新缓存”，因为并发写场景下更新缓存可能出现数据不一致。&lt;/p&gt;
+&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先理解 Redis 基础数据结构&lt;/strong&gt;，String、Hash、List、Set、ZSet 各适合什么场景。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;搞清楚过期策略和淘汰策略&lt;/strong&gt;（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实现一遍缓存穿透和击穿的解决方案&lt;/strong&gt;，纸上得来终觉浅，写一遍代码比背十遍八股文有用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;了解分布式锁的实现&lt;/strong&gt;（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;读一读 Redis 官方文档的持久化和集群章节&lt;/strong&gt;，对理解缓存系统的整体架构很有帮助。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/interact/expiry/&quot;&gt;Redis 官方文档 - Expire&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/use/keyspace-notifications/&quot;&gt;Redis 官方文档 - Keyspace Notifications&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://tech.meituan.com/&quot;&gt;美团技术团队 - 缓存一致性方案&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cluster</guid><description>前情提要
 单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster 集群，分别解决数据冗余、自动故障转移和水平扩展三个层次的问题。面试中经常一轮追问到底：“主从怎么同步数据的？哨兵怎么选主？Cluster 的 16384 个槽什么意思？“这篇笔记把三种方案一次打通。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -4783,170 +4949,4 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/&quot;&gt;Redis 官方文档 — Sentinel&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;http://antirez.com/news/122&quot;&gt;Redis Cluster 16384 slots 设计讨论 — antirez 博客&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Redis 设计与实现》— 黄健宏，第 17 章复制、第 22 章集群&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:集群</category><category>tag:主从复制</category><category>tag:哨兵</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/ja/post/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">ja:2026-6-13-interview-redis-cache-problems</guid><description>前情提要
-最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
-问题
-面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。&lt;/p&gt;
-&lt;h2&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试官通常会这样问：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;什么是缓存穿透、缓存击穿、缓存雪崩？分别怎么解决？&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这道题考的不只是定义，更是你能否在实际架构中识别风险并选择合适的方案。&lt;/p&gt;
-&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;一、三个问题的定义和区别&lt;a href=&quot;#一三个问题的定义和区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;缓存穿透&lt;/strong&gt;：客户端查询一个根本不存在的数据，缓存永远 miss，每次请求都直接打到数据库。攻击者可以用大量随机 key 发起攻击，导致数据库压力骤增。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;缓存击穿&lt;/strong&gt;：某个热点 key 在过期失效的瞬间，大量并发请求同时 miss 缓存，一起查数据库。它和穿透的区别是：这个数据是真实存在的，只是恰好缓存过期了。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;缓存雪崩&lt;/strong&gt;：大量 key 在同一时间集中过期，或者 Redis 本身宕机，导致几乎所有请求都落到数据库。雪崩是”面”的问题，击穿是”点”的问题。&lt;/p&gt;
-&lt;p&gt;一句话总结：穿透是”查无此 key”，击穿是”热点 key 刚好过期”，雪崩是”大批 key 同时过期”。&lt;/p&gt;
-&lt;h3&gt;二、缓存穿透：布隆过滤器 + 缓存空值&lt;a href=&quot;#二缓存穿透布隆过滤器--缓存空值&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：缓存空值。&lt;/strong&gt; 当数据库也查不到时，在缓存中写入一个空值（或特殊标记），设置较短的 TTL（比如 60 秒）。下次同样的请求直接命中缓存，返回空结果。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;!=&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, &lt;/span&gt;&lt;span&gt;&quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;60&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second) &lt;/span&gt;&lt;span&gt;// 缓存空值，短 TTL&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;优点是简单有效；缺点是攻击者用大量随机 key 请求时，缓存会被空值填满。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案二：布隆过滤器。&lt;/strong&gt; 在缓存前置一层布隆过滤器，将所有合法的 key 预加载进去。请求先过布隆过滤器，判断不存在的 key 直接拦截，不会到达缓存和数据库。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key1&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key2&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) (&lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; !&lt;/span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Contains&lt;/span&gt;&lt;span&gt;(key) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, ErrKeyNotFound &lt;/span&gt;&lt;span&gt;// 直接返回&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    // 正常查缓存和数据库...&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;布隆过滤器有一定误判率（可能把不存在的 key 判断为存在），但绝不会漏掉存在的 key。实际工程中可直接使用 Redis 的 &lt;code&gt;RedisBloom&lt;/code&gt; 模块。&lt;/p&gt;
-&lt;h3&gt;三、缓存击穿：互斥锁 + 逻辑过期&lt;a href=&quot;#三缓存击穿互斥锁--逻辑过期&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：互斥锁（SETNX）。&lt;/strong&gt; 当缓存 miss 时，不直接查数据库，而是先尝试获取分布式锁。只有拿到锁的那个请求去查数据库并回填缓存，其他请求等待后重试。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    lockKey &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; &quot;lock:&quot;&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; key&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; acquireLock&lt;/span&gt;&lt;span&gt;(lockKey) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; releaseLock&lt;/span&gt;&lt;span&gt;(lockKey)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // Double Check：拿到锁后再查一次缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, err &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // 查数据库，写缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    } &lt;/span&gt;&lt;span&gt;else&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(key) &lt;/span&gt;&lt;span&gt;// 重试&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;注意拿到锁之后要做 Double Check，因为可能有其他请求已经回填了缓存。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案二：逻辑过期。&lt;/strong&gt; 不在 Redis 上设置 TTL，而是在 value 中嵌入一个逻辑过期时间。读取时发现逻辑过期了，就异步触发缓存更新，当前请求直接返回旧数据。好处是不会阻塞任何请求，代价是短时间内可能读到稍旧的数据。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;type&lt;/span&gt;&lt;span&gt; CacheEntry&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    Value     &lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    ExpireAt  &lt;/span&gt;&lt;span&gt;time&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Time&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 永不过期，靠 value 里的 ExpireAt 判断&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, entry, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 后台定时刷新热点数据&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    ticker &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; time.&lt;/span&gt;&lt;span&gt;NewTicker&lt;/span&gt;&lt;span&gt;(time.Hour)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; ticker.C {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(hotKey)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(hotKey, &lt;/span&gt;&lt;span&gt;CacheEntry&lt;/span&gt;&lt;span&gt;{val, time.&lt;/span&gt;&lt;span&gt;Now&lt;/span&gt;&lt;span&gt;().&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(time.Hour)}, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;h3&gt;四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级&lt;a href=&quot;#四缓存雪崩随机-ttl--多级缓存--熔断降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：TTL 加随机偏移。&lt;/strong&gt; 写入缓存时，在基础 TTL 上叠加一个随机值，避免大批 key 同时过期。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;baseTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 3600&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;randomTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; rand.&lt;/span&gt;&lt;span&gt;Intn&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;600&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 0~600 秒&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, time.&lt;/span&gt;&lt;span&gt;Duration&lt;/span&gt;&lt;span&gt;(baseTTL&lt;/span&gt;&lt;span&gt;+&lt;/span&gt;&lt;span&gt;randomTTL)&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;方案二：多级缓存。&lt;/strong&gt; 在 Redis 前面再加一层本地缓存（进程内 LRU），作为 L1 缓存。即使 Redis 短暂不可用，本地缓存仍能挡住大部分请求。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// L1：本地缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, ok &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; localCache.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; ok { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// L2：Redis&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// L3：数据库&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, _ &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;在 Rinne-IM 项目中，我用的就是”本地 LRU + Redis”两级缓存架构，热数据命中率达到 99.2%。即使 Redis 短暂不可用，本地缓存依然可以兜底。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案三：熔断降级。&lt;/strong&gt; 当数据库压力过大或 Redis 完全宕机时，通过熔断器直接返回默认值或拒绝请求，防止数据库被彻底打垮。常用的库有 &lt;code&gt;gobreaker&lt;/code&gt;（Go）和 &lt;code&gt;sentinel&lt;/code&gt;。&lt;/p&gt;
-&lt;h2&gt;分析与思考&lt;a href=&quot;#分析与思考&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试时回答这三个问题，除了给出方案，最好能说清楚方案之间的取舍：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;缓存空值 vs 布隆过滤器&lt;/strong&gt;：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;互斥锁 vs 逻辑过期&lt;/strong&gt;：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;随机 TTL 是最廉价的雪崩防御&lt;/strong&gt;，几乎零成本，所有项目都应该默认加上。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;问题&lt;/th&gt;&lt;th&gt;触发条件&lt;/th&gt;&lt;th&gt;核心影响&lt;/th&gt;&lt;th&gt;推荐方案&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;缓存穿透&lt;/td&gt;&lt;td&gt;查询不存在的 key&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;布隆过滤器、缓存空值&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存击穿&lt;/td&gt;&lt;td&gt;热点 key 过期&lt;/td&gt;&lt;td&gt;瞬时并发打 DB&lt;/td&gt;&lt;td&gt;互斥锁、逻辑过期&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存雪崩&lt;/td&gt;&lt;td&gt;大量 key 同时过期 / Redis 宕机&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;随机 TTL、多级缓存、熔断降级&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h2&gt;相关知识扩展：缓存一致性&lt;a href=&quot;#相关知识扩展缓存一致性&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;解决了”三兄弟”之后，面试官往往会追问：缓存和数据库之间的一致性怎么保证？&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;延迟双删&lt;/strong&gt;：先删缓存，再更新数据库，等一小段时间（比如 500ms）后再删一次缓存。第二次删除是为了清除在更新数据库期间被其他请求回填的旧数据。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Update&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;val&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第一次删除&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    db.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val)            &lt;/span&gt;&lt;span&gt;// 更新数据库&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;500&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第二次删除&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这个方案简单但有缺陷：延迟时间不好定，太短删不干净，太长影响性能。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Canal + Binlog 订阅&lt;/strong&gt;：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这也是目前大厂用得最多的方案。缺点是引入了额外的中间件，有一定的运维成本和延迟（通常毫秒级，可以接受）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Cache Aside Pattern（旁路模式）&lt;/strong&gt;：最常用的读写策略。读操作先查缓存，miss 则查数据库并回填缓存；写操作先更新数据库，再删除缓存。注意是”删除缓存”而不是”更新缓存”，因为并发写场景下更新缓存可能出现数据不一致。&lt;/p&gt;
-&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先理解 Redis 基础数据结构&lt;/strong&gt;，String、Hash、List、Set、ZSet 各适合什么场景。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;搞清楚过期策略和淘汰策略&lt;/strong&gt;（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实现一遍缓存穿透和击穿的解决方案&lt;/strong&gt;，纸上得来终觉浅，写一遍代码比背十遍八股文有用。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;了解分布式锁的实现&lt;/strong&gt;（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;读一读 Redis 官方文档的持久化和集群章节&lt;/strong&gt;，对理解缓存系统的整体架构很有帮助。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/interact/expiry/&quot;&gt;Redis 官方文档 - Expire&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/use/keyspace-notifications/&quot;&gt;Redis 官方文档 - Keyspace Notifications&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://tech.meituan.com/&quot;&gt;美团技术团队 - 缓存一致性方案&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item></channel></rss>
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:集群</category><category>tag:主从复制</category><category>tag:哨兵</category><category>tag:面试</category><category>tag:八股文</category></item></channel></rss>
