@@ -2745,131 +2745,7 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://go.dev/blog/pipelines&quot;&gt;Go Concurrency Patterns: Pipelines and cancellation&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#channels&quot;&gt;Uber Go Style Guide - Channels&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-channel/&quot;&gt;Draveness - Go Channel 源码分析&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">2026-6-13-interview-go-garbage-collection</guid><description>前情提要
-写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。
-问题
-面试官常见的问法：
-
-“Go</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试官常见的问法：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“Go 的垃圾回收是怎么工作的？”&lt;/li&gt;
-&lt;li&gt;“讲讲三色标记算法”&lt;/li&gt;
-&lt;li&gt;“GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？”&lt;/li&gt;
-&lt;li&gt;“Go 为什么选择并发 GC 而不是 Stop The World？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;考察的核心是：你是否理解 Go 运行时的垃圾回收算法原理、GC 的四个阶段如何衔接、写屏障解决什么问题，以及生产环境中如何通过参数控制 GC 行为。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Go 使用的是&lt;strong&gt;三色标记清除算法（Tri-color Mark and Sweep）&lt;/strong&gt;，配合&lt;strong&gt;并发标记&lt;/strong&gt;和&lt;strong&gt;写屏障&lt;/strong&gt;，在保证正确性的前提下尽量降低 STW（Stop The World）时间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;三色标记&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 把堆上的每个对象看作三种颜色之一：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;白色 — 未被标记，GC 结束时仍为白色的对象将被回收&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;灰色 — 自身已被标记，但引用的子对象还没扫描完&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;黑色 — 自身和所有子对象都已扫描完毕，不会再被回收&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;可以这样理解：白色是”还没查到”，灰色是”查了一半”，黑色是”查完了，确认存活”。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 的四个阶段&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;整个 GC 周期分为四步，其中只有短暂的 STW，大部分时间和用户程序并发执行：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;阶段 1: 标记准备（Mark Setup）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 开启写屏障&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 将 GC 阶段切换到 _GCmark&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - STW：暂停所有 Goroutine（极短）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 2: 并发标记（Concurrent Mark）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - GC Goroutine 和用户 Goroutine 并发执行&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 从根对象（全局变量、栈上的局部变量等）出发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 白色 → 灰色 → 黑色，逐步扫描整个对象图&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 3: 标记终止（Mark Termination）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - STW：再次暂停所有 Goroutine&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 处理剩余的灰色对象，确保标记完整&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 关闭写屏障，切换到清除阶段&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;阶段 4: 并发清除（Concurrent Sweep）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 回收所有仍为白色的对象&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;  - 与用户程序并发执行，不影响业务逻辑&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;用伪代码表示并发标记的核心循环：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; gcMark&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    markRoots&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 从根对象开始标记&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        obj &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; getGreyObject&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 取一个灰色对象&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; obj &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;            break&lt;/span&gt;&lt;span&gt;               // 没有灰色对象了，标记完成&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        scanObject&lt;/span&gt;&lt;span&gt;(obj)         &lt;/span&gt;&lt;span&gt;// 扫描它的子对象，标灰，自身标黑&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;写屏障（Write Barrier）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;并发标记阶段有个棘手问题：GC 和用户程序同时跑，用户程序可能修改指针引用，导致对象漏标或错标。Dijkstra 提出的写屏障方案解决了这个问题——每次程序修改指针时，先把旧值”着色”（放入灰色队列），保证不会被误回收。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 混合写屏障：赋值时自动触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; writeBarrier&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;slot&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt;unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;ptr&lt;/span&gt;&lt;span&gt; unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    shade&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;slot)   &lt;/span&gt;&lt;span&gt;// 将旧值标记为灰色，保护它不被回收&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    *&lt;/span&gt;&lt;span&gt;slot &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ptr    &lt;/span&gt;&lt;span&gt;// 然后写入新值&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Go 1.8+ 使用的是&lt;strong&gt;混合写屏障（Hybrid Write Barrier）&lt;/strong&gt;，结合了 Dijkstra 插入屏障和 Yuasa 删除屏障的优点，消除了重新扫描栈的需要，进一步缩短了 STW 时间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 触发条件&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 不是随便触发的，有三种触发方式：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;1. 内存分配达到阈值 — 由 GOGC 控制，默认 100%&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;2. 定时触发         — 默认 2 分钟没有 GC 则强制触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;3. 手动触发         — 调用 runtime.GC()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;GOGC 与 GOMEMLIMIT 调优&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;GOGC&lt;/code&gt; 控制 GC 触发的激进程度，含义是”堆内存增长到上次 GC 后存活对象大小的多少百分比时触发下一次 GC”：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;   # 默认值，堆增长到存活对象的 2 倍时触发&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;50&lt;/span&gt;&lt;span&gt;    # 更频繁回收，CPU 开销增大，内存占用降低&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;200&lt;/span&gt;&lt;span&gt;   # 更少触发，CPU 开销降低，内存占用增大&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;off&lt;/span&gt;&lt;span&gt;   # 关闭 GC（危险，仅用于特殊场景）&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Go 1.19 引入了 &lt;code&gt;GOMEMLIMIT&lt;/code&gt;，这是一个&lt;strong&gt;软性内存上限&lt;/strong&gt;。当堆内存接近这个值时，GC 会更积极地触发，避免 OOM。相比 GOGC 只控制比率，GOMEMLIMIT 直接约束绝对值，在容器环境中尤其有用：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 代码中设置&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;debug.&lt;/span&gt;&lt;span&gt;SetMemoryLimit&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;1&lt;/span&gt;&lt;span&gt; &amp;lt;&amp;lt;&lt;/span&gt;&lt;span&gt; 30&lt;/span&gt;&lt;span&gt;)  &lt;/span&gt;&lt;span&gt;// 1GB 软上限&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 或环境变量&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// GOMEMLIMIT=1GiB&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;生产环境调优的一般建议：先用 GOMEMLIMIT 兜底防止 OOM，再用 GOGC 微调 CPU 与内存的平衡。&lt;/p&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;为什么 Go 选择并发 GC 而非纯 STW？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;纯 STW 的 GC 实现简单，但暂停时间和堆大小成正比——堆越大，暂停越久。对于追求低延迟的服务端程序（Web 服务、RPC 服务等），几百毫秒的 STW 是不可接受的。Go 的设计目标是让 GC 暂停控制在亚毫秒级别，因此选择了并发标记的方案：大部分标记工作和用户程序并行，只在关键的切换点做极短的 STW。&lt;/p&gt;
-&lt;p&gt;代价是并发 GC 会消耗一部分 CPU 资源（默认约 25%），并且需要写屏障来保证正确性。Go 团队认为这个取舍是值得的——大多数服务对延迟的敏感度远高于对吞吐的敏感度。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;GC 对延迟的影响&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;GC 对延迟的影响主要来自三个方面：短暂的 STW 暂停、并发标记期间的 CPU 竞争、以及写屏障带来的赋值开销。Go 1.5 以来 GC 暂停时间从几十毫秒逐步降到亚毫秒，Go 1.19 的 GOMEMLIMIT 进一步减少了”突发大量 GC”的概率。在延迟敏感的场景下，合理设置 GOGC（比如降低到 50）和 GOMEMLIMIT 可以有效减少 GC 引起的毛刺。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;三色标记&lt;/strong&gt;：白色（待回收）、灰色（扫描中）、黑色（存活确认）&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;四个阶段&lt;/strong&gt;：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;写屏障&lt;/strong&gt;：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;触发条件&lt;/strong&gt;：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOGC&lt;/strong&gt;：控制 GC 触发比率，默认 100%&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;GOMEMLIMIT&lt;/strong&gt;：Go 1.19 引入，软性内存上限，防止 OOM&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;逃逸分析（Escape Analysis）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 编译器在编译期分析变量的生命周期：如果一个变量的引用不会”逃逸”出当前函数，就直接分配在栈上而非堆上。栈上的变量随函数返回自动回收，不经过 GC。减少堆分配是降低 GC 压力的根本手段。可以用 &lt;code&gt;go build -gcflags=&quot;-m&quot;&lt;/code&gt; 查看逃逸分析结果。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;pprof 内存分析&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;runtime/pprof&lt;/code&gt; 和 &lt;code&gt;net/http/pprof&lt;/code&gt; 是 Go 自带的性能分析工具。通过 heap profile 可以看到当前堆上的内存分配情况，找出哪些函数分配了最多的内存，从而针对性地优化：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;# 采集堆内存 profile&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/heap&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;# 查看 GC 暂停时间统计&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/gc&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;GC 的 25% CPU 目标&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Go 的 GC 调度器会尽量把 GC 的 CPU 占用控制在 25% 以内。当分配速率过高、GC 来不及回收时，运行时会插入辅助标记（mark assist），让正在分配内存的 Goroutine 帮忙做一些标记工作，防止堆无限增长。这也是为什么高分配速率的服务有时会观察到吞吐下降。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先搞懂三色标记&lt;/strong&gt;：这是 GC 的理论基础，理解白/灰/黑的状态转换&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;记住四个阶段&lt;/strong&gt;：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解写屏障&lt;/strong&gt;：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手调优&lt;/strong&gt;：用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;面试表达&lt;/strong&gt;：按”算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段”的顺序讲，层次分明&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/&quot;&gt;Go 语言设计与实现 - 垃圾回收&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/design/1750-gc-elimination&quot;&gt;Go 1.5 并发 GC 设计文档&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/ismmkeynote&quot;&gt;Getting to Go: The Journey of Go’s Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-context</link><guid isPermaLink="false">2026-6-13-interview-go-context</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Channel</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go Context的超时控制和级联取消</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-context</link><guid isPermaLink="false">2026-6-13-interview-go-context</guid><description>前情提要
 在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 context.WithTimeout，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;在 Go 并发编程的面试中，Context 几乎是绕不开的核心考点。很多同学在项目里用过 &lt;code&gt;context.WithTimeout&lt;/code&gt;，但一旦被追问”级联取消是怎么实现的”、“context 泄漏是怎么回事”，就容易卡壳。这篇笔记把 Context 的设计思想、使用方式和常见陷阱做一次完整的梳理。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -3004,7 +2880,131 @@ $ go run main.go&lt;/p&gt;
 &lt;li&gt;&lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/context/context.go&quot;&gt;Go 标准库源码 src/context/context.go&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://github.com/uber-go/guide/blob/master/style.md#context&quot;&gt;Uber Go Style Guide - Context&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://medium.com/@cep21/how-to-correctly-use-context-context-in-go-1-7-8f2c0fafdf39&quot;&gt;Jack Lindamood - How to correctly use context.Context&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:Context</category><category>tag:并发编程</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的GC垃圾回收是怎么工作的</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-garbage-collection</link><guid isPermaLink="false">2026-6-13-interview-go-garbage-collection</guid><description>前情提要
+写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。
+问题
+面试官常见的问法：
+
+“Go</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;写 Go 的人很少需要手动管理内存，这全靠运行时默默工作的垃圾回收器（GC）。面试中聊到 Go 内存管理，GC 几乎必问，而且往往从”三色标记”一路追问到 GOGC 调优。这篇笔记把 Go GC 的核心机制理清楚，争取面试时一次讲到位。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试官常见的问法：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“Go 的垃圾回收是怎么工作的？”&lt;/li&gt;
+&lt;li&gt;“讲讲三色标记算法”&lt;/li&gt;
+&lt;li&gt;“GOGC 和 GOMEMLIMIT 分别是什么，怎么调优？”&lt;/li&gt;
+&lt;li&gt;“Go 为什么选择并发 GC 而不是 Stop The World？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;考察的核心是：你是否理解 Go 运行时的垃圾回收算法原理、GC 的四个阶段如何衔接、写屏障解决什么问题，以及生产环境中如何通过参数控制 GC 行为。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 使用的是&lt;strong&gt;三色标记清除算法（Tri-color Mark and Sweep）&lt;/strong&gt;，配合&lt;strong&gt;并发标记&lt;/strong&gt;和&lt;strong&gt;写屏障&lt;/strong&gt;，在保证正确性的前提下尽量降低 STW（Stop The World）时间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;三色标记&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 把堆上的每个对象看作三种颜色之一：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;白色 — 未被标记，GC 结束时仍为白色的对象将被回收&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;灰色 — 自身已被标记，但引用的子对象还没扫描完&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;黑色 — 自身和所有子对象都已扫描完毕，不会再被回收&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;可以这样理解：白色是”还没查到”，灰色是”查了一半”，黑色是”查完了，确认存活”。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 的四个阶段&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;整个 GC 周期分为四步，其中只有短暂的 STW，大部分时间和用户程序并发执行：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;阶段 1: 标记准备（Mark Setup）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 开启写屏障&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 将 GC 阶段切换到 _GCmark&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - STW：暂停所有 Goroutine（极短）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 2: 并发标记（Concurrent Mark）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - GC Goroutine 和用户 Goroutine 并发执行&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 从根对象（全局变量、栈上的局部变量等）出发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 白色 → 灰色 → 黑色，逐步扫描整个对象图&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 3: 标记终止（Mark Termination）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - STW：再次暂停所有 Goroutine&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 处理剩余的灰色对象，确保标记完整&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 关闭写屏障，切换到清除阶段&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;阶段 4: 并发清除（Concurrent Sweep）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 回收所有仍为白色的对象&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;  - 与用户程序并发执行，不影响业务逻辑&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;用伪代码表示并发标记的核心循环：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; gcMark&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    markRoots&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 从根对象开始标记&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        obj &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; getGreyObject&lt;/span&gt;&lt;span&gt;()  &lt;/span&gt;&lt;span&gt;// 取一个灰色对象&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; obj &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;            break&lt;/span&gt;&lt;span&gt;               // 没有灰色对象了，标记完成&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        scanObject&lt;/span&gt;&lt;span&gt;(obj)         &lt;/span&gt;&lt;span&gt;// 扫描它的子对象，标灰，自身标黑&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;写屏障（Write Barrier）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;并发标记阶段有个棘手问题：GC 和用户程序同时跑，用户程序可能修改指针引用，导致对象漏标或错标。Dijkstra 提出的写屏障方案解决了这个问题——每次程序修改指针时，先把旧值”着色”（放入灰色队列），保证不会被误回收。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 混合写屏障：赋值时自动触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; writeBarrier&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;slot&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt;unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;ptr&lt;/span&gt;&lt;span&gt; unsafe&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Pointer&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    shade&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;slot)   &lt;/span&gt;&lt;span&gt;// 将旧值标记为灰色，保护它不被回收&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    *&lt;/span&gt;&lt;span&gt;slot &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ptr    &lt;/span&gt;&lt;span&gt;// 然后写入新值&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Go 1.8+ 使用的是&lt;strong&gt;混合写屏障（Hybrid Write Barrier）&lt;/strong&gt;，结合了 Dijkstra 插入屏障和 Yuasa 删除屏障的优点，消除了重新扫描栈的需要，进一步缩短了 STW 时间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 触发条件&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 不是随便触发的，有三种触发方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;1. 内存分配达到阈值 — 由 GOGC 控制，默认 100%&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;2. 定时触发         — 默认 2 分钟没有 GC 则强制触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;3. 手动触发         — 调用 runtime.GC()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;GOGC 与 GOMEMLIMIT 调优&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;GOGC&lt;/code&gt; 控制 GC 触发的激进程度，含义是”堆内存增长到上次 GC 后存活对象大小的多少百分比时触发下一次 GC”：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt;   # 默认值，堆增长到存活对象的 2 倍时触发&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;50&lt;/span&gt;&lt;span&gt;    # 更频繁回收，CPU 开销增大，内存占用降低&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;200&lt;/span&gt;&lt;span&gt;   # 更少触发，CPU 开销降低，内存占用增大&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;GOGC&lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt;off&lt;/span&gt;&lt;span&gt;   # 关闭 GC（危险，仅用于特殊场景）&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Go 1.19 引入了 &lt;code&gt;GOMEMLIMIT&lt;/code&gt;，这是一个&lt;strong&gt;软性内存上限&lt;/strong&gt;。当堆内存接近这个值时，GC 会更积极地触发，避免 OOM。相比 GOGC 只控制比率，GOMEMLIMIT 直接约束绝对值，在容器环境中尤其有用：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// 代码中设置&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;debug.&lt;/span&gt;&lt;span&gt;SetMemoryLimit&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;1&lt;/span&gt;&lt;span&gt; &amp;lt;&amp;lt;&lt;/span&gt;&lt;span&gt; 30&lt;/span&gt;&lt;span&gt;)  &lt;/span&gt;&lt;span&gt;// 1GB 软上限&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 或环境变量&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// GOMEMLIMIT=1GiB&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;生产环境调优的一般建议：先用 GOMEMLIMIT 兜底防止 OOM，再用 GOGC 微调 CPU 与内存的平衡。&lt;/p&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;为什么 Go 选择并发 GC 而非纯 STW？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;纯 STW 的 GC 实现简单，但暂停时间和堆大小成正比——堆越大，暂停越久。对于追求低延迟的服务端程序（Web 服务、RPC 服务等），几百毫秒的 STW 是不可接受的。Go 的设计目标是让 GC 暂停控制在亚毫秒级别，因此选择了并发标记的方案：大部分标记工作和用户程序并行，只在关键的切换点做极短的 STW。&lt;/p&gt;
+&lt;p&gt;代价是并发 GC 会消耗一部分 CPU 资源（默认约 25%），并且需要写屏障来保证正确性。Go 团队认为这个取舍是值得的——大多数服务对延迟的敏感度远高于对吞吐的敏感度。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;GC 对延迟的影响&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GC 对延迟的影响主要来自三个方面：短暂的 STW 暂停、并发标记期间的 CPU 竞争、以及写屏障带来的赋值开销。Go 1.5 以来 GC 暂停时间从几十毫秒逐步降到亚毫秒，Go 1.19 的 GOMEMLIMIT 进一步减少了”突发大量 GC”的概率。在延迟敏感的场景下，合理设置 GOGC（比如降低到 50）和 GOMEMLIMIT 可以有效减少 GC 引起的毛刺。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;三色标记&lt;/strong&gt;：白色（待回收）、灰色（扫描中）、黑色（存活确认）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;四个阶段&lt;/strong&gt;：标记准备（STW）→ 并发标记 → 标记终止（STW）→ 并发清除&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写屏障&lt;/strong&gt;：并发标记期间保护对象不被误回收，Go 1.8+ 使用混合写屏障&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;触发条件&lt;/strong&gt;：内存阈值（GOGC）、定时（2min）、手动（runtime.GC）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOGC&lt;/strong&gt;：控制 GC 触发比率，默认 100%&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;GOMEMLIMIT&lt;/strong&gt;：Go 1.19 引入，软性内存上限，防止 OOM&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;逃逸分析（Escape Analysis）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 编译器在编译期分析变量的生命周期：如果一个变量的引用不会”逃逸”出当前函数，就直接分配在栈上而非堆上。栈上的变量随函数返回自动回收，不经过 GC。减少堆分配是降低 GC 压力的根本手段。可以用 &lt;code&gt;go build -gcflags=&quot;-m&quot;&lt;/code&gt; 查看逃逸分析结果。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;pprof 内存分析&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;runtime/pprof&lt;/code&gt; 和 &lt;code&gt;net/http/pprof&lt;/code&gt; 是 Go 自带的性能分析工具。通过 heap profile 可以看到当前堆上的内存分配情况，找出哪些函数分配了最多的内存，从而针对性地优化：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;# 采集堆内存 profile&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/heap&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;# 查看 GC 暂停时间统计&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; tool&lt;/span&gt;&lt;span&gt; pprof&lt;/span&gt;&lt;span&gt; http://localhost:6060/debug/pprof/gc&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;GC 的 25% CPU 目标&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go 的 GC 调度器会尽量把 GC 的 CPU 占用控制在 25% 以内。当分配速率过高、GC 来不及回收时，运行时会插入辅助标记（mark assist），让正在分配内存的 Goroutine 帮忙做一些标记工作，防止堆无限增长。这也是为什么高分配速率的服务有时会观察到吞吐下降。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先搞懂三色标记&lt;/strong&gt;：这是 GC 的理论基础，理解白/灰/黑的状态转换&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;记住四个阶段&lt;/strong&gt;：标记准备 → 并发标记 → 标记终止 → 并发清除，知道哪些阶段 STW&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解写屏障&lt;/strong&gt;：搞清楚为什么并发标记需要写屏障，混合写屏障解决了什么问题&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手调优&lt;/strong&gt;：用 &lt;code&gt;GODEBUG=gctrace=1&lt;/code&gt; 环境变量观察 GC 行为，在测试环境调整 GOGC 看效果&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;面试表达&lt;/strong&gt;：按”算法原理 → 四个阶段 → 写屏障 → 触发条件 → 调优手段”的顺序讲，层次分明&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/&quot;&gt;Go 语言设计与实现 - 垃圾回收&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/design/1750-gc-elimination&quot;&gt;Go 1.5 并发 GC 设计文档&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/blog/ismmkeynote&quot;&gt;Getting to Go: The Journey of Go’s Garbage Collector&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/golang/go/blob/master/src/runtime/mgc.go&quot;&gt;Go runtime 源码 - runtime/mgc.go&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://go.dev/doc/go1.19#runtime&quot;&gt;Go 1.19 Release Notes - GOMEMLIMIT&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://tip.golang.org/doc/gc-guide&quot;&gt;A Guide to the Go Language Garbage Collector&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Go</category><category>tag:GC</category><category>tag:内存管理</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-go-sync-package</link><guid isPermaLink="false">2026-6-13-interview-go-sync-package</guid><description>面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
 准备面试的时候发现，Go 的 sync 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
 这篇文章是我对 sync 包相关知识的系统梳理，把</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选&lt;a href=&quot;#面试笔记go的sync包怎么用mutex和rwmutex怎么选&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;准备面试的时候发现，Go 的 &lt;code&gt;sync&lt;/code&gt; 包几乎是并发编程必考的基础设施。面试官不只会问”怎么用”，更喜欢追问”底层怎么实现的”、“什么场景该选哪个”。
@@ -4144,7 +4144,148 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;&lt;a href=&quot;https://go-zero.dev/&quot;&gt;go-zero 微服务框架&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;https://www.domainlanguage.com/ddd/&quot;&gt;DDD 领域驱动设计 - Eric Evans&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;Google SRE Book - &lt;a href=&quot;https://sre.google/sre-book/table-of-contents/&quot;&gt;Managing Critical State&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
+&lt;/ul&gt;</content:encoded><category>tag:微服务</category><category>tag:架构设计</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
+
+上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 FOR UPDATE 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。
+
+前情提要
+在之前的 MVCC</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理&lt;a href=&quot;#面试笔记mysql-的行锁间隙锁和死锁怎么处理&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 &lt;code&gt;FOR UPDATE&lt;/code&gt; 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在之前的 MVCC 笔记中，我梳理了 RR 级别下 InnoDB 如何通过 Read View 实现无锁快照读。但面试官不会止步于此——“那 &lt;code&gt;SELECT ... FOR UPDATE&lt;/code&gt; 加的是什么锁？&quot;&quot;间隙锁在什么隔离级别下才会出现？&quot;&quot;两个事务互相等对方的锁怎么办？“这些问题都指向同一个核心：&lt;strong&gt;InnoDB 的锁机制&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;MVCC 解决的是”读不加锁”的问题，而锁解决的是”写要排队”的问题。两者配合，才构成 InnoDB 完整的并发控制体系。&lt;/p&gt;
+&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试中关于锁的常见问法：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;“InnoDB 有哪些行锁类型？Record Lock、Gap Lock、Next-Key Lock 分别锁什么？”&lt;/li&gt;
+&lt;li&gt;“间隙锁的作用是什么？为什么 RC 级别下没有间隙锁？”&lt;/li&gt;
+&lt;li&gt;“什么是死锁？MySQL 怎么检测和处理的？”&lt;/li&gt;
+&lt;li&gt;“实际项目中你是怎么避免死锁的？”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些问题的底层逻辑是一条线：&lt;strong&gt;锁的粒度从行到间隙再到范围，粒度越大冲突越多，死锁风险越高&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;InnoDB 的锁粒度与类型&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;按粒度分，MySQL 有表锁和行锁。表锁锁整张表（&lt;code&gt;LOCK TABLES&lt;/code&gt;），行锁只锁涉及的行。InnoDB 默认使用行锁，但如果没有走索引，行锁会退化成表锁——因为 InnoDB 的行锁是加在索引记录上的，没有索引就只能全表扫描并锁住所有行。&lt;/p&gt;
+&lt;p&gt;按类型分，行锁又分为共享锁（S Lock）和排他锁（X Lock）：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 共享锁：允许其他事务读，不允许写&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; LOCK &lt;/span&gt;&lt;span&gt;IN&lt;/span&gt;&lt;span&gt; SHARE MODE;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 排他锁：不允许其他事务读和写&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Record Lock（记录锁）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Record Lock 锁定索引上的单行记录。&lt;code&gt;SELECT ... WHERE id = 1 FOR UPDATE&lt;/code&gt; 锁住 &lt;code&gt;id=1&lt;/code&gt; 这一行，其他事务无法修改这行数据，直到当前事务提交或回滚。Record Lock 是最基础的行锁，在所有隔离级别下都存在。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Gap Lock（间隙锁）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Gap Lock 锁定索引记录之间的间隙，不锁记录本身，只锁”空隙”。假设索引中有 &lt;code&gt;id=5&lt;/code&gt; 和 &lt;code&gt;id=10&lt;/code&gt; 两条记录，间隙锁会锁住 &lt;code&gt;(5, 10)&lt;/code&gt; 这个开区间，阻止其他事务在这个区间内插入新行。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 锁定 (10, 20) 的间隙，阻止在此区间插入&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; 10&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 20&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;间隙锁存在的唯一目的就是&lt;strong&gt;防止幻读&lt;/strong&gt;。正因为如此，间隙锁只在 RR（可重复读）级别下生效。降到 RC 后间隙锁自动消失，这也是为什么 RC 下无法阻止幻读。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Next-Key Lock（临键锁）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Next-Key Lock 是 Record Lock + Gap Lock 的组合，锁定一个左开右闭区间 &lt;code&gt;(prev, current]&lt;/code&gt;。InnoDB 在 RR 级别下对索引扫描范围加 Next-Key Lock，既锁住已有记录，又锁住记录之间的间隙。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 对 id=1 加 Record Lock，同时对 (-∞, 1] 的范围加 Gap Lock&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;简单总结：Record Lock 锁”已有的行”，Gap Lock 锁”行之间的空”，Next-Key Lock 两个一起锁。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;死锁的产生与检测&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;死锁的经典场景：两个事务互相持有对方需要的锁。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 事务 A&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;BEGIN&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 100&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 锁住 id=1&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 200&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 等待 id=2 的锁&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 事务 B&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;BEGIN&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 300&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 锁住 id=2&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 400&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 等待 id=1 的锁&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 死锁！A 等 B 释放 id=2，B 等 A 释放 id=1&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;死锁产生的四个必要条件：互斥、持有并等待、不可剥夺、循环等待。四个同时满足才会死锁。&lt;/p&gt;
+&lt;p&gt;InnoDB 通过 &lt;strong&gt;wait-for graph（等待图）&lt;/strong&gt; 检测死锁。每个事务是图中的一个节点，当事务 A 等待事务 B 持有的锁时，就画一条从 A 到 B 的边。如果图中出现了环，就判定为死锁。检测到死锁后，InnoDB 会选择持有锁最少、回滚代价最小的事务作为”牺牲者”，将其回滚并抛出 &lt;code&gt;Deadlock found&lt;/code&gt; 错误，让其他事务继续执行。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 查看最近的死锁信息&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SHOW ENGINE INNODB &lt;/span&gt;&lt;span&gt;STATUS&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 锁等待超时时间（默认 50 秒，非死锁场景下的等待上限）&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; innodb_lock_wait_timeout &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 50&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;死锁预防策略&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;固定加锁顺序&lt;/strong&gt;：所有事务按相同顺序访问资源。先锁用户表再锁订单表，所有事务都这么做，就不会出现交叉等待。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;缩短事务持有时间&lt;/strong&gt;：事务越短，锁持有时间越短，死锁概率越低。把非数据库操作（调外部 API、发消息、写日志文件）移到事务外面。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;降低隔离级别&lt;/strong&gt;：RC 比 RR 的锁范围小（没有间隙锁），死锁概率低。但要权衡幻读问题。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;合理使用索引&lt;/strong&gt;：没有索引时 InnoDB 会锁全表，死锁概率暴增。确保 UPDATE/DELETE 语句走索引，只锁必要的行。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;面试官问锁，真正想考察的是三个层面：你是否理解锁的类型和适用场景、能否解释死锁的成因、有没有在项目中实际处理过锁问题。&lt;/p&gt;
+&lt;p&gt;一个容易踩的坑：&lt;strong&gt;乐观锁 vs 悲观锁的选择&lt;/strong&gt;。悲观锁（&lt;code&gt;FOR UPDATE&lt;/code&gt;）假设冲突一定发生，适合写密集场景。乐观锁（version 字段）假设冲突很少，适合读多写少场景。选错了不是功能出错，而是性能雪崩。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 乐观锁：通过 version 字段做更新检查&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; files &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; ?, &lt;/span&gt;&lt;span&gt;version&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; version&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ? &lt;/span&gt;&lt;span&gt;AND&lt;/span&gt;&lt;span&gt; version&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; ?;&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;-- 如果 affected rows = 0，说明被其他事务改了，需要重试&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;另一个常见追问：&lt;strong&gt;为什么没有索引会导致锁升级？&lt;/strong&gt; 因为 InnoDB 的行锁是加在索引记录上的。如果 &lt;code&gt;WHERE&lt;/code&gt; 条件没有索引，InnoDB 必须扫描全表，对扫描到的每一行都尝试加锁。虽然最终只修改符合条件的行，但锁已经加到了所有行上，效果和表锁差不多。&lt;/p&gt;
+&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Record Lock&lt;/td&gt;&lt;td&gt;锁索引上的单行记录，所有隔离级别都有&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Gap Lock&lt;/td&gt;&lt;td&gt;锁索引记录之间的间隙，只在 RR 级别存在，用于防幻读&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Next-Key Lock&lt;/td&gt;&lt;td&gt;Record Lock + Gap Lock，锁 &lt;code&gt;(prev, current]&lt;/code&gt; 区间&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;共享锁 / 排他锁&lt;/td&gt;&lt;td&gt;S Lock 允许并发读，X Lock 独占读写&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;死锁&lt;/td&gt;&lt;td&gt;两个事务互相等待对方持有的锁，形成循环依赖&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;wait-for graph&lt;/td&gt;&lt;td&gt;InnoDB 用等待图检测死锁，发现环就回滚代价最小的事务&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;锁升级&lt;/td&gt;&lt;td&gt;没有索引时行锁退化为表锁，大幅增加冲突和死锁概率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;乐观锁 vs 悲观锁&lt;/td&gt;&lt;td&gt;读多写少用 version 字段，写密集用 FOR UPDATE&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;意向锁（Intention Lock）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;InnoDB 在加行锁之前，会先给表加上意向锁。意向共享锁（IS）表示”我要给某些行加 S 锁”，意向排他锁（IX）表示”我要给某些行加 X 锁”。意向锁的作用是让表锁和行锁可以共存——当事务想对表加表锁时，只需要检查意向锁是否存在，不需要逐行检查行锁，大大提高了效率。&lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 中可以看到 &lt;code&gt;IX&lt;/code&gt; 和 &lt;code&gt;IS&lt;/code&gt; 锁的信息。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;自增锁（AUTO-INC Lock）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;AUTO_INCREMENT&lt;/code&gt; 列在插入时会获取自增锁。MySQL 5.1 之后默认使用 &lt;code&gt;innodb_autoinc_lock_mode = 1&lt;/code&gt;（连续锁模式）：简单的 &lt;code&gt;INSERT&lt;/code&gt; 语句使用轻量级互斥量分配自增值，不需要持有锁到语句结束；但 &lt;code&gt;INSERT ... SELECT&lt;/code&gt; 这类不确定插入行数的语句仍然需要传统的 AUTO-INC 表锁。高并发批量插入场景下，自增锁可能成为瓶颈，值得关注。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;锁监控&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;生产环境排查锁问题，常用的几个手段：&lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 查看最近的死锁信息和当前锁等待；&lt;code&gt;information_schema.INNODB_LOCKS&lt;/code&gt;（MySQL 8.0 改为 &lt;code&gt;performance_schema.data_locks&lt;/code&gt;）查看当前持有的锁；&lt;code&gt;information_schema.INNODB_LOCK_WAITS&lt;/code&gt; 查看锁等待关系。配合慢查询日志和 &lt;code&gt;SHOW PROCESSLIST&lt;/code&gt;，可以快速定位锁竞争的根源。&lt;/p&gt;
+&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先搞清锁的分类体系&lt;/strong&gt;：表锁 vs 行锁、S Lock vs X Lock、Record Lock vs Gap Lock vs Next-Key Lock。画出层级关系图，面试时能清晰表述。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手复现死锁&lt;/strong&gt;：开两个 MySQL 客户端，按上面的示例交叉 UPDATE，观察 &lt;code&gt;Deadlock found&lt;/code&gt; 错误，再用 &lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 看死锁日志。亲手操作一次比看十遍文章都记得牢。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理解索引与锁的关系&lt;/strong&gt;：同一个 UPDATE 语句，有索引和没索引时加锁范围完全不同。用 &lt;code&gt;EXPLAIN&lt;/code&gt; 确认走索引，再结合 &lt;code&gt;performance_schema.data_locks&lt;/code&gt; 看实际加了哪些锁。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;掌握乐观锁和悲观锁的选择依据&lt;/strong&gt;：不要只背概念，结合自己项目想想哪些场景适合乐观锁（读多写少、冲突概率低）、哪些适合悲观锁（高并发写入、强一致性）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;关注 MySQL 8.0 的锁变化&lt;/strong&gt;：&lt;code&gt;INNODB_LOCKS&lt;/code&gt; 表被移到了 &lt;code&gt;performance_schema&lt;/code&gt;，RC 级别的锁行为也有优化。面试中提到这些细节会加分。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlocks.html&quot;&gt;MySQL 官方文档 - InnoDB Deadlock Detection&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model and Locking&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
+&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL InnoDB为什么用B+树做索引</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-btree-index</link><guid isPermaLink="false">2026-6-13-interview-mysql-btree-index</guid><description>面试笔记：MySQL InnoDB 为什么用 B+ 树做索引
 
 准备面试时被”为什么不用红黑树”问到哑口无言，于是把 B+ 树索引从结构到实战彻底梳理了一遍。这篇文章只聚焦一个核心问题：InnoDB 的索引为什么长成这个样子，以及面试官会怎么追问。
 
@@ -4342,148 +4483,7 @@ Go 并发几乎是后端面试的必考项，而”Goroutine 和线程的区别�
 &lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
 &lt;li&gt;《数据库系统概论》B+ 树章节，王珊、萨师煊&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL的行锁、间隙锁和死锁怎么处理</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-locks</link><guid isPermaLink="false">2026-6-13-interview-mysql-locks</guid><description>面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理
-
-上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 FOR UPDATE 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。
-
-前情提要
-在之前的 MVCC</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h1&gt;面试笔记：MySQL 的行锁、间隙锁和死锁怎么处理&lt;a href=&quot;#面试笔记mysql-的行锁间隙锁和死锁怎么处理&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h1&gt;
-&lt;blockquote&gt;
-&lt;p&gt;上一篇聊了事务隔离级别和 MVCC，但 MVCC 只管快照读，一旦涉及 &lt;code&gt;FOR UPDATE&lt;/code&gt; 这种当前读，就进入锁的领地了。面试中锁和死锁经常捆绑出现，这篇把行锁、间隙锁、死锁检测与预防一次讲透。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在之前的 MVCC 笔记中，我梳理了 RR 级别下 InnoDB 如何通过 Read View 实现无锁快照读。但面试官不会止步于此——“那 &lt;code&gt;SELECT ... FOR UPDATE&lt;/code&gt; 加的是什么锁？&quot;&quot;间隙锁在什么隔离级别下才会出现？&quot;&quot;两个事务互相等对方的锁怎么办？“这些问题都指向同一个核心：&lt;strong&gt;InnoDB 的锁机制&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;MVCC 解决的是”读不加锁”的问题，而锁解决的是”写要排队”的问题。两者配合，才构成 InnoDB 完整的并发控制体系。&lt;/p&gt;
-&lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试中关于锁的常见问法：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;“InnoDB 有哪些行锁类型？Record Lock、Gap Lock、Next-Key Lock 分别锁什么？”&lt;/li&gt;
-&lt;li&gt;“间隙锁的作用是什么？为什么 RC 级别下没有间隙锁？”&lt;/li&gt;
-&lt;li&gt;“什么是死锁？MySQL 怎么检测和处理的？”&lt;/li&gt;
-&lt;li&gt;“实际项目中你是怎么避免死锁的？”&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这些问题的底层逻辑是一条线：&lt;strong&gt;锁的粒度从行到间隙再到范围，粒度越大冲突越多，死锁风险越高&lt;/strong&gt;。&lt;/p&gt;
-&lt;h3&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;InnoDB 的锁粒度与类型&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;按粒度分，MySQL 有表锁和行锁。表锁锁整张表（&lt;code&gt;LOCK TABLES&lt;/code&gt;），行锁只锁涉及的行。InnoDB 默认使用行锁，但如果没有走索引，行锁会退化成表锁——因为 InnoDB 的行锁是加在索引记录上的，没有索引就只能全表扫描并锁住所有行。&lt;/p&gt;
-&lt;p&gt;按类型分，行锁又分为共享锁（S Lock）和排他锁（X Lock）：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 共享锁：允许其他事务读，不允许写&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; LOCK &lt;/span&gt;&lt;span&gt;IN&lt;/span&gt;&lt;span&gt; SHARE MODE;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 排他锁：不允许其他事务读和写&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;Record Lock（记录锁）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Record Lock 锁定索引上的单行记录。&lt;code&gt;SELECT ... WHERE id = 1 FOR UPDATE&lt;/code&gt; 锁住 &lt;code&gt;id=1&lt;/code&gt; 这一行，其他事务无法修改这行数据，直到当前事务提交或回滚。Record Lock 是最基础的行锁，在所有隔离级别下都存在。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Gap Lock（间隙锁）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Gap Lock 锁定索引记录之间的间隙，不锁记录本身，只锁”空隙”。假设索引中有 &lt;code&gt;id=5&lt;/code&gt; 和 &lt;code&gt;id=10&lt;/code&gt; 两条记录，间隙锁会锁住 &lt;code&gt;(5, 10)&lt;/code&gt; 这个开区间，阻止其他事务在这个区间内插入新行。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 锁定 (10, 20) 的间隙，阻止在此区间插入&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;&amp;gt;&lt;/span&gt;&lt;span&gt; 10&lt;/span&gt;&lt;span&gt; AND&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;&amp;lt;&lt;/span&gt;&lt;span&gt; 20&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;间隙锁存在的唯一目的就是&lt;strong&gt;防止幻读&lt;/strong&gt;。正因为如此，间隙锁只在 RR（可重复读）级别下生效。降到 RC 后间隙锁自动消失，这也是为什么 RC 下无法阻止幻读。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Next-Key Lock（临键锁）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Next-Key Lock 是 Record Lock + Gap Lock 的组合，锁定一个左开右闭区间 &lt;code&gt;(prev, current]&lt;/code&gt;。InnoDB 在 RR 级别下对索引扫描范围加 Next-Key Lock，既锁住已有记录，又锁住记录之间的间隙。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 对 id=1 加 Record Lock，同时对 (-∞, 1] 的范围加 Gap Lock&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SELECT&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; FROM&lt;/span&gt;&lt;span&gt; users &lt;/span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt; FOR&lt;/span&gt;&lt;span&gt; UPDATE&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;简单总结：Record Lock 锁”已有的行”，Gap Lock 锁”行之间的空”，Next-Key Lock 两个一起锁。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;死锁的产生与检测&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;死锁的经典场景：两个事务互相持有对方需要的锁。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 事务 A&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;BEGIN&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 100&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 锁住 id=1&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 200&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 等待 id=2 的锁&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 事务 B&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;BEGIN&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 300&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 2&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 锁住 id=2&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; accounts &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; balance &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 400&lt;/span&gt;&lt;span&gt; WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;span&gt;;  &lt;/span&gt;&lt;span&gt;-- 等待 id=1 的锁&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 死锁！A 等 B 释放 id=2，B 等 A 释放 id=1&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;死锁产生的四个必要条件：互斥、持有并等待、不可剥夺、循环等待。四个同时满足才会死锁。&lt;/p&gt;
-&lt;p&gt;InnoDB 通过 &lt;strong&gt;wait-for graph（等待图）&lt;/strong&gt; 检测死锁。每个事务是图中的一个节点，当事务 A 等待事务 B 持有的锁时，就画一条从 A 到 B 的边。如果图中出现了环，就判定为死锁。检测到死锁后，InnoDB 会选择持有锁最少、回滚代价最小的事务作为”牺牲者”，将其回滚并抛出 &lt;code&gt;Deadlock found&lt;/code&gt; 错误，让其他事务继续执行。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 查看最近的死锁信息&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SHOW ENGINE INNODB &lt;/span&gt;&lt;span&gt;STATUS&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 锁等待超时时间（默认 50 秒，非死锁场景下的等待上限）&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; innodb_lock_wait_timeout &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; 50&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;死锁预防策略&lt;/strong&gt;&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;固定加锁顺序&lt;/strong&gt;：所有事务按相同顺序访问资源。先锁用户表再锁订单表，所有事务都这么做，就不会出现交叉等待。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;缩短事务持有时间&lt;/strong&gt;：事务越短，锁持有时间越短，死锁概率越低。把非数据库操作（调外部 API、发消息、写日志文件）移到事务外面。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;降低隔离级别&lt;/strong&gt;：RC 比 RR 的锁范围小（没有间隙锁），死锁概率低。但要权衡幻读问题。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;合理使用索引&lt;/strong&gt;：没有索引时 InnoDB 会锁全表，死锁概率暴增。确保 UPDATE/DELETE 语句走索引，只锁必要的行。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;分析&lt;a href=&quot;#分析&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;面试官问锁，真正想考察的是三个层面：你是否理解锁的类型和适用场景、能否解释死锁的成因、有没有在项目中实际处理过锁问题。&lt;/p&gt;
-&lt;p&gt;一个容易踩的坑：&lt;strong&gt;乐观锁 vs 悲观锁的选择&lt;/strong&gt;。悲观锁（&lt;code&gt;FOR UPDATE&lt;/code&gt;）假设冲突一定发生，适合写密集场景。乐观锁（version 字段）假设冲突很少，适合读多写少场景。选错了不是功能出错，而是性能雪崩。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;-- 乐观锁：通过 version 字段做更新检查&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;UPDATE&lt;/span&gt;&lt;span&gt; files &lt;/span&gt;&lt;span&gt;SET&lt;/span&gt;&lt;span&gt; name&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; ?, &lt;/span&gt;&lt;span&gt;version&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; version&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; 1&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;WHERE&lt;/span&gt;&lt;span&gt; id &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; ? &lt;/span&gt;&lt;span&gt;AND&lt;/span&gt;&lt;span&gt; version&lt;/span&gt;&lt;span&gt; =&lt;/span&gt;&lt;span&gt; ?;&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;-- 如果 affected rows = 0，说明被其他事务改了，需要重试&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;另一个常见追问：&lt;strong&gt;为什么没有索引会导致锁升级？&lt;/strong&gt; 因为 InnoDB 的行锁是加在索引记录上的。如果 &lt;code&gt;WHERE&lt;/code&gt; 条件没有索引，InnoDB 必须扫描全表，对扫描到的每一行都尝试加锁。虽然最终只修改符合条件的行，但锁已经加到了所有行上，效果和表锁差不多。&lt;/p&gt;
-&lt;h3&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;概念&lt;/th&gt;&lt;th&gt;一句话&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;Record Lock&lt;/td&gt;&lt;td&gt;锁索引上的单行记录，所有隔离级别都有&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Gap Lock&lt;/td&gt;&lt;td&gt;锁索引记录之间的间隙，只在 RR 级别存在，用于防幻读&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Next-Key Lock&lt;/td&gt;&lt;td&gt;Record Lock + Gap Lock，锁 &lt;code&gt;(prev, current]&lt;/code&gt; 区间&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;共享锁 / 排他锁&lt;/td&gt;&lt;td&gt;S Lock 允许并发读，X Lock 独占读写&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;死锁&lt;/td&gt;&lt;td&gt;两个事务互相等待对方持有的锁，形成循环依赖&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;wait-for graph&lt;/td&gt;&lt;td&gt;InnoDB 用等待图检测死锁，发现环就回滚代价最小的事务&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;锁升级&lt;/td&gt;&lt;td&gt;没有索引时行锁退化为表锁，大幅增加冲突和死锁概率&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;乐观锁 vs 悲观锁&lt;/td&gt;&lt;td&gt;读多写少用 version 字段，写密集用 FOR UPDATE&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h3&gt;相关知识扩展&lt;a href=&quot;#相关知识扩展&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;意向锁（Intention Lock）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;InnoDB 在加行锁之前，会先给表加上意向锁。意向共享锁（IS）表示”我要给某些行加 S 锁”，意向排他锁（IX）表示”我要给某些行加 X 锁”。意向锁的作用是让表锁和行锁可以共存——当事务想对表加表锁时，只需要检查意向锁是否存在，不需要逐行检查行锁，大大提高了效率。&lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 中可以看到 &lt;code&gt;IX&lt;/code&gt; 和 &lt;code&gt;IS&lt;/code&gt; 锁的信息。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;自增锁（AUTO-INC Lock）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;AUTO_INCREMENT&lt;/code&gt; 列在插入时会获取自增锁。MySQL 5.1 之后默认使用 &lt;code&gt;innodb_autoinc_lock_mode = 1&lt;/code&gt;（连续锁模式）：简单的 &lt;code&gt;INSERT&lt;/code&gt; 语句使用轻量级互斥量分配自增值，不需要持有锁到语句结束；但 &lt;code&gt;INSERT ... SELECT&lt;/code&gt; 这类不确定插入行数的语句仍然需要传统的 AUTO-INC 表锁。高并发批量插入场景下，自增锁可能成为瓶颈，值得关注。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;锁监控&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;生产环境排查锁问题，常用的几个手段：&lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 查看最近的死锁信息和当前锁等待；&lt;code&gt;information_schema.INNODB_LOCKS&lt;/code&gt;（MySQL 8.0 改为 &lt;code&gt;performance_schema.data_locks&lt;/code&gt;）查看当前持有的锁；&lt;code&gt;information_schema.INNODB_LOCK_WAITS&lt;/code&gt; 查看锁等待关系。配合慢查询日志和 &lt;code&gt;SHOW PROCESSLIST&lt;/code&gt;，可以快速定位锁竞争的根源。&lt;/p&gt;
-&lt;h3&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先搞清锁的分类体系&lt;/strong&gt;：表锁 vs 行锁、S Lock vs X Lock、Record Lock vs Gap Lock vs Next-Key Lock。画出层级关系图，面试时能清晰表述。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手复现死锁&lt;/strong&gt;：开两个 MySQL 客户端，按上面的示例交叉 UPDATE，观察 &lt;code&gt;Deadlock found&lt;/code&gt; 错误，再用 &lt;code&gt;SHOW ENGINE INNODB STATUS&lt;/code&gt; 看死锁日志。亲手操作一次比看十遍文章都记得牢。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;理解索引与锁的关系&lt;/strong&gt;：同一个 UPDATE 语句，有索引和没索引时加锁范围完全不同。用 &lt;code&gt;EXPLAIN&lt;/code&gt; 确认走索引，再结合 &lt;code&gt;performance_schema.data_locks&lt;/code&gt; 看实际加了哪些锁。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;掌握乐观锁和悲观锁的选择依据&lt;/strong&gt;：不要只背概念，结合自己项目想想哪些场景适合乐观锁（读多写少、冲突概率低）、哪些适合悲观锁（高并发写入、强一致性）。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;关注 MySQL 8.0 的锁变化&lt;/strong&gt;：&lt;code&gt;INNODB_LOCKS&lt;/code&gt; 表被移到了 &lt;code&gt;performance_schema&lt;/code&gt;，RC 级别的锁行为也有优化。面试中提到这些细节会加分。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-deadlocks.html&quot;&gt;MySQL 官方文档 - InnoDB Deadlock Detection&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-model.html&quot;&gt;MySQL 官方文档 - InnoDB Transaction Model and Locking&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;《高性能 MySQL》第 4 版，O’Reilly&lt;/li&gt;
-&lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 2 版，姜承尧&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:行锁</category><category>tag:间隙锁</category><category>tag:死锁</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:B+树</category><category>tag:索引</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：MySQL事务隔离级别和MVCC是怎么实现的</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-mysql-transaction-mvcc</link><guid isPermaLink="false">2026-6-13-interview-mysql-transaction-mvcc</guid><description>前情提要
 整理面试高频题——MySQL 事务隔离级别和 MVCC。这块几乎是后端面试的必考项，不管是 Go 还是 Java 方向。我把自己的理解重新梳理了一遍，算是把零散的知识点串成了一条线。
 问题
 
@@ -4616,173 +4616,7 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://dev.mysql.com/doc/refman/8.0/en/innodb-locks-set.html&quot;&gt;MySQL 官方文档 - InnoDB Locks and Locking Reads&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《高性能 MySQL》第 4 章：事务和并发控制&lt;/li&gt;
 &lt;li&gt;《MySQL 技术内幕：InnoDB 存储引擎》第 6 章：事务与 MVCC 实现细节&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">2026-6-13-interview-redis-cache-problems</guid><description>前情提要
-最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
-问题
-面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。&lt;/p&gt;
-&lt;h2&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试官通常会这样问：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;什么是缓存穿透、缓存击穿、缓存雪崩？分别怎么解决？&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这道题考的不只是定义，更是你能否在实际架构中识别风险并选择合适的方案。&lt;/p&gt;
-&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;h3&gt;一、三个问题的定义和区别&lt;a href=&quot;#一三个问题的定义和区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;缓存穿透&lt;/strong&gt;：客户端查询一个根本不存在的数据，缓存永远 miss，每次请求都直接打到数据库。攻击者可以用大量随机 key 发起攻击，导致数据库压力骤增。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;缓存击穿&lt;/strong&gt;：某个热点 key 在过期失效的瞬间，大量并发请求同时 miss 缓存，一起查数据库。它和穿透的区别是：这个数据是真实存在的，只是恰好缓存过期了。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;缓存雪崩&lt;/strong&gt;：大量 key 在同一时间集中过期，或者 Redis 本身宕机，导致几乎所有请求都落到数据库。雪崩是”面”的问题，击穿是”点”的问题。&lt;/p&gt;
-&lt;p&gt;一句话总结：穿透是”查无此 key”，击穿是”热点 key 刚好过期”，雪崩是”大批 key 同时过期”。&lt;/p&gt;
-&lt;h3&gt;二、缓存穿透：布隆过滤器 + 缓存空值&lt;a href=&quot;#二缓存穿透布隆过滤器--缓存空值&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：缓存空值。&lt;/strong&gt; 当数据库也查不到时，在缓存中写入一个空值（或特殊标记），设置较短的 TTL（比如 60 秒）。下次同样的请求直接命中缓存，返回空结果。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;!=&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, &lt;/span&gt;&lt;span&gt;&quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;60&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second) &lt;/span&gt;&lt;span&gt;// 缓存空值，短 TTL&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;优点是简单有效；缺点是攻击者用大量随机 key 请求时，缓存会被空值填满。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案二：布隆过滤器。&lt;/strong&gt; 在缓存前置一层布隆过滤器，将所有合法的 key 预加载进去。请求先过布隆过滤器，判断不存在的 key 直接拦截，不会到达缓存和数据库。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key1&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key2&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) (&lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; !&lt;/span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Contains&lt;/span&gt;&lt;span&gt;(key) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, ErrKeyNotFound &lt;/span&gt;&lt;span&gt;// 直接返回&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    // 正常查缓存和数据库...&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;布隆过滤器有一定误判率（可能把不存在的 key 判断为存在），但绝不会漏掉存在的 key。实际工程中可直接使用 Redis 的 &lt;code&gt;RedisBloom&lt;/code&gt; 模块。&lt;/p&gt;
-&lt;h3&gt;三、缓存击穿：互斥锁 + 逻辑过期&lt;a href=&quot;#三缓存击穿互斥锁--逻辑过期&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：互斥锁（SETNX）。&lt;/strong&gt; 当缓存 miss 时，不直接查数据库，而是先尝试获取分布式锁。只有拿到锁的那个请求去查数据库并回填缓存，其他请求等待后重试。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    lockKey &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; &quot;lock:&quot;&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; key&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; acquireLock&lt;/span&gt;&lt;span&gt;(lockKey) {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; releaseLock&lt;/span&gt;&lt;span&gt;(lockKey)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // Double Check：拿到锁后再查一次缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, err &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        // 查数据库，写缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    } &lt;/span&gt;&lt;span&gt;else&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(key) &lt;/span&gt;&lt;span&gt;// 重试&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;注意拿到锁之后要做 Double Check，因为可能有其他请求已经回填了缓存。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案二：逻辑过期。&lt;/strong&gt; 不在 Redis 上设置 TTL，而是在 value 中嵌入一个逻辑过期时间。读取时发现逻辑过期了，就异步触发缓存更新，当前请求直接返回旧数据。好处是不会阻塞任何请求，代价是短时间内可能读到稍旧的数据。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;type&lt;/span&gt;&lt;span&gt; CacheEntry&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    Value     &lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    ExpireAt  &lt;/span&gt;&lt;span&gt;time&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Time&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 永不过期，靠 value 里的 ExpireAt 判断&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, entry, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// 后台定时刷新热点数据&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    ticker &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; time.&lt;/span&gt;&lt;span&gt;NewTicker&lt;/span&gt;&lt;span&gt;(time.Hour)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; ticker.C {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(hotKey)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(hotKey, &lt;/span&gt;&lt;span&gt;CacheEntry&lt;/span&gt;&lt;span&gt;{val, time.&lt;/span&gt;&lt;span&gt;Now&lt;/span&gt;&lt;span&gt;().&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(time.Hour)}, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;h3&gt;四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级&lt;a href=&quot;#四缓存雪崩随机-ttl--多级缓存--熔断降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;strong&gt;方案一：TTL 加随机偏移。&lt;/strong&gt; 写入缓存时，在基础 TTL 上叠加一个随机值，避免大批 key 同时过期。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;baseTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 3600&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;randomTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; rand.&lt;/span&gt;&lt;span&gt;Intn&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;600&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 0~600 秒&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, time.&lt;/span&gt;&lt;span&gt;Duration&lt;/span&gt;&lt;span&gt;(baseTTL&lt;/span&gt;&lt;span&gt;+&lt;/span&gt;&lt;span&gt;randomTTL)&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;方案二：多级缓存。&lt;/strong&gt; 在 Redis 前面再加一层本地缓存（进程内 LRU），作为 L1 缓存。即使 Redis 短暂不可用，本地缓存仍能挡住大部分请求。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// L1：本地缓存&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, ok &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; localCache.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; ok { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// L2：Redis&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;// L3：数据库&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;val, _ &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;在 Rinne-IM 项目中，我用的就是”本地 LRU + Redis”两级缓存架构，热数据命中率达到 99.2%。即使 Redis 短暂不可用，本地缓存依然可以兜底。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;方案三：熔断降级。&lt;/strong&gt; 当数据库压力过大或 Redis 完全宕机时，通过熔断器直接返回默认值或拒绝请求，防止数据库被彻底打垮。常用的库有 &lt;code&gt;gobreaker&lt;/code&gt;（Go）和 &lt;code&gt;sentinel&lt;/code&gt;。&lt;/p&gt;
-&lt;h2&gt;分析与思考&lt;a href=&quot;#分析与思考&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;面试时回答这三个问题，除了给出方案，最好能说清楚方案之间的取舍：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;缓存空值 vs 布隆过滤器&lt;/strong&gt;：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;互斥锁 vs 逻辑过期&lt;/strong&gt;：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;随机 TTL 是最廉价的雪崩防御&lt;/strong&gt;，几乎零成本，所有项目都应该默认加上。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;问题&lt;/th&gt;&lt;th&gt;触发条件&lt;/th&gt;&lt;th&gt;核心影响&lt;/th&gt;&lt;th&gt;推荐方案&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;缓存穿透&lt;/td&gt;&lt;td&gt;查询不存在的 key&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;布隆过滤器、缓存空值&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存击穿&lt;/td&gt;&lt;td&gt;热点 key 过期&lt;/td&gt;&lt;td&gt;瞬时并发打 DB&lt;/td&gt;&lt;td&gt;互斥锁、逻辑过期&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存雪崩&lt;/td&gt;&lt;td&gt;大量 key 同时过期 / Redis 宕机&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;随机 TTL、多级缓存、熔断降级&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;h2&gt;相关知识扩展：缓存一致性&lt;a href=&quot;#相关知识扩展缓存一致性&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;解决了”三兄弟”之后，面试官往往会追问：缓存和数据库之间的一致性怎么保证？&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;延迟双删&lt;/strong&gt;：先删缓存，再更新数据库，等一小段时间（比如 500ms）后再删一次缓存。第二次删除是为了清除在更新数据库期间被其他请求回填的旧数据。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Update&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;val&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第一次删除&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    db.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val)            &lt;/span&gt;&lt;span&gt;// 更新数据库&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;500&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第二次删除&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;/span&gt;
-&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这个方案简单但有缺陷：延迟时间不好定，太短删不干净，太长影响性能。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Canal + Binlog 订阅&lt;/strong&gt;：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这也是目前大厂用得最多的方案。缺点是引入了额外的中间件，有一定的运维成本和延迟（通常毫秒级，可以接受）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Cache Aside Pattern（旁路模式）&lt;/strong&gt;：最常用的读写策略。读操作先查缓存，miss 则查数据库并回填缓存；写操作先更新数据库，再删除缓存。注意是”删除缓存”而不是”更新缓存”，因为并发写场景下更新缓存可能出现数据不一致。&lt;/p&gt;
-&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;先理解 Redis 基础数据结构&lt;/strong&gt;，String、Hash、List、Set、ZSet 各适合什么场景。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;搞清楚过期策略和淘汰策略&lt;/strong&gt;（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;动手实现一遍缓存穿透和击穿的解决方案&lt;/strong&gt;，纸上得来终觉浅，写一遍代码比背十遍八股文有用。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;了解分布式锁的实现&lt;/strong&gt;（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;读一读 Redis 官方文档的持久化和集群章节&lt;/strong&gt;，对理解缓存系统的整体架构很有帮助。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/interact/expiry/&quot;&gt;Redis 官方文档 - Expire&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/use/keyspace-notifications/&quot;&gt;Redis 官方文档 - Keyspace Notifications&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://tech.meituan.com/&quot;&gt;美团技术团队 - 缓存一致性方案&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">2026-6-13-interview-redis-cluster</guid><description>前情提要
+&lt;/ul&gt;</content:encoded><category>tag:MySQL</category><category>tag:事务</category><category>tag:MVCC</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：Redis主从、哨兵和Cluster集群怎么选</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-redis-cluster</link><guid isPermaLink="false">2026-6-13-interview-redis-cluster</guid><description>前情提要
 单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h3&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;单机 Redis 扛得住高并发读写，但一旦进程挂了或者机器宕机，整个服务就断了。生产环境不可能接受单点故障，所以需要集群方案。Redis 提供了三种递进的集群架构：主从复制、哨兵模式、Cluster 集群，分别解决数据冗余、自动故障转移和水平扩展三个层次的问题。面试中经常一轮追问到底：“主从怎么同步数据的？哨兵怎么选主？Cluster 的 16384 个槽什么意思？“这篇笔记把三种方案一次打通。&lt;/p&gt;
 &lt;h3&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
@@ -4949,4 +4783,170 @@ MySQL 有哪几种事务隔离级别？各自解决了什么问题？
 &lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/&quot;&gt;Redis 官方文档 — Sentinel&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href=&quot;http://antirez.com/news/122&quot;&gt;Redis Cluster 16384 slots 设计讨论 — antirez 博客&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;《Redis 设计与实现》— 黄健宏，第 17 章复制、第 22 章集群&lt;/li&gt;
-&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:集群</category><category>tag:主从复制</category><category>tag:哨兵</category><category>tag:面试</category><category>tag:八股文</category></item></channel></rss>
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:集群</category><category>tag:主从复制</category><category>tag:哨兵</category><category>tag:面试</category><category>tag:八股文</category></item><item><title>面试笔记：缓存穿透、击穿、雪崩怎么区分和解决</title><link>https://yurin-kami.github.io/post/2026-6-13-interview-redis-cache-problems</link><guid isPermaLink="false">2026-6-13-interview-redis-cache-problems</guid><description>前情提要
+最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。
+问题
+面试官通常会这样问：</description><pubDate>Sat, 13 Jun 2026 00:00:00 GMT</pubDate><content:encoded>&lt;h2&gt;前情提要&lt;a href=&quot;#前情提要&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近在准备后端面试，Redis 缓存相关的题目几乎是必考项。面试官最爱问的”缓存三兄弟”——穿透、击穿、雪崩——概念听起来相似，但触发场景和解决方案截然不同。我结合自己的项目实践和八股文资料，把这三个问题彻底梳理一遍，顺便延伸到缓存一致性的处理策略。&lt;/p&gt;
+&lt;h2&gt;问题&lt;a href=&quot;#问题&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试官通常会这样问：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;什么是缓存穿透、缓存击穿、缓存雪崩？分别怎么解决？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这道题考的不只是定义，更是你能否在实际架构中识别风险并选择合适的方案。&lt;/p&gt;
+&lt;h2&gt;回答&lt;a href=&quot;#回答&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;h3&gt;一、三个问题的定义和区别&lt;a href=&quot;#一三个问题的定义和区别&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;缓存穿透&lt;/strong&gt;：客户端查询一个根本不存在的数据，缓存永远 miss，每次请求都直接打到数据库。攻击者可以用大量随机 key 发起攻击，导致数据库压力骤增。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缓存击穿&lt;/strong&gt;：某个热点 key 在过期失效的瞬间，大量并发请求同时 miss 缓存，一起查数据库。它和穿透的区别是：这个数据是真实存在的，只是恰好缓存过期了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缓存雪崩&lt;/strong&gt;：大量 key 在同一时间集中过期，或者 Redis 本身宕机，导致几乎所有请求都落到数据库。雪崩是”面”的问题，击穿是”点”的问题。&lt;/p&gt;
+&lt;p&gt;一句话总结：穿透是”查无此 key”，击穿是”热点 key 刚好过期”，雪崩是”大批 key 同时过期”。&lt;/p&gt;
+&lt;h3&gt;二、缓存穿透：布隆过滤器 + 缓存空值&lt;a href=&quot;#二缓存穿透布隆过滤器--缓存空值&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：缓存空值。&lt;/strong&gt; 当数据库也查不到时，在缓存中写入一个空值（或特殊标记），设置较短的 TTL（比如 60 秒）。下次同样的请求直接命中缓存，返回空结果。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;!=&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, &lt;/span&gt;&lt;span&gt;&quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;60&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second) &lt;/span&gt;&lt;span&gt;// 缓存空值，短 TTL&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;优点是简单有效；缺点是攻击者用大量随机 key 请求时，缓存会被空值填满。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案二：布隆过滤器。&lt;/strong&gt; 在缓存前置一层布隆过滤器，将所有合法的 key 预加载进去。请求先过布隆过滤器，判断不存在的 key 直接拦截，不会到达缓存和数据库。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key1&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;&quot;key2&quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) (&lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt;) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; !&lt;/span&gt;&lt;span&gt;bloom.&lt;/span&gt;&lt;span&gt;Contains&lt;/span&gt;&lt;span&gt;(key) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; &quot;&quot;&lt;/span&gt;&lt;span&gt;, ErrKeyNotFound &lt;/span&gt;&lt;span&gt;// 直接返回&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    // 正常查缓存和数据库...&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;布隆过滤器有一定误判率（可能把不存在的 key 判断为存在），但绝不会漏掉存在的 key。实际工程中可直接使用 Redis 的 &lt;code&gt;RedisBloom&lt;/code&gt; 模块。&lt;/p&gt;
+&lt;h3&gt;三、缓存击穿：互斥锁 + 逻辑过期&lt;a href=&quot;#三缓存击穿互斥锁--逻辑过期&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：互斥锁（SETNX）。&lt;/strong&gt; 当缓存 miss 时，不直接查数据库，而是先尝试获取分布式锁。只有拿到锁的那个请求去查数据库并回填缓存，其他请求等待后重试。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; redis.Nil {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    lockKey &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; &quot;lock:&quot;&lt;/span&gt;&lt;span&gt; +&lt;/span&gt;&lt;span&gt; key&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    if&lt;/span&gt;&lt;span&gt; acquireLock&lt;/span&gt;&lt;span&gt;(lockKey) {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        defer&lt;/span&gt;&lt;span&gt; releaseLock&lt;/span&gt;&lt;span&gt;(lockKey)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // Double Check：拿到锁后再查一次缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, err &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        // 查数据库，写缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    } &lt;/span&gt;&lt;span&gt;else&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;100&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        return&lt;/span&gt;&lt;span&gt; Get&lt;/span&gt;&lt;span&gt;(key) &lt;/span&gt;&lt;span&gt;// 重试&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;注意拿到锁之后要做 Double Check，因为可能有其他请求已经回填了缓存。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案二：逻辑过期。&lt;/strong&gt; 不在 Redis 上设置 TTL，而是在 value 中嵌入一个逻辑过期时间。读取时发现逻辑过期了，就异步触发缓存更新，当前请求直接返回旧数据。好处是不会阻塞任何请求，代价是短时间内可能读到稍旧的数据。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;type&lt;/span&gt;&lt;span&gt; CacheEntry&lt;/span&gt;&lt;span&gt; struct&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    Value     &lt;/span&gt;&lt;span&gt;string&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    ExpireAt  &lt;/span&gt;&lt;span&gt;time&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;Time&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 永不过期，靠 value 里的 ExpireAt 判断&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, entry, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// 后台定时刷新热点数据&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;go&lt;/span&gt;&lt;span&gt; func&lt;/span&gt;&lt;span&gt;() {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    ticker &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; time.&lt;/span&gt;&lt;span&gt;NewTicker&lt;/span&gt;&lt;span&gt;(time.Hour)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    for&lt;/span&gt;&lt;span&gt; range&lt;/span&gt;&lt;span&gt; ticker.C {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        val, _ &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(hotKey)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;        redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(hotKey, &lt;/span&gt;&lt;span&gt;CacheEntry&lt;/span&gt;&lt;span&gt;{val, time.&lt;/span&gt;&lt;span&gt;Now&lt;/span&gt;&lt;span&gt;().&lt;/span&gt;&lt;span&gt;Add&lt;/span&gt;&lt;span&gt;(time.Hour)}, &lt;/span&gt;&lt;span&gt;0&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}()&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;四、缓存雪崩：随机 TTL + 多级缓存 + 熔断降级&lt;a href=&quot;#四缓存雪崩随机-ttl--多级缓存--熔断降级&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方案一：TTL 加随机偏移。&lt;/strong&gt; 写入缓存时，在基础 TTL 上叠加一个随机值，避免大批 key 同时过期。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;baseTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; 3600&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;randomTTL &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; rand.&lt;/span&gt;&lt;span&gt;Intn&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;600&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;// 0~600 秒&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, time.&lt;/span&gt;&lt;span&gt;Duration&lt;/span&gt;&lt;span&gt;(baseTTL&lt;/span&gt;&lt;span&gt;+&lt;/span&gt;&lt;span&gt;randomTTL)&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;方案二：多级缓存。&lt;/strong&gt; 在 Redis 前面再加一层本地缓存（进程内 LRU），作为 L1 缓存。即使 Redis 短暂不可用，本地缓存仍能挡住大部分请求。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;// L1：本地缓存&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, ok &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; localCache.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; ok { &lt;/span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// L2：Redis&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, err &lt;/span&gt;&lt;span&gt;:=&lt;/span&gt;&lt;span&gt; redis.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;if&lt;/span&gt;&lt;span&gt; err &lt;/span&gt;&lt;span&gt;==&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;// L3：数据库&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;val, _ &lt;/span&gt;&lt;span&gt;=&lt;/span&gt;&lt;span&gt; db.&lt;/span&gt;&lt;span&gt;Get&lt;/span&gt;&lt;span&gt;(key)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;redis.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;3600&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Second)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;localCache.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val, &lt;/span&gt;&lt;span&gt;5&lt;/span&gt;&lt;span&gt;*&lt;/span&gt;&lt;span&gt;time.Minute)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;return&lt;/span&gt;&lt;span&gt; val, &lt;/span&gt;&lt;span&gt;nil&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在 Rinne-IM 项目中，我用的就是”本地 LRU + Redis”两级缓存架构，热数据命中率达到 99.2%。即使 Redis 短暂不可用，本地缓存依然可以兜底。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;方案三：熔断降级。&lt;/strong&gt; 当数据库压力过大或 Redis 完全宕机时，通过熔断器直接返回默认值或拒绝请求，防止数据库被彻底打垮。常用的库有 &lt;code&gt;gobreaker&lt;/code&gt;（Go）和 &lt;code&gt;sentinel&lt;/code&gt;。&lt;/p&gt;
+&lt;h2&gt;分析与思考&lt;a href=&quot;#分析与思考&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面试时回答这三个问题，除了给出方案，最好能说清楚方案之间的取舍：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;缓存空值 vs 布隆过滤器&lt;/strong&gt;：空值方案实现简单但有资源浪费风险；布隆过滤器精准但引入了额外组件和误判率。中小项目用空值就够了，大流量场景上布隆过滤器。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;互斥锁 vs 逻辑过期&lt;/strong&gt;：互斥锁保证数据实时性但会阻塞部分请求；逻辑过期不阻塞但可能返回旧数据。对一致性要求高用互斥锁，对可用性要求高用逻辑过期。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;随机 TTL 是最廉价的雪崩防御&lt;/strong&gt;，几乎零成本，所有项目都应该默认加上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;知识点总结&lt;a href=&quot;#知识点总结&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;问题&lt;/th&gt;&lt;th&gt;触发条件&lt;/th&gt;&lt;th&gt;核心影响&lt;/th&gt;&lt;th&gt;推荐方案&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;缓存穿透&lt;/td&gt;&lt;td&gt;查询不存在的 key&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;布隆过滤器、缓存空值&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存击穿&lt;/td&gt;&lt;td&gt;热点 key 过期&lt;/td&gt;&lt;td&gt;瞬时并发打 DB&lt;/td&gt;&lt;td&gt;互斥锁、逻辑过期&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;缓存雪崩&lt;/td&gt;&lt;td&gt;大量 key 同时过期 / Redis 宕机&lt;/td&gt;&lt;td&gt;请求全部打到 DB&lt;/td&gt;&lt;td&gt;随机 TTL、多级缓存、熔断降级&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;h2&gt;相关知识扩展：缓存一致性&lt;a href=&quot;#相关知识扩展缓存一致性&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;解决了”三兄弟”之后，面试官往往会追问：缓存和数据库之间的一致性怎么保证？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;延迟双删&lt;/strong&gt;：先删缓存，再更新数据库，等一小段时间（比如 500ms）后再删一次缓存。第二次删除是为了清除在更新数据库期间被其他请求回填的旧数据。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;func&lt;/span&gt;&lt;span&gt; Update&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;key&lt;/span&gt;&lt;span&gt;, &lt;/span&gt;&lt;span&gt;val&lt;/span&gt;&lt;span&gt; string&lt;/span&gt;&lt;span&gt;) &lt;/span&gt;&lt;span&gt;error&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第一次删除&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    db.&lt;/span&gt;&lt;span&gt;Set&lt;/span&gt;&lt;span&gt;(key, val)            &lt;/span&gt;&lt;span&gt;// 更新数据库&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    time.&lt;/span&gt;&lt;span&gt;Sleep&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;500&lt;/span&gt;&lt;span&gt; *&lt;/span&gt;&lt;span&gt; time.Millisecond)&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    cache.&lt;/span&gt;&lt;span&gt;Delete&lt;/span&gt;&lt;span&gt;(key)           &lt;/span&gt;&lt;span&gt;// 第二次删除&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;    return&lt;/span&gt;&lt;span&gt; nil&lt;/span&gt;&lt;/span&gt;
+&lt;span&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个方案简单但有缺陷：延迟时间不好定，太短删不干净，太长影响性能。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Canal + Binlog 订阅&lt;/strong&gt;：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&lt;span&gt;&lt;span&gt;应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这也是目前大厂用得最多的方案。缺点是引入了额外的中间件，有一定的运维成本和延迟（通常毫秒级，可以接受）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Cache Aside Pattern（旁路模式）&lt;/strong&gt;：最常用的读写策略。读操作先查缓存，miss 则查数据库并回填缓存；写操作先更新数据库，再删除缓存。注意是”删除缓存”而不是”更新缓存”，因为并发写场景下更新缓存可能出现数据不一致。&lt;/p&gt;
+&lt;h2&gt;学习路线与建议&lt;a href=&quot;#学习路线与建议&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;先理解 Redis 基础数据结构&lt;/strong&gt;，String、Hash、List、Set、ZSet 各适合什么场景。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;搞清楚过期策略和淘汰策略&lt;/strong&gt;（惰性删除 + 定期删除、allkeys-lru 等），这是缓存问题的底层基础。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动手实现一遍缓存穿透和击穿的解决方案&lt;/strong&gt;，纸上得来终觉浅，写一遍代码比背十遍八股文有用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;了解分布式锁的实现&lt;/strong&gt;（SETNX + Lua 脚本释放锁 + watchdog 续期），面试中经常和缓存击穿一起考。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;读一读 Redis 官方文档的持久化和集群章节&lt;/strong&gt;，对理解缓存系统的整体架构很有帮助。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;参考文章与延伸阅读&lt;a href=&quot;#参考文章与延伸阅读&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/interact/expiry/&quot;&gt;Redis 官方文档 - Expire&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/use/keyspace-notifications/&quot;&gt;Redis 官方文档 - Keyspace Notifications&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://tech.meituan.com/&quot;&gt;美团技术团队 - 缓存一致性方案&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/&quot;&gt;RedisBloom 模块&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/alibaba/canal&quot;&gt;Canal 项目 (GitHub)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://github.com/sony/gobreaker&quot;&gt;gobreaker 熔断器库&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content:encoded><category>tag:Redis</category><category>tag:缓存</category><category>tag:面试</category><category>tag:八股文</category></item></channel></rss>
