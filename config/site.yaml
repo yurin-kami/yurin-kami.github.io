@@ -15,11 +15,11 @@ site:
   alternate: kamishow # 网站英文名称 用于页脚、Logo、@ handle 等
   subtitle: 小柳香穗的博客 # 网站副标题
   name: 小柳香穗 # 作者名称
-  description: 个人技术博客 # 网站描述
+  description: 个人博客 # 网站描述
   avatar: https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/avatar.jpg # 网站头像
   showLogo: true # 是否显示 Logo
   author: 小柳香穗 # 作者名称
-  url: https://yurin-kami.github.io # 站点 URL 用于 RSS 和 SEO
+  url: https://zhenxia.cfd # 站点 URL 用于 RSS 和 SEO
   defaultOgImage: https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/avatar.jpg # 默认 Open Graph 图片
   startYear: 2025 # 建站年份
   timezone: Asia/Shanghai # 时区配置 (IANA 格式)，用于日期显示和处理
@@ -27,7 +27,11 @@ site:
     - 博客
     - Astro
     - 技术
-    - 前端
+    - golang
+    - 后端开发
+    - agent
+    - 微服务
+    - 分布式
     # 请根据你的网站内容添加关键词
   # breadcrumbHome: 首页  # 面包屑导航中首页的显示名称（默认: '首页'）
   # icp:                         # ICP 备案号（可自定义链接）
@@ -69,12 +73,12 @@ categoryMap:
   工具: tools
   周刊: weekly
   # Secondary categories (for nested paths)
-  前端: front-end
+  # 前端: front-end
   # Add more as needed:
   # 书摘: reading
-  # 后端: back-end
-  # 算法: algorithm
-  # 项目: project
+  后端: back-end
+  算法: algorithm
+  项目: project
 
 # =============================================================================
 # Featured Categories (Homepage)
@@ -95,10 +99,10 @@ featuredCategories:
     label: 笔记
     image: /img/cover/4.webp
     description: 技术笔记、学习笔记
-  - link: note/front-end # 嵌套分类：笔记/前端
-    label: 前端
+  - link: note/back-end # 嵌套分类：笔记/后端
+    label: 后端
     image: /img/cover/1.webp
-    description: 前端技术相关
+    description: 后端技术相关
   - link: tools # 对应 categoryMap 中 工具: tools
     label: 工具
     image: /img/cover/11.webp
