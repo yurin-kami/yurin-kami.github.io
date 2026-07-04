@@ -3,7 +3,7 @@ import { useTTS } from '@hooks/useTTS';
 import { clearTTSMarkers, extractSpeechSegmentsFromSelector } from '@lib/tts/extract-readable-text';
 import { cn } from '@lib/utils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RiPauseFill, RiPlayFill, RiStopFill, RiVoiceprintFill } from 'react-icons/ri';
+import { RiPauseFill, RiPlayFill, RiSpeedUpFill, RiStopFill, RiVoiceprintFill } from 'react-icons/ri';
 import type { Locale } from '@/i18n';
 
 interface TTSPlayerProps {
@@ -11,7 +11,7 @@ interface TTSPlayerProps {
   locale: Locale;
 }
 
-const RATE_OPTIONS = [0.75, 1, 1.25, 1.5];
+const RATE_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 
 const COPY = {
   en: {
@@ -19,8 +19,9 @@ const COPY = {
     error: 'Playback failed. Please try again.',
     pause: 'Pause',
     play: 'Play',
+    progress: (current: number, total: number) => `Paragraph ${current} / ${total}`,
     rate: 'Speed',
-    ready: (count: number) => `${count} segments are ready for replay.`,
+    ready: (count: number) => `${count} paragraphs ready`,
     resume: 'Resume',
     sectionLabel: 'Article text-to-speech',
     statusIdle: 'Ready to read the article aloud.',
@@ -35,8 +36,9 @@ const COPY = {
     error: '????????????????????',
     pause: '????',
     play: '??',
+    progress: (current: number, total: number) => `?? ${current} / ${total}`,
     rate: '??',
-    ready: (count: number) => `${count} ????????????`,
+    ready: (count: number) => `${count} ?????????`,
     resume: '??',
     sectionLabel: '?????????',
     statusIdle: '??????????????????',
@@ -51,8 +53,9 @@ const COPY = {
     error: '???????????',
     pause: '????',
     play: '????',
+    progress: (current: number, total: number) => `?? ${current} / ${total}`,
     rate: '??',
-    ready: (count: number) => `???? ${count} ??????????`,
+    ready: (count: number) => `? ${count} ???????`,
     resume: '????',
     sectionLabel: '??????',
     statusIdle: '???????????',
@@ -75,6 +78,7 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
   const { error, isSupported, pause, rate, resume, setRate, speakSegments, status, stop } = useTTS();
   const [segmentCount, setSegmentCount] = useState(0);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState<number | null>(null);
   const activeElementRef = useRef<HTMLElement | null>(null);
 
   const clearActiveSegment = useCallback(() => {
@@ -82,37 +86,12 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
       delete activeElementRef.current.dataset.ttsActive;
       activeElementRef.current = null;
     }
+
     setActiveSegmentId(null);
+    setActiveSegmentIndex(null);
   }, []);
 
   useEffect(() => {
-    const styleId = 'article-tts-active-style';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        .prose [data-tts-active="true"] {
-          background: linear-gradient(90deg, hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.04));
-          border-left: 3px solid hsl(var(--primary));
-          border-radius: 0.75rem;
-          box-shadow: 0 10px 30px -24px hsl(var(--primary) / 0.6);
-          margin-left: -0.875rem;
-          margin-right: -0.25rem;
-          padding-left: calc(0.875rem - 3px);
-          padding-right: 0.25rem;
-          transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-        }
-        .prose [data-tts-active="true"]:is(p, blockquote, li, h1, h2, h3, h4, h5, h6, figcaption) {
-          transform: translateX(2px);
-        }
-        .dark .prose [data-tts-active="true"] {
-          background: linear-gradient(90deg, hsl(var(--primary) / 0.22), hsl(var(--primary) / 0.08));
-          box-shadow: 0 14px 32px -26px hsl(var(--primary) / 0.9);
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
     return () => {
       clearActiveSegment();
       const root = document.querySelector<HTMLElement>(contentSelector);
@@ -139,7 +118,7 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
     }
   }, [copy, error, isSupported, status]);
 
-  const syncActiveSegment = (segmentId: string | null, element: HTMLElement | null) => {
+  const syncActiveSegment = useCallback((index: number, segmentId: string | null, element: HTMLElement | null) => {
     if (activeElementRef.current && activeElementRef.current !== element) {
       delete activeElementRef.current.dataset.ttsActive;
     }
@@ -151,7 +130,8 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
 
     activeElementRef.current = element;
     setActiveSegmentId(segmentId);
-  };
+    setActiveSegmentIndex(index + 1);
+  }, []);
 
   const handlePlayToggle = () => {
     if (!isSupported) return;
@@ -181,7 +161,7 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
         locale,
         onBoundary: (index) => {
           const current = segments[index];
-          syncActiveSegment(current?.id ?? null, current?.element ?? null);
+          syncActiveSegment(index, current?.id ?? null, current?.element ?? null);
         },
         onComplete: () => {
           clearActiveSegment();
@@ -197,14 +177,12 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
 
   return (
     <section
-      className={cn(
-        'overflow-hidden rounded-2xl border border-border/60 bg-gradient-start shadow-box',
-        'mb-6 flex flex-col gap-4 px-5 py-4',
-      )}
+      className={cn('mb-6 overflow-hidden rounded-2xl border border-border/60 bg-gradient-start shadow-box')}
       aria-label={copy.sectionLabel}
+      data-tts-player
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-border/50 border-b bg-foreground/[0.04] px-4 py-3">
+        <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 font-medium text-primary text-xs">
             <RiVoiceprintFill className="size-4" />
             <span>{copy.title}</span>
@@ -212,52 +190,66 @@ export function TTSPlayer({ contentSelector, locale }: TTSPlayerProps) {
           <p className="max-w-2xl text-muted-foreground text-sm leading-6">{statusText}</p>
         </div>
 
-        <label
-          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/75 px-3 py-1.5 text-muted-foreground text-sm backdrop-blur-sm"
-          htmlFor="tts-rate"
-        >
-          <span>{copy.rate}</span>
-          <select
-            id="tts-rate"
-            value={rate}
-            onChange={(event) => setRate(Number(event.target.value))}
-            className="bg-transparent font-medium text-foreground outline-none"
-          >
-            {RATE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}x
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {segmentCount > 0 && (
+            <span className="rounded-full border border-border/50 bg-background/80 px-3 py-1 text-muted-foreground">
+              {copy.ready(segmentCount)}
+            </span>
+          )}
+          {activeSegmentIndex && activeSegmentId && (
+            <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+              {copy.progress(activeSegmentIndex, segmentCount)}
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" className="rounded-full" onClick={handlePlayToggle} disabled={!isSupported}>
-          {status === 'playing' ? <RiPauseFill className="mr-1 size-4" /> : <RiPlayFill className="mr-1 size-4" />}
-          {status === 'playing' ? copy.pause : status === 'paused' ? copy.resume : copy.play}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="rounded-full bg-background/75"
-          onClick={handleStop}
-          disabled={!isSupported || status === 'idle'}
-        >
-          <RiStopFill className="mr-1 size-4" />
-          {copy.stop}
-        </Button>
-        {segmentCount > 0 && status !== 'playing' && status !== 'paused' && !error && (
-          <span className="rounded-full bg-foreground/5 px-3 py-1 text-muted-foreground text-xs">
-            {copy.ready(segmentCount)}
+      <div className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <div className="rounded-2xl border border-border/50 bg-background/70 p-3 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" className="rounded-full" onClick={handlePlayToggle} disabled={!isSupported}>
+              {status === 'playing' ? <RiPauseFill className="mr-1 size-4" /> : <RiPlayFill className="mr-1 size-4" />}
+              {status === 'playing' ? copy.pause : status === 'paused' ? copy.resume : copy.play}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-full bg-background/80"
+              onClick={handleStop}
+              disabled={!isSupported || status === 'idle'}
+            >
+              <RiStopFill className="mr-1 size-4" />
+              {copy.stop}
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-start gap-2 rounded-2xl border border-border/50 bg-background/70 p-2 backdrop-blur-sm md:justify-end">
+          <span className="inline-flex items-center gap-1 px-2 text-muted-foreground text-xs">
+            <RiSpeedUpFill className="size-3.5" />
+            {copy.rate}
           </span>
-        )}
-        {activeSegmentId && (
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-primary text-xs">
-            #{activeSegmentId.replace('tts-segment-', '')}
-          </span>
-        )}
+          {RATE_OPTIONS.map((option) => {
+            const isActive = rate === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setRate(option)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 font-medium text-xs transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-foreground/5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground',
+                )}
+                aria-pressed={isActive}
+              >
+                {option}x
+              </button>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

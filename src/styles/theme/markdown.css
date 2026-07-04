@@ -6,6 +6,30 @@
     @apply text-primary hover:text-blue no-underline transition-colors duration-300 hover:underline;
   }
 
+  [data-tts-segment-id] {
+    scroll-margin-top: 5rem;
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      box-shadow 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  [data-tts-active="true"] {
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.05));
+    border-left: 3px solid hsl(var(--primary));
+    border-radius: 0.85rem;
+    box-shadow: 0 16px 40px -32px hsl(var(--primary) / 0.7);
+    margin-left: -0.9rem;
+    margin-right: -0.25rem;
+    padding-left: calc(0.9rem - 3px);
+    padding-right: 0.25rem;
+  }
+
+  [data-tts-active="true"]:is(p, blockquote, li, h1, h2, h3, h4, h5, h6, figcaption) {
+    transform: translateX(2px);
+  }
+
   /* ========== 行内代码样式 ========== */
   /* 移除 Typography 默认的反引号 */
   :not(pre) > code::before,
@@ -541,6 +565,11 @@
 
 .dark .prose :not(pre) > code:hover {
   background: hsl(var(--background) / 0.4);
+}
+
+.dark .prose [data-tts-active="true"] {
+  background: linear-gradient(90deg, hsl(var(--primary) / 0.24), hsl(var(--primary) / 0.09));
+  box-shadow: 0 18px 44px -34px hsl(var(--primary) / 0.95);
 }
 
 /* 深色模式 - 列表 hover */
