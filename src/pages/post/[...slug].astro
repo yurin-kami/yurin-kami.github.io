@@ -1,13 +1,15 @@
 ---
-import Layout from '@layouts/Layout.astro';
-import TwoColumnLayout from '@layouts/TwoColumnLayout.astro';
 import CustomContent from '@components/common/CustomContent.astro';
-import Cover from '@components/ui/cover/Cover.astro';
 import HomeSider from '@components/layout/HomeSider.astro';
 import SummaryPanel from '@components/post/SummaryPanel';
-import EditButton from '@/components/EditButton';
-import { Comment } from '@/components/comment';
-import { Icon } from 'astro-icon/components';
+import { TTSPlayer } from '@components/post/TTSPlayer';
+import Cover from '@components/ui/cover/Cover.astro';
+import { defaultContentConfig } from '@constants/content-config';
+import { HomeSiderType } from '@constants/enum';
+import { CONTENT_PADDING } from '@constants/layout';
+import { siteConfig } from '@constants/site-config';
+import Layout from '@layouts/Layout.astro';
+import TwoColumnLayout from '@layouts/TwoColumnLayout.astro';
 import {
   buildCategoryPath,
   extractTextFromMarkdown,
@@ -20,29 +22,25 @@ import {
   getSortedPosts,
   translateCategoryName,
 } from '@lib/content';
-import { defaultLocale, getLocaleFromUrl, getLocaleLabel, localizedPath, t } from '@/i18n';
-import { HomeSiderType } from '@constants/enum';
-import { defaultContentConfig } from '@constants/content-config';
-import { CONTENT_PADDING } from '@constants/layout';
-import { siteConfig } from '@constants/site-config';
 import { formatForSeo } from '@lib/date';
 import { encodeSlug } from '@lib/route';
 import { getOgImageUrl } from '@lib/seo/og-image';
+import { Icon } from 'astro-icon/components';
+import { Comment } from '@/components/comment';
+import EditButton from '@/components/EditButton';
+import { defaultLocale, getLocaleFromUrl, getLocaleLabel, localizedPath, t } from '@/i18n';
 
 export async function getStaticPaths() {
   const posts = await getSortedPosts(defaultLocale);
-  return posts
-    .filter((post) => {
-      const slug = getPostSlug(post);
-      if (!slug) {
-        console.warn(`[getStaticPaths] Skipping post "${post.id}" - no valid slug`);
-      }
-      return !!slug;
-    })
-    .map((post) => ({
-      params: { slug: getPostSlug(post)! },
-      props: { postId: post.id },
-    }));
+  return posts.flatMap((post) => {
+    const slug = getPostSlug(post);
+    if (!slug) {
+      console.warn(`[getStaticPaths] Skipping post "${post.id}" - no valid slug`);
+      return [];
+    }
+
+    return [{ params: { slug }, props: { postId: post.id } }];
+  });
 }
 
 const { postId } = Astro.props;
@@ -176,6 +174,7 @@ const breadcrumbJsonLd = {
           <SummaryPanel client:visible summary={summaryText} source={summarySource} className="mt-2" />
         )
       }
+      {!post.data.password && <TTSPlayer client:idle locale={locale} contentSelector=".custom-content" />}
       <article class="prose md:prose-sm dark:prose-invert" data-pagefind-body>
         <CustomContent Content={Content} />
       </article>
