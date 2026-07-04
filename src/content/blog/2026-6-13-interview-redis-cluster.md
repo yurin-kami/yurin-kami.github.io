@@ -36,7 +36,7 @@ masterauth password
 
 **增量同步（PSYNC）：** 全量同步完成后进入增量阶段。Master 把每条写命令的 offset 记录在 repl_backlog（一个环形缓冲区）里，Slave 断线重连时发送自己的 offset，Master 判断这个 offset 之后的数据是否还在 backlog 中：在就只补发增量（部分重同步），不在就只能重新全量同步。
 
-```
+```plain
 Master ──写命令──→ repl_backlog（环形缓冲区，默认 1MB）
                     ↑
 Slave 断线重连，带上 offset
@@ -147,7 +147,7 @@ func keyHashSlot(key string) int {
 
 Cluster 模式下，`MGET`、`DEL` 多个 key、`SUNION` 等涉及多个 key 的命令，要求所有 key 必须在同一个 slot 里，否则返回 `CROSSSLOT` 错误。解决方法是用 Hash Tag：
 
-```
+```plain
 # 这两个 key 的 slot 由 {user} 决定，而不是整个 key
 SET {user}:name "Alice"
 SET {user}:age 25

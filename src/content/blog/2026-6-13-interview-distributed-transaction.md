@@ -41,7 +41,7 @@ TCC 把事务逻辑搬到了业务层，每个操作都要实现三个接口：
 - **Confirm**：确认提交。真正扣库存 `stock -= 1, frozen -= 1`。
 - **Cancel**：取消释放。解冻库存 `frozen -= 1`。
 
-```
+```plain
 用户下单 -> Try(冻结库存) -> Try(冻结余额)
           |                        |
           v                        v
@@ -59,7 +59,7 @@ TCC 的核心优势是**不依赖数据库层面的事务**，性能好，适合
 
 Saga 把一个大事务拆成一连串本地事务，每个本地事务都有对应的补偿操作。如果某一步失败，就逆序执行已完成步骤的补偿。
 
-```
+```plain
 T1 -> T2 -> T3 -> T4   (正向执行)
 C1 <- C2 <- C3         (T4 失败，逆序补偿)
 ```
@@ -76,7 +76,7 @@ Saga 适合长事务场景（比如订单履约、物流），但它的隔离性
 
 这是最"接地气"的方案。核心思路：把"发消息"和"写业务数据"放在同一个本地事务里，靠消息队列 + 轮询来实现最终一致性。
 
-```
+```plain
 BEGIN TRANSACTION
   UPDATE accounts SET balance = balance - 100 WHERE id = 1;
   INSERT INTO outbox_messages (id, payload, status) VALUES (uuid, '...', 'pending');
@@ -156,4 +156,4 @@ SELECT * FROM outbox_messages WHERE status = 'pending';
 - Seata 官方文档：https://seata.apache.org
 - DTM（Go 分布式事务框架）：https://github.com/dtm-labs/dtm
 - Chris Richardson, *Pattern: Saga*, https://microservices.io/patterns/data/saga.html
-- 周志明, *凤凰架构*, 第 16 章：分布式事务
+- 周志明， *凤凰架构*, 第 16 章：分布式事务

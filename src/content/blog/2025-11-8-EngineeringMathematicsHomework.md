@@ -5,7 +5,7 @@ tags: ["cpp", "Schimidt", "homeworks", "baseful"]
 excerpt: "kami works"
 ---
 
-# 使用c++编写代码使用施密特正交化
+# 使用 c++编写代码使用施密特正交化
 
 #### 编程实现施密特（Schimidt）正交化过程，并找一个实例验证对错
 

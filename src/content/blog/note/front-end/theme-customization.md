@@ -20,7 +20,7 @@ cover: /img/cover/3.webp
 本文使用了嵌套分类 `[笔记, 前端]`，这会创建层级关系：
 
 - URL: `/categories/note/front-end`
-- 面包屑: 笔记 → 前端
+- 面包屑： 笔记 → 前端
 
 在 frontmatter 中这样配置：
 

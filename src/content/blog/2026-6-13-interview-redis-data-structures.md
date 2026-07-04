@@ -56,7 +56,7 @@ HGETALL user:1001
 
 和 String 存 JSON 对比：Hash 可以单独修改某个字段而不需要整体覆写，网络开销和序列化开销都更小。但如果对象需要整体读取且字段很少，String 反而更简单。
 
-内部编码转换：字段少且值短时使用 ziplist（压缩列表），字段数超过 `hash-max-ziplist-entries`（默认 128）或值超过 `hash-max-ziplist-value`（默认 64 字节）时转为 hashtable。ziplist 的优势是内存紧凑，hashtable 的优势是 O(1) 查找。
+内部编码转换：字段少且值短时使用 ziplist（压缩列表），字段数超过 `hash-max-ziplist-entries`（默认 128）或值超过 `hash-max-ziplist-value`（默认 64 字节）时转为 hashtable。ziplist 的优势是内存紧凑，hashtable 的优势是 O（1） 查找。
 
 **3. List -- 轻量消息队列与时间线**
 
@@ -106,13 +106,13 @@ ZRANK leaderboard "player:B"           # 排名查询
 
 排行榜是 ZSet 最经典的面试案例。`ZADD` 插入 O(log N)，`ZRANGE` 取排名 O(log N + M)，万级排行榜取 Top 10 几乎是瞬间完成。如果用 MySQL 做 `ORDER BY score DESC LIMIT 10`，数据量大时性能会急剧下降。
 
-内部编码转换：元素少时使用 ziplist（元素按 score 排序存储），元素多后转为 skiplist（跳跃表）+ hashtable。skiplist 负责按 score 有序查询，hashtable 负责 O(1) 查元素的 score。跳跃表是一种随机化的多层链表结构，平均查找和插入都是 O(log N)，实现比平衡树简单，且范围查询效率更高。
+内部编码转换：元素少时使用 ziplist（元素按 score 排序存储），元素多后转为 skiplist（跳跃表）+ hashtable。skiplist 负责按 score 有序查询，hashtable 负责 O（1） 查元素的 score。跳跃表是一种随机化的多层链表结构，平均查找和插入都是 O(log N)，实现比平衡树简单，且范围查询效率更高。
 
 ### 分析
 
 把五种结构放在一起看，有一条清晰的选择逻辑：
 
-```
+```plain
 需要存简单值或计数？ → String
 需要存多字段对象？   → Hash
 需要有序列表/队列？  → List
@@ -136,7 +136,7 @@ ZRANK leaderboard "player:B"           # 排名查询
 
 - ZSet 和 List 都能做"有序"的事，但 List 按插入顺序排列，ZSet 按 score 排序，应用场景完全不同。
 - Hash 和 String 都能存对象，但 Hash 支持字段级读写，适合频繁更新部分字段的场景。
-- Set 的去重能力是"天然的"，不需要业务层做判断，SISMEMBER 是 O(1) 操作。
+- Set 的去重能力是"天然的"，不需要业务层做判断，SISMEMBER 是 O（1） 操作。
 
 ### 相关知识扩展
 

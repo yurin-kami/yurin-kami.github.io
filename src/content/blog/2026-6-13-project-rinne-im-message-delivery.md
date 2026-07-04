@@ -25,7 +25,7 @@ Rinne-IM 是一个 Go + gRPC 双向流 + PostgreSQL + Redis + Kafka 的全栈 IM
 
 引入 Kafka 做异步消息分发，Redis Pub/Sub 做"最后一公里"的实时推送。消息的完整生命周期变成了：
 
-```
+```plain
 发送方 → gRPC Stream → 服务端
                           ├→ PostgreSQL（持久化，保证不丢）
                           └→ Kafka（异步队列，削峰分发）

@@ -52,7 +52,7 @@ window.electronAPI.chat.onMessage((serverMsg) => {
 
 消息状态的完整生命周期是一个小型状态机：
 
-```
+```plain
 sending → sent → read
   ↓
 failed（发送失败，显示重试按钮）

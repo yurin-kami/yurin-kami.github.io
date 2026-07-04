@@ -5,7 +5,7 @@ tags: ["Kafka", "高性能", "零拷贝", "面试", "八股文"]
 excerpt: "kami works"
 ---
 
-# 面试笔记：Kafka为什么这么快
+# 面试笔记：Kafka 为什么这么快
 
 ### 前情提要
 
@@ -37,7 +37,7 @@ Kafka 高吞吐有五个核心原因，按重要程度排列如下。
 
 磁盘顺序写和随机写的性能差距是数量级的：
 
-```
+```plain
 顺序写（HDD）：  ~600 MB/s
 随机写（HDD）：  ~0.1 MB/s（每次 seek 约 10ms）
 
@@ -51,7 +51,7 @@ Kafka 高吞吐有五个核心原因，按重要程度排列如下。
 
 消费者拉取消息时，Kafka 使用了操作系统的零拷贝技术。先看传统方式需要几次数据拷贝：
 
-```
+```plain
 传统 read + write（4 次拷贝 + 4 次上下文切换）：
 
   磁盘 ──DMA──► 内核读缓冲区 ──copy──► 用户空间 ──copy──► Socket 缓冲区 ──DMA──► 网卡
@@ -76,7 +76,7 @@ Linux 提供了两种零拷贝系统调用：
 
 Kafka 的 Producer 不会来一条消息就发一次网络请求，而是将多条消息攒成一个批次（Batch）再发送。相关配置：
 
-```
+```plain
 batch.size = 16384       # 批次大小上限（16KB）
 linger.ms = 5            # 最多等待 5ms 凑批
 compression.type = snappy # 批次压缩算法
@@ -100,7 +100,7 @@ Kafka 没有自己在 JVM 内实现缓存层，而是直接依赖操作系统的
 
 一个 Topic 被划分为多个 Partition，每个 Partition 是独立的有序日志。生产者和消费者可以并行操作不同的 Partition，Broker 也可以将不同 Partition 分布在不同磁盘上，最大化 I/O 并行度。Consumer Group 中每个消费者"独占"一个或多个 Partition，天然支持水平扩展。
 
-```
+```plain
 Topic: messages (3 Partitions)
   ├── Partition 0 ──► Consumer 1
   ├── Partition 1 ──► Consumer 2
@@ -154,7 +154,7 @@ RocketMQ 在架构上借鉴了 Kafka 的顺序写盘思想（CommitLog 也是 ap
 
 Kafka 在大数据架构中通常扮演"数据管道"的角色，处于数据采集层和计算层之间：
 
-```
+```plain
 数据源（日志/指标/事件）──► Kafka ──► Flink/Spark Streaming（实时计算）
                                 └──► HDFS/S3（离线存储）
                                 └──► Elasticsearch（检索分析）

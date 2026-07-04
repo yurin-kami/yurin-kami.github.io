@@ -5,7 +5,7 @@ tags: ["C++", "ImGui", "字体", "国际化", "项目实战"]
 excerpt: "kami works"
 ---
 
-# 项目笔记：ImGui中文显示全是方框怎么办
+# 项目笔记：ImGui 中文显示全是方框怎么办
 
 ### 前情提要
 
@@ -74,7 +74,7 @@ LoadCJKFonts(io.Fonts, 16.0f);
 
 **自定义 glyph ranges 的优势。** ImGui 内置了 `GetGlyphRangesChineseFull()` 和 `GetGlyphRangesChineseSimplifiedCommon()` 等辅助函数，但它们加载的字符集非常庞大（CJK Full 涵盖 27,000+ 字符），会将大量字体数据上传到 GPU 显存，在低端显卡上造成帧率下降。自定义 ranges 只加载项目实际用到的字符区间，显著降低显存占用。
 
-```
+```plain
 Glyph 数量对比：
   GetGlyphRangesChineseFull()        ≈ 27,000 个
   GetGlyphRangesChineseSimplifiedCommon() ≈ 2,500 个（但在新版 ImGui 已被移除）
@@ -87,7 +87,7 @@ Glyph 数量对比：
 
 - **ImFontAtlas**：ImGui 的字体管理器，负责将多个字体的字形光栅化到一张 GPU 纹理上。所有 `ImFont` 都共享同一张纹理，切换字体时不产生纹理绑定开销。
 - **MergeMode**：`ImFontConfig::MergeMode = true` 让新字体数据追加到最近一个已添加的 `ImFont`，而非创建新实例。这是 ImGui 实现"一个 ImFont 多套字形"的唯一官方方式。
-- **Glyph Ranges**：`ImWchar` 数组以成对形式定义 Unicode 区间（起始码点, 结束码点），以 0 结尾。传入 `AddFontFromFileTTF` 时，只有落在这些区间内的字符会被光栅化进纹理图集。
+- **Glyph Ranges**：`ImWchar` 数组以成对形式定义 Unicode 区间（起始码点， 结束码点），以 0 结尾。传入 `AddFontFromFileTTF` 时，只有落在这些区间内的字符会被光栅化进纹理图集。
 - **CJK Unicode 基本区（U+4E00–U+9FFF）**：又称"统一汉字基本区"，包含约 20,902 个汉字，覆盖简体中文、繁体中文、日文汉字（Kanji）、韩文汉字（Hanja）的绝大部分常用字。
 
 ### 相关知识扩展
@@ -133,4 +133,4 @@ SDF 字体将字形存储为距离场而非位图，支持无损缩放到任意�
 - [ImGui 官方文档 - Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md)
 - [CJK 统一汉字 Unicode 范围](https://unicode.org/charts/unihan.html)
 - [FreeType 官方文档](https://freetype.org/freetype2/docs/documentation.html)
-- [Signed Distance Field 字体渲染原理 (Valve)](https://steamcommunity.com/sharedfiles/filedetails/?id=2074187454)
+- [Signed Distance Field 字体渲染原理 （Valve）](https://steamcommunity.com/sharedfiles/filedetails/?id=2074187454)

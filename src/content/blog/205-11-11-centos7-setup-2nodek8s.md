@@ -5,19 +5,19 @@ tags: ["k8s", "centos7", "virtualmachine", "cloud native", "baseful"]
 excerpt: "我将会使用CentOS7虚拟机配置阿里源部署使用containerd运行时的k8s集群，version=1.30.14"
 ---
 
-# CentOS7部署k8s双节点集群
+# CentOS7 部署 k8s 双节点集群
 
 0. 预先准备
 
-  - *配置好网络与ssh服务，关闭防火墙*
+  - *配置好网络与 ssh 服务，关闭防火墙*
   
-  - 配置selinux安全策略
+  - 配置 selinux 安全策略
     ```bash
     setenforce 0
     sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
     ```
   	
-  - 配置iptables规则
+  - 配置 iptables 规则
     ```bash
   	iptables -F
   	iptables -X
@@ -25,7 +25,7 @@ excerpt: "我将会使用CentOS7虚拟机配置阿里源部署使用containerd�
   	iptables-save
     ```
   	
-  - 配置主机名映射、ssh免密
+  - 配置主机名映射、ssh 免密
     ```bash
   	hostnamectl set-hostname master/worker
   	echo "masterIp master" >> /etc/hosts
@@ -40,7 +40,7 @@ excerpt: "我将会使用CentOS7虚拟机配置阿里源部署使用containerd�
   	swapoff -a
     ```
   	
-  - 加载内核模块、开启ipv4转发
+  - 加载内核模块、开启 ipv4 转发
   	```bash
   	tee /etc/sysctl.d/k8s.conf <<EOF
   	net.bridge.brifge-nf-call-iptables = 1
@@ -53,7 +53,7 @@ excerpt: "我将会使用CentOS7虚拟机配置阿里源部署使用containerd�
   	sysctl --system
   	echo "modprobe br_netfilter" >/etc/sysconfig/modules/br_netfilter.modules && echo "modprobe ip_conntrack" >/etc/sysconfig/modules/ip_conntrack.modules && chmod 755 /etc/sysconfig/modules/br_netfilter.modules && chmod 755 /etc/sysconfig/modules/ip_conntrack.modules
     ```
-  - 配置yum源
+  - 配置 yum 源
     ```bash
 		cd /etc/yum.repo.d/ && curl -O http://mirrors.aliyun.com/repo/Centos-7.repo && cd
 		yum install -y wget vim bash-completion yum-utils
@@ -66,12 +66,12 @@ excerpt: "我将会使用CentOS7虚拟机配置阿里源部署使用containerd�
 		gpgcheck=1
 		gpgkey=https://mirrors.aliyun.com/kubernetes-new/core/stable/v1.30/rpm/repodata/repomd.xml.key
     ```
-  - 安装kubelet kubeadm kubectl containerd.io
+  - 安装 kubelet kubeadm kubectl containerd.io
 		
     ```bash
   	yum -y install containerd.io kubelet kubectl kubeadm
     ```
-  - 配置containerd
+  - 配置 containerd
     ```bash
   	containerd config default > /etc/containerd/config.toml
   	sed -i 's/pause\:3\.6/pause\:3\.9/g' /etc/containerd/config.toml

@@ -5,7 +5,7 @@ tags: ["Go", "sync", "并发编程", "面试", "八股文"]
 excerpt: "kami works"
 ---
 
-# 面试笔记：Go的sync包怎么用，Mutex和RWMutex怎么选
+# 面试笔记：Go 的 sync 包怎么用，Mutex 和 RWMutex 怎么选
 
 准备面试的时候发现，Go 的 `sync` 包几乎是并发编程必考的基础设施。面试官不只会问"怎么用"，更喜欢追问"底层怎么实现的"、"什么场景该选哪个"。
 这篇文章是我对 sync 包相关知识的系统梳理，把 Mutex、RWMutex、WaitGroup、Once、Pool、Map 这些组件的用法和原理串一遍，顺便聊聊面试中容易踩坑的地方。
@@ -202,7 +202,7 @@ func (c *Counter) Inc() { // 指针接收者
 |------|---------|-------------|---------|
 | Mutex | 互斥访问 | 正常/饥饿双模式，信号量 | 共享计数器、状态保护 |
 | RWMutex | 读写分离 | readerCount 原子计数，写者阻塞读者 | 缓存、配置中心 |
-| WaitGroup | 等待完成 | 64位 state，计数器归零唤醒 | 并发任务编排 |
+| WaitGroup | 等待完成 | 64 位 state，计数器归零唤醒 | 并发任务编排 |
 | Once | 单次执行 | done + Mutex 双重检查 | 单例、初始化 |
 | Pool | 对象复用 | per-P 本地池 + GC 时清空 | bytes.Buffer、临时对象 |
 | Map | 并发安全 map | read + dirty 双层结构 | key 稳定的并发读写 |

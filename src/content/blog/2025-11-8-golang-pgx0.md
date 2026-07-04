@@ -7,9 +7,9 @@ excerpt: "我将演示如何使用 golang 连接 PG 并对其进行基本操作"
 
 # 学习使用 golang 连接 postgresql 数据库
 
-0. 安装postgresql· [PostgreSQL: 下载 - PostgreSQL 数据库](https://postgresql.ac.cn/download/)· 个人更推荐再wsl中使用容器工具启动PG，减少开发环境的污染
+0. 安装 postgresql· [PostgreSQL: 下载 - PostgreSQL 数据库](https://postgresql.ac.cn/download/)· 个人更推荐再 wsl 中使用容器工具启动 PG，减少开发环境的污染
 
-1. 创建数据库goForTrain
+1. 创建数据库 goForTrain
 
 2. source sql
 
@@ -123,7 +123,7 @@ excerpt: "我将演示如何使用 golang 连接 PG 并对其进行基本操作"
     fmt.Println("connection successful")
     ```
 
-8. 定义一个数据类型User
+8. 定义一个数据类型 User
 
    ```go
    type User struct {
@@ -175,7 +175,7 @@ excerpt: "我将演示如何使用 golang 连接 PG 并对其进行基本操作"
        }
        ```
 
-11. 在main中调用它们
+11. 在 main 中调用它们
 
    ```go
    func main() {

@@ -142,7 +142,7 @@ Multi Part AOF 将 AOF 拆分为多个文件，放在一个目录下，由一个
 
 重写时不再 fork 子进程生成完整文件，而是直接开启一个新的 incr 文件继续追加，旧的 incr 文件可以后台异步压缩。这样做的好处是：重写期间不需要额外的内存缓冲区，也不会因为 fork 大进程导致阻塞。
 
-```
+```plain
 aof-use-rdb-preamble yes     # 仍然支持混合持久化
 aof-timestamp-enabled yes     # AOF 文件中记录时间戳，加速恢复
 ```

@@ -84,7 +84,7 @@ InnoDB 中每行数据有两个隐藏列：
 MVCC 解决了不可重复读，但幻读还需要靠锁。在 RR 级别下，InnoDB 使用 **Next-Key Lock**（临键锁）来防止幻读，它是 Record Lock + Gap Lock 的组合：
 
 - **Record Lock**：锁定索引上的单行记录。`SELECT ... WHERE id = 1 FOR UPDATE` 锁住 id=1 这行。
-- **Gap Lock**：锁定索引记录之间的间隙，防止其他事务在间隙中插入新行。比如索引中有 id=5 和 id=10，间隙锁会锁住 (5, 10) 这个区间。
+- **Gap Lock**：锁定索引记录之间的间隙，防止其他事务在间隙中插入新行。比如索引中有 id=5 和 id=10，间隙锁会锁住 （5, 10） 这个区间。
 - **Next-Key Lock**：左开右闭区间，锁住 `(prev, current]`。InnoDB 在 RR 下对扫描范围加 Next-Key Lock，既锁记录又锁间隙。
 
 举个例子：事务 A 执行 `SELECT * FROM orders WHERE order_no > 100 FOR UPDATE`，InnoDB 会对符合条件的行加 Record Lock，同时对相关间隙加 Gap Lock。此时事务 B 想 `INSERT INTO orders (order_no) VALUES (150)` 就会被阻塞，从而避免幻读。

@@ -5,7 +5,7 @@ tags: ["Go", "并发编程", "面试", "八股文"]
 excerpt: "kami works"
 ---
 
-# 面试笔记：Goroutine和线程到底有什么区别
+# 面试笔记：Goroutine 和线程到底有什么区别
 
 ### 前情提要
 

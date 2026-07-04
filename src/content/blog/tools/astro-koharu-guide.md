@@ -248,7 +248,7 @@ social:
   # ... 更多平台
 ```
 
-支持的平台：GitHub, Twitter, Bilibili, 网易云音乐, Email, RSS 等。完整配置请参考 `config/site.yaml` 文件。
+支持的平台：GitHub, Twitter, Bilibili, 网易云音乐， Email, RSS 等。完整配置请参考 `config/site.yaml` 文件。
 
 ### 导航配置
 
@@ -592,7 +592,7 @@ navigation:
 
 ### 文章阅读功能
 
-**目录导航 (Table of Contents)：**
+**目录导航 （Table of Contents）：**
 
 - 自动提取文章标题（h2-h6）生成目录
 - 使用 CSS 计数器自动为标题添加层级编号（如 1., 1.1., 1.1.1.）
@@ -1123,10 +1123,10 @@ announcements:
 
 | 类型        | 说明     | 默认颜色       |
 | ----------- | -------- | -------------- |
-| `info`      | 信息通知 | 蓝色 (#3b82f6) |
-| `warning`   | 警告提示 | 黄色 (#eab308) |
-| `success`   | 成功消息 | 绿色 (#22c55e) |
-| `important` | 重要公告 | 红色 (#ef4444) |
+| `info`      | 信息通知 | 蓝色 （#3b82f6） |
+| `warning`   | 警告提示 | 黄色 （#eab308） |
+| `success`   | 成功消息 | 绿色 （#22c55e） |
+| `important` | 重要公告 | 红色 （#ef4444） |
 
 > 设置 `color` 字段可覆盖上述默认颜色
 
@@ -1432,9 +1432,9 @@ H~2~O 是水的化学式，E = mc^2^ 是质能方程
 
 示例效果：
 
-这里有一段!!隐藏文字，点击显示!!
+这里有一段！！隐藏文字，点击显示！!
 
-这里有一段!!模糊文字，鼠标悬停显示!!{.blur}
+这里有一段！！模糊文字，鼠标悬停显示！!{.blur}
 
 - 默认模式：点击后粒子消散动画揭示文字（基于 spoilerjs Web Component）
 - `.blur` 模式：鼠标悬停时模糊消失
@@ -2658,20 +2658,20 @@ import { fadeIn } from "@constants/anim/variants";
 
 **性能：**
 
-- ⚡ 静态站点生成 (SSG)，加载速度更快
+- ⚡ 静态站点生成 （SSG），加载速度更快
 - ⚡ 按需加载 JavaScript
 - ⚡ 图片优化
 
 **开发体验：**
 
 - 🛠️ TypeScript 类型安全
-- 🛠️ 热模块替换 (HMR)
+- 🛠️ 热模块替换 （HMR）
 - 🛠️ 现代化的开发工具链
 
 **功能增强：**
 
 - 🔍 更强大的全站搜索（Pagefind）
-- 📝 内容集合 (Content Collections) 类型安全
+- 📝 内容集合 （Content Collections） 类型安全
 - 🎨 Tailwind CSS 4.x 样式系统
 - 🌊 View Transitions API 页面过渡
 
@@ -2973,7 +2973,7 @@ comment:
 | `envId`  | `string` | Twikoo 环境 ID (**必填**，需带 `https://` 或 `https://`） |
 | `region` | `string` | 环境地域，默认为 `'ap-shanghai'`                           |
 | `path`   | `string` | 用于区分不同文章的自定义 js 路径，如果您的文章路径不是 location.pathname，需传此参数 |
-| `lang`   | `string` | 语言 (默认: `'zh-CN'`)                                    |
+| `lang`   | `string` | 语言 （默认： `'zh-CN'`)                                    |
 
 **部署 Twikoo 服务端：**
 

@@ -16,7 +16,7 @@ quiz: true
 
 ## 文字特效
 
-### 下划线 (ins)
+### 下划线 （ins）
 
 ```markdown
 ++这是下划线文字++
@@ -40,7 +40,7 @@ quiz: true
 
 ++主色调++{.primary} ++成功++{.success} ++警告++{.warning} ++危险++{.danger} ++信息++{.info}
 
-### 高亮 (mark)
+### 高亮 （mark）
 
 ```markdown
 ==这是高亮文字==
@@ -83,7 +83,7 @@ E = mc^2^ 是质能方程
 
 [Ctrl]{.kbd} + [C]{.kbd} 复制，[Ctrl]{.kbd} + [V]{.kbd} 粘贴
 
-## 隐藏文字 (Spoiler)
+## 隐藏文字 （Spoiler）
 
 ```markdown
 这里有一段!!隐藏文字，鼠标点击显示!!
@@ -91,11 +91,11 @@ E = mc^2^ 是质能方程
 这里有一段!!模糊文字，鼠标悬停显示!!{.blur}
 ```
 
-这里有一段!!隐藏文字，鼠标点击显示!!
+这里有一段！！隐藏文字，鼠标点击显示！!
 
-这里有一段!!模糊文字，鼠标悬停显示!!{.blur}
+这里有一段！！模糊文字，鼠标悬停显示！!{.blur}
 
-## 标签块 (Labels)
+## 标签块 （Labels）
 
 ```markdown
 [默认]{.label .default} [主要]{.label .primary} [信息]{.label .info} [成功]{.label .success} [警告]{.label .warning} [危险]{.label .danger}
@@ -103,7 +103,7 @@ E = mc^2^ 是质能方程
 
 [默认]{.label .default} [主要]{.label .primary} [信息]{.label .info} [成功]{.label .success} [警告]{.label .warning} [危险]{.label .danger}
 
-## 提醒块 (Note Blocks)
+## 提醒块 （Note Blocks）
 
 ```markdown
 :::default
@@ -163,7 +163,7 @@ E = mc^2^ 是质能方程
 这是没有图标的信息块
 :::
 
-## 折叠块 (Collapse)
+## 折叠块 （Collapse）
 
 ```markdown
 +++primary 点击展开详细内容
@@ -219,7 +219,7 @@ rm -rf /  # 请勿执行此命令
 ```
 +++
 
-## 标签卡 (Tabs)
+## 标签卡 （Tabs）
 
 ````markdown
 ;;;tab1 JavaScript
@@ -501,7 +501,7 @@ $$
 
 > 解析：Flexbox 是一维布局模型（行或列），Grid 是二维布局模型（行和列同时控制），Float 是 CSS2 时代的传统布局方式。
 
-## 加密内容块 (Encrypted Block)
+## 加密内容块 （Encrypted Block）
 
 使用 `:::encrypted{password="密码"}` 语法可以创建加密区块。区块内的内容在构建时使用 AES-256-GCM 进行真正加密，密码不会出现在最终的 HTML 中。读者需要输入正确密码才能解密查看。
 

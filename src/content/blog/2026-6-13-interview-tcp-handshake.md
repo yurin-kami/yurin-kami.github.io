@@ -19,7 +19,7 @@ excerpt: "kami works"
 
 先看流程图：
 
-```
+```plain
 Client                          Server
   |                               |
   |--- SYN (seq=x) ------------->|   第一次：客户端发起连接请求
@@ -47,7 +47,7 @@ Client                          Server
 
 ### 四次挥手
 
-```
+```plain
 Client                          Server
   |                               |
   |--- FIN (seq=u) ------------->|   第一次：客户端请求断开
@@ -148,11 +148,11 @@ TCP 的可靠性不仅靠握手和挥手，还依赖拥塞控制：
 2. **抓包实践**：用 Wireshark 或 `tcpdump` 抓一次真实的 TCP 连接，观察 SYN、ACK、FIN 报文的序列号变化，比看十遍书都有用。
 3. **理解状态机**：画出 TCP 的完整状态转换图（11 个状态），面试中偶尔会追问 `CLOSE_WAIT` 和 `TIME_WAIT` 的区别。
 4. **动手写 Socket**：用 C 或 Go 写一对 TCP Client/Server，体验 `bind`、`listen`、`accept`、`connect` 的调用顺序和阻塞行为。
-5. **进阶阅读**：《TCP/IP 详解 卷1》（W. Richard Stevens）第 17-24 章是 TCP 部分的圣经级参考。
+5. **进阶阅读**：《TCP/IP 详解 卷 1》（W. Richard Stevens）第 17-24 章是 TCP 部分的圣经级参考。
 
 ## 参考文章与延伸阅读
 
 - [RFC 793 - Transmission Control Protocol](https://datatracker.ietf.org/doc/html/rfc793)
 - [RFC 4987 - TCP SYN Flooding Attacks and Common Mitigations](https://datatracker.ietf.org/doc/html/rfc4987)
-- [TCP/IP 详解 卷1：协议 - W. Richard Stevens](https://book.douban.com/subject/1088054/)
-- [小林coding - 图解TCP](https://xiaolincoding.com/network/1_base/tcp-interview.html)
+- [TCP/IP 详解 卷 1：协议 - W. Richard Stevens](https://book.douban.com/subject/1088054/)
+- [小林 coding - 图解 TCP](https://xiaolincoding.com/network/1_base/tcp-interview.html)

@@ -24,7 +24,7 @@ m_translations["Performance"] = "性能";
 
 根本原因是 **MSVC 默认使用系统 code page 来解析源文件**。中文 Windows 的默认 code page 是 GBK（CP936）。当 MSVC 的词法分析器读取 UTF-8 编码的源文件时，它把 UTF-8 字节流当作 GBK 来解释：
 
-```
+```plain
 "设置" 的 UTF-8 编码: E8 AE BE E7 BD AE (6 字节)
 按 GBK 解读:          E8AE → 璁  BEE7 → 剧  BDAE → 疆
 ```
@@ -47,7 +47,7 @@ m_translations["Performance"] = "性能";
 
 `/utf-8` 是一个组合选项，等价于同时设置两个子选项：
 
-```
+```plain
 /utf-8 = /source-charset:utf-8 + /execution-charset:utf-8
 ```
 
@@ -59,7 +59,7 @@ m_translations["Performance"] = "性能";
 
 这是理解 MSVC 编码行为的关键概念。MSVC 的编译过程分为两个独立的编码阶段：
 
-```
+```plain
 源文件字节流 ──[source charset]──→ 内部 Unicode 表示 ──[execution charset]──→ 目标文件字节流
 ```
 
@@ -69,7 +69,7 @@ m_translations["Performance"] = "性能";
 
 如果只设了 `/source-charset:utf-8` 而没有设 `/execution-charset:utf-8`：
 
-```
+```plain
 源文件 "设置" (UTF-8: E8 AE BE E7 BD AE)
   → source charset 正确解码为 Unicode 码点 U+8BBE U+7F6E
   → execution charset 仍为 GBK(CP936)
@@ -83,7 +83,7 @@ m_translations["Performance"] = "性能";
 
 GCC 和 Clang 默认假设源文件为 UTF-8 编码，执行字符集也默认为 UTF-8。因此在 Linux / macOS 上通常不需要额外的编译选项。这也解释了为什么同一份代码在 Linux 上编译运行正常，到了 Windows MSVC 就出问题——编译器默认行为不同。
 
-```
+```plain
 编译器     source charset 默认值    execution charset 默认值
 MSVC       系统 ANSI code page      系统 ANSI code page
 GCC        UTF-8                   UTF-8

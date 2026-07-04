@@ -100,7 +100,7 @@ config.Net.MaxOpenRequests = 1  // 保证消息有序发送
 
 把整条链路画出来会更清晰：
 
-```
+```plain
 生产者 --[acks=all]--> Broker(3副本, min.insync=2) --[手动提交offset]--> 消费者
    |                      |                              |
    v                      v                              v
@@ -114,19 +114,19 @@ config.Net.MaxOpenRequests = 1  // 保证消息有序发送
 
 | 知识点 | 核心要点 |
 |--------|----------|
-| acks=0/1/all | 不等确认 / Leader确认 / 全部ISR确认 |
-| min.insync.replicas | ISR最少副本数，防止acks=all退化 |
-| unclean.leader.election | 禁止落后副本当选Leader，防丢消息 |
-| 手动提交offset | 处理完再提交，避免消费位点超前 |
+| acks=0/1/all | 不等确认 / Leader 确认 / 全部 ISR 确认 |
+| min.insync.replicas | ISR 最少副本数，防止 acks=all 退化 |
+| unclean.leader.election | 禁止落后副本当选 Leader，防丢消息 |
+| 手动提交 offset | 处理完再提交，避免消费位点超前 |
 | at-most-once | 可能丢，不重复 |
 | at-least-once | 不丢，可能重复（主流选择） |
 | exactly-once | 幂等生产者+事务+read_committed |
-| 幂等生产者 | producerId+sequenceNumber去重 |
-| Kafka事务 | 跨Partition/Topic原子写入 |
+| 幂等生产者 | producerId+sequenceNumber 去重 |
+| Kafka 事务 | 跨 Partition/Topic 原子写入 |
 
 ### 相关知识扩展
 
-**消息丢失的三个场景速查**：生产者发送失败（网络抖动）通过重试+acks解决；Broker 宕机（未同步到副本）通过多副本+min.insync.replicas 解决；消费者处理失败（业务异常）通过手动提交 offset 解决。
+**消息丢失的三个场景速查**：生产者发送失败（网络抖动）通过重试+acks 解决；Broker 宕机（未同步到副本）通过多副本+min.insync.replicas 解决；消费者处理失败（业务异常）通过手动提交 offset 解决。
 
 **ISR 机制**：ISR 是"与 Leader 保持同步的副本集合"。Follower 如果落后太多（由 `replica.lag.time.max.ms` 控制），会被踢出 ISR。只有 ISR 中的副本才有资格参与 acks=all 的确认和 Leader 选举。
 
@@ -144,6 +144,6 @@ config.Net.MaxOpenRequests = 1  // 保证消息有序发送
 ### 参考文章与延伸阅读
 
 - [Apache Kafka 官方文档 - Delivery Semantics](https://kafka.apache.org/documentation/#semantics)
-- [Kafka 可靠性最佳实践：acks、副本与ISR](https://kafka.apache.org/documentation/#producerconfigs_acks)
+- [Kafka 可靠性最佳实践：acks、副本与 ISR](https://kafka.apache.org/documentation/#producerconfigs_acks)
 - [Exactly-Once Semantics in Apache Kafka](https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/)
 - 《Kafka 权威指南》第 4 章：Kafka 生产者 & 第 6 章：可靠的数据传输

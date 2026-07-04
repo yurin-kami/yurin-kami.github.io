@@ -21,7 +21,7 @@ HTTP/1.1 是我们最熟悉的版本。它最大的改进是引入了 **Keep-Ali
 
 但 Keep-Alive 有一个致命问题：**队头阻塞（Head-of-Line Blocking）**。虽然连接复用了，但请求是严格串行的——前一个请求的响应没回来，后面的请求就只能排队等着。
 
-```
+```plain
 请求 1 ──────────► 响应 1
                         请求 2 ──────────► 响应 2
                                               请求 3 ──────────► 响应 3
@@ -40,7 +40,7 @@ HTTP/2 在 2015 年发布，核心思路是：**在同一个 TCP 连接上实现
 - **头部压缩（HPACK）**：HTTP 头部往往有大量重复字段（Cookie、User-Agent 等），HPACK 通过维护一个动态字典来压缩头部，节省带宽。
 - **服务器推送（Server Push）**：服务器可以主动把客户端还没请求但大概率需要的资源推过去，比如 HTML 里引用的 CSS 文件。
 
-```
+```plain
           TCP 连接
 ┌──────────────────────────┐
 │ Stream 1: 请求/响应 A     │
@@ -63,7 +63,7 @@ QUIC 的核心优势：
 - **无队头阻塞**：每个 Stream 独立进行丢包重传，Stream A 丢了包不影响 Stream B。
 - **连接迁移**：用 Connection ID 标识连接而非四元组，手机从 WiFi 切到 4G 时连接不会断。
 
-```
+```plain
 TCP + TLS 1.3 握手（2-RTT）       QUIC 握手（0/1-RTT）
 ─────────────────────────         ─────────────────────
 Client → SYN → Server             Client → QUIC Initial → Server
@@ -85,7 +85,7 @@ HTTPS 就是 HTTP 跑在 TLS 之上。传统 TLS 1.2 的完整握手需要 2-RTT
 
 TLS 1.3 的握手流程非常简洁：
 
-```
+```plain
 Client                          Server
   |--- Client Hello               |
   |    (支持的算法 + Key Share) -->|
@@ -108,7 +108,7 @@ Client                          Server
 |------|--------------|---------|---------|
 | HTTP/1.1 | 连接复用（Keep-Alive） | TCP | 1-RTT (TCP) |
 | HTTP/2 | HTTP 层多路复用 | TCP | 1-RTT (TCP) + 1~2-RTT (TLS) |
-| HTTP/3 | TCP 层队头阻塞 + 快速建连 | QUIC/UDP | 0~1-RTT (含 TLS) |
+| HTTP/3 | TCP 层队头阻塞 + 快速建连 | QUIC/UDP | 0~1-RTT （含 TLS) |
 
 每一代协议都在追求更低的延迟和更高的传输效率。值得注意的是，HTTP/2 和 HTTP/3 在应用层语义上几乎一致（都是请求/响应模型），区别主要在传输层。
 

@@ -48,7 +48,7 @@ Leader 挂了怎么办？Follower 会被选举为新 Leader。Kafka 用 ISR（In
 
 Consumer Group 是 Kafka 的消费模型。同一个 Group 内的消费者分摊消费 Topic 的 Partition：每个 Partition 只会被组内一个消费者处理。不同 Group 之间完全独立，各自消费各自的全量数据。
 
-```
+```plain
 Consumer Group "order-service"
 ├── Consumer A  →  Partition 0, Partition 1
 ├── Consumer B  →  Partition 2, Partition 3

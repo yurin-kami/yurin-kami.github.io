@@ -5,7 +5,7 @@ tags: ["C++", "MSVC", "编译器", "行结尾", "项目实战"]
 excerpt: "kami works"
 ---
 
-# 项目笔记：MSVC报C4335 Mac file format detected
+# 项目笔记：MSVC 报 C4335 Mac file format detected
 
 ### 前情提要
 
@@ -13,7 +13,7 @@ OptiScaler 是一个 C++ DLL 注入式工具，替换游戏中的 DLSS / FSR / X
 
 ### 问题
 
-```
+```plain
 warning C4335: Mac file format detected: please convert the source file to either
 DOS or UNIX format
 ```
@@ -44,9 +44,9 @@ with open(filepath, "wb") as f:
     f.write(raw)
 ```
 
-**两步操作的顺序至关重要。** 如果省略步骤1直接做步骤2，文件中已有的 `\r\n` 会被步骤2中的 `\n` 匹配规则再次转换，变成 `\r\r\n`——一个无效的三字节行结尾，MSVC 依然会报错。
+**两步操作的顺序至关重要。** 如果省略步骤 1 直接做步骤 2，文件中已有的 `\r\n` 会被步骤 2 中的 `\n` 匹配规则再次转换，变成 `\r\r\n`——一个无效的三字节行结尾，MSVC 依然会报错。
 
-```
+```plain
 错误示范：
   原始: Hello\r\nWorld\r\n
   直接替换 \n → \r\n: Hello\r\r\nWorld\r\r\n   ← 损坏！
@@ -67,7 +67,7 @@ with open(filepath, "wb") as f:
 |------|--------|------|------|
 | Windows | CR+LF | `\r\n` | 继承自打字机：回车（CR）+ 换行（LF）两个物理动作 |
 | Unix / Linux / macOS (10+) | LF | `\n` | Dennis Ritchie 在 Unix 中简化为一个字节 |
-| 经典 Mac OS (9 及以前) | CR | `\r` | 早期 Apple 系统的选择，macOS X 后废弃 |
+| 经典 Mac OS (9 及以前） | CR | `\r` | 早期 Apple 系统的选择，macOS X 后废弃 |
 
 CRLF 用两个字节表示一行结尾，LF 只用一个字节。在网络协议（HTTP、SMTP）中通常规定使用 CRLF，而现代开发工具大多能自动识别两种格式——除了 MSVC。
 
@@ -147,7 +147,7 @@ git config --global core.autocrlf input
 
 更精确的控制可以使用 `.gitattributes` 文件：
 
-```
+```plain
 # .gitattributes
 *.cpp    text eol=crlf
 *.h      text eol=crlf

@@ -5,7 +5,7 @@ tags: ["C++", "Python", "Unicode", "国际化", "项目实战"]
 excerpt: "kami works"
 ---
 
-# 项目笔记：翻译文本里的Unicode撇号让我找了半天bug
+# 项目笔记：翻译文本里的 Unicode 撇号让我找了半天 bug
 
 ### 前情提要
 

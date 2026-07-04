@@ -5,7 +5,7 @@ tags: ["OS", "kimatsu", "course", "baseful"]
 excerpt: "kami works"
 ---
 
-# 期末OS课程复习
+# 期末 OS 课程复习
 
 ## 第一章 操作系统概述
 

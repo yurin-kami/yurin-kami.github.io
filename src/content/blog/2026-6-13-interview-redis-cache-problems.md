@@ -174,7 +174,7 @@ func Update(key, val string) error {
 
 **Canal + Binlog 订阅**：更优雅的方案。应用程序只负责更新数据库，由 Canal 伪装成 MySQL 从节点订阅 binlog，解析出变更事件后异步删除或更新缓存。好处是业务代码完全不关心缓存同步，解耦彻底。
 
-```
+```plain
 应用写 DB → MySQL binlog → Canal 解析 → 删除/更新 Redis 缓存
 ```
 
@@ -196,5 +196,5 @@ func Update(key, val string) error {
 - [Redis 官方文档 - Keyspace Notifications](https://redis.io/docs/latest/develop/use/keyspace-notifications/)
 - [美团技术团队 - 缓存一致性方案](https://tech.meituan.com/)
 - [RedisBloom 模块](https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/)
-- [Canal 项目 (GitHub)](https://github.com/alibaba/canal)
+- [Canal 项目 （GitHub）](https://github.com/alibaba/canal)
 - [gobreaker 熔断器库](https://github.com/sony/gobreaker)

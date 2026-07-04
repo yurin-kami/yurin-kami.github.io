@@ -192,7 +192,7 @@ Gin 的中间件通过 `c.Next()` 和 `c.Abort()` 控制链路。执行顺序很
 
 ### 参考文章与延伸阅读
 
-- [Go 语言设计模式 (refactoring.guru)](https://refactoringguru.cn/design-patterns/go)
+- [Go 语言设计模式 （refactoring.guru）](https://refactoringguru.cn/design-patterns/go)
 - [Go Patterns - tmrts/go-patterns (GitHub)](https://github.com/tmrts/go-patterns)
 - [Google Wire - Compile-time Dependency Injection for Go](https://github.com/google/wire)
 - [Go 项目中的 Clean Architecture 实践](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)

@@ -5,29 +5,29 @@ tags: ["opencode", "agent", "wezterm", "终端模拟器"]
 excerpt: "kami works"
 ---
 
-# 关闭opencode导致wezterm会闪退（实际为wezterm的问题）
+# 关闭 opencode 导致 wezterm 会闪退（实际为 wezterm 的问题）
 
 ### 前情提要
 
-习惯linux命令，于是在Windows11上安装了支持kitty图像显示协议的wezterm，并且配置了gitbash+ohmyzsh和opencode
+习惯 linux 命令，于是在 Windows11 上安装了支持 kitty 图像显示协议的 wezterm，并且配置了 gitbash+ohmyzsh 和 opencode
 
 ### 问题
 
-在某次更新后opencode退出会导致wezterm标签页会一起关闭
+在某次更新后 opencode 退出会导致 wezterm 标签页会一起关闭
 
 ### 解决
 
-使用google英文搜索，发现wezterm下有一条issue：https://github.com/wezterm/wezterm/issues/7520
+使用 google 英文搜索，发现 wezterm 下有一条 issue：https://github.com/wezterm/wezterm/issues/7520
 
 #### 解决方法
 
-1. 进入微软wt的仓库https://github.com/microsoft/terminal/releases/tag/v1.24.10921.0 (或更新的版本)
+1. 进入微软 wt 的仓库https://github.com/microsoft/terminal/releases/tag/v1.24.10921.0 （或更新的版本）
 
-2. 下载nupkg包，例如https://github.com/microsoft/terminal/releases/download/v1.24.10921.0/Microsoft.Windows.Console.ConPTY.1.24.260402001.nupkg
+2. 下载 nupkg 包，例如https://github.com/microsoft/terminal/releases/download/v1.24.10921.0/Microsoft.Windows.Console.ConPTY.1.24.260402001.nupkg
 
-3. 使用解压缩软件打开，本人使用了bandzip，7z应该也行
+3. 使用解压缩软件打开，本人使用了 bandzip，7z 应该也行
 
-4. 找到 *untimes\win-x64\native\conpty.dll* 和*build\native\runtimes\x64\OpenConsole.exe* 两个文件复制到wezterm的目录（注意架构，这里使用x64），例如：
+4. 找到 *untimes\win-x64\native\conpty.dll* 和*build\native\runtimes\x64\OpenConsole.exe* 两个文件复制到 wezterm 的目录（注意架构，这里使用 x64），例如：
 
    ![image-20260527224702788](https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/image-20260527224702788.png)
 
@@ -39,13 +39,13 @@ excerpt: "kami works"
 
    ![image-20260527225233121](https://cdn.jsdelivr.net/gh/yurin-kami/KamiBlogImages/images/image-20260527225233121.png)
 
-​	可以观察到退出oc（opencode）后wezterm没有直接关闭标签页，问题解决
+​	可以观察到退出 oc（opencode）后 wezterm 没有直接关闭标签页，问题解决
 
 ### 分析
 
-启用wezterm的调试功能，定位到崩溃前OpenConsole.exe进程：
+启用 wezterm 的调试功能，定位到崩溃前 OpenConsole.exe 进程：
 
-```
+```plain
 0:000> !analyze -v
 Reloading current modules
 .....................................
@@ -222,6 +222,6 @@ FAILURE_ID_HASH:  {4b340304-ea48-c33c-9072-a8a7230f1e65}
 Followup:     MachineOwner
 ```
 
-大概是空指针解引用的问题。更新上游WindowsTerminal，将上述两个文件替换后即可修复
+大概是空指针解引用的问题。更新上游 WindowsTerminal，将上述两个文件替换后即可修复
 
-### 另，此操作也可解决*`pwsh` 的 FailFast 问题和 `0x80131623` 相关的问题*
+### 另，此操作也可解决*`pwsh` 的 FailFast 问题和 `0x80131623` 相关的问题

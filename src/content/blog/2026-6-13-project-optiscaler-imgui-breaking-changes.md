@@ -5,7 +5,7 @@ tags: ["C++", "ImGui", "API迁移", "项目实战"]
 excerpt: "kami works"
 ---
 
-# 项目笔记：ImGui 1.92的breaking changes让我编译全挂
+# 项目笔记：ImGui 1.92 的 breaking changes 让我编译全挂
 
 ### 前情提要
 
@@ -15,7 +15,7 @@ OptiScaler 是一个 C++ DLL 注入式工具，替换游戏中的 DLSS / FSR / X
 
 编译器报出的错误大致有这几类：
 
-```
+```plain
 error C2039: 'FontSize': is not a member of 'ImFont'
 error C2039: 'Build': is not a member of 'ImFontAtlas'
 error C2039: 'GetGlyphRangesChineseSimplifiedCommon': is not a member of 'ImFontAtlas'

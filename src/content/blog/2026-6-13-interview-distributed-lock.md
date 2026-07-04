@@ -23,7 +23,7 @@ excerpt: "kami works"
 
 最经典的实现。核心就一条命令：
 
-```
+```plain
 SET lock_key unique_value NX EX 10
 ```
 
@@ -141,7 +141,7 @@ Lease 的作用类似 Redis 的 TTL——客户端挂了，Lease 过期后 key �
 
 自动过期时间设太短，业务没执行完锁就释放了；设太长，崩溃后其他客户端要等很久。Redisson 的解决方案是**看门狗**：后台线程每隔 `lockWatchdogTimeout / 3`（默认 10 秒）检查一次，如果持有锁的线程还在运行，就自动续期。
 
-```
+```plain
 持锁线程还在跑 → 看门狗续期（重置 TTL）
 持锁线程已退出 → 看门狗停止 → TTL 自然到期后锁释放
 ```
@@ -152,7 +152,7 @@ Lease 的作用类似 Redis 的 TTL——客户端挂了，Lease 过期后 key �
 
 同一个线程可能需要多次获取同一把锁（递归调用）。实现方式是在锁的 value 中记录持有者 ID + 重入次数：
 
-```
+```plain
 第一次获锁：SET lock_key {threadId:1} NX EX 30
 第二次获锁：发现是自己持有 → 计数 +1 → {threadId:2}
 释放锁：计数 -1 → 到 0 时才真正删除
@@ -172,7 +172,7 @@ Redisson 用 Hash 结构实现：field 是线程标识，value 是重入次数�
 
 - Martin Kleppmann: [How to do distributed locking](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)
 - antirez: [Is Redlock safe?](http://antirez.com/news/101)
-- Redis 官方: [Distributed locks with Redis](https://redis.io/docs/manual/patterns/distributed-locks/)
+- Redis 官方： [Distributed locks with Redis](https://redis.io/docs/manual/patterns/distributed-locks/)
 - Apache Curator: [Shared Lock 文档](https://curator.apache.org/curator-recipes/shared-lock.html)
-- etcd 官方: [Lock recipe](https://etcd.io/docs/v3.5/dev-guide/recipes/#lock)
+- etcd 官方： [Lock recipe](https://etcd.io/docs/v3.5/dev-guide/recipes/#lock)
 - 《Designing Data-Intensive Applications》第 9 章：Consistency and Consensus
