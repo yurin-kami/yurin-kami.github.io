@@ -45,3 +45,8 @@ _theme_backup/
 .cc-connect/
 
 .cache/
+
+# Codex local scratch files
+.codex_*.txt
+.tmp-*-pr-body.md
+docs/superpowers/
