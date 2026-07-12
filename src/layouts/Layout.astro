@@ -138,37 +138,100 @@ const keywords = keywordsOverride || siteConfig.keywords || [siteConfig.title];
     {isI18nEnabled && <link rel="alternate" hreflang="x-default" href={xDefaultHref} />}
 
     <script is:inline>
-      // 主题系统 - 立即执行以防止 FOUC（无样式内容闪烁）
-      // 优先级：1. 用户手动选择 > 2. 系统偏好
-      (function() {
-        function getTheme() {
-          // 用户明确选择了主题
-          if (localStorage.theme === 'dark') return 'dark';
-          if (localStorage.theme === 'light') return 'light';
-          // 未设置，跟随系统偏好
-          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      (function () {
+        var THEME_KEY = 'theme';
+        var LIGHT_START_HOUR = 7;
+        var DARK_START_HOUR = 19;
+        var autoTimer = 0;
+
+        function getStoredPreference() {
+          try {
+            var value = localStorage.getItem(THEME_KEY);
+            return value === 'light' || value === 'dark' || value === 'auto' ? value : 'auto';
+          } catch (_error) {
+            return 'auto';
+          }
         }
 
-        function applyTheme(theme) {
+        function resolveAutoTheme(date) {
+          var hour = (date || new Date()).getHours();
+          return hour >= LIGHT_START_HOUR && hour < DARK_START_HOUR ? 'light' : 'dark';
+        }
+
+        function resolveTheme(preference) {
+          return preference === 'auto' ? resolveAutoTheme() : preference;
+        }
+
+        function applyTheme(theme, preference) {
           var root = document.documentElement;
           root.classList.toggle('dark', theme === 'dark');
-          root.dataset.theme = theme; // For astro-mermaid autoTheme
+          root.dataset.theme = theme;
+          root.dataset.themeMode = preference;
+          root.style.colorScheme = theme;
         }
 
-        // 立即应用主题
-        applyTheme(getTheme());
+        function getNextAutoDelay() {
+          var now = new Date();
+          var next = new Date(now);
+          var hour = now.getHours();
 
-        // 监听系统主题偏好变化
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-          // 仅当用户未明确选择主题时自动切换
-          if (!('theme' in localStorage)) {
-            applyTheme(getTheme());
+          if (hour < LIGHT_START_HOUR) {
+            next.setHours(LIGHT_START_HOUR, 0, 0, 0);
+          } else if (hour < DARK_START_HOUR) {
+            next.setHours(DARK_START_HOUR, 0, 0, 0);
+          } else {
+            next.setDate(next.getDate() + 1);
+            next.setHours(LIGHT_START_HOUR, 0, 0, 0);
           }
+
+          return Math.max(1000, next.getTime() - now.getTime() + 100);
+        }
+
+        function scheduleAutoSync() {
+          window.clearTimeout(autoTimer);
+          if (getStoredPreference() !== 'auto') return;
+          autoTimer = window.setTimeout(function () {
+            syncTheme();
+          }, getNextAutoDelay());
+        }
+
+        function syncTheme() {
+          var preference = getStoredPreference();
+          var theme = resolveTheme(preference);
+          applyTheme(theme, preference);
+          scheduleAutoSync();
+          return { preference: preference, theme: theme };
+        }
+
+        function setPreference(preference) {
+          var nextPreference = preference === 'light' || preference === 'dark' || preference === 'auto' ? preference : 'auto';
+          try {
+            localStorage.setItem(THEME_KEY, nextPreference);
+          } catch (_error) {}
+          return syncTheme();
+        }
+
+        window.__koharuTheme = {
+          applyPreference: setPreference,
+          getPreference: getStoredPreference,
+          getResolvedTheme: function () {
+            return resolveTheme(getStoredPreference());
+          },
+          sync: syncTheme,
+        };
+
+        syncTheme();
+
+        window.addEventListener('storage', function (event) {
+          if (event.key === THEME_KEY) syncTheme();
         });
 
-        // View Transition 切换页面后重新应用主题（在 DOM 渲染前）
-        document.addEventListener('astro:after-swap', function() {
-          applyTheme(getTheme());
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) syncTheme();
+        });
+
+        document.addEventListener('astro:after-swap', function () {
+          syncTheme();
         });
       })();
     </script>
