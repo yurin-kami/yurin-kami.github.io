@@ -1,69 +1,99 @@
 /**
  * ThemeToggle Component
  *
- * A sun/moon toggle for switching between light and dark themes.
- * Features View Transitions API for smooth theme changes.
- *
- * Inspired by https://codepen.io/aaroniker/pen/raaMMGx
+ * Three-state theme control: browser-local time auto mode, fixed light, and fixed dark.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import './theme-toggle.css';
 
-/**
- * Hook to manage theme state
- */
-function useTheme() {
-  const [isDark, setIsDark] = useState(() => {
-    // Initialize from DOM on client
-    if (typeof document !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
+type ThemePreference = 'auto' | 'light' | 'dark';
+type ResolvedTheme = 'light' | 'dark';
 
-  // Sync with DOM changes (e.g., from other tabs or initial state)
+interface ThemeSnapshot {
+  preference: ThemePreference;
+  theme: ResolvedTheme;
+}
+
+declare global {
+  interface Document {
+    startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+  }
+
+  interface Window {
+    __koharuTheme?: {
+      applyPreference: (preference: ThemePreference) => ThemeSnapshot;
+      getPreference: () => ThemePreference;
+      getResolvedTheme: () => ResolvedTheme;
+      sync: () => ThemeSnapshot;
+    };
+  }
+}
+
+function readThemeSnapshot(): ThemeSnapshot {
+  if (typeof document === 'undefined') {
+    return { preference: 'auto', theme: 'light' };
+  }
+
+  const root = document.documentElement;
+  const preference = root.dataset.themeMode === 'light' || root.dataset.themeMode === 'dark' ? root.dataset.themeMode : 'auto';
+  const theme = root.classList.contains('dark') ? 'dark' : 'light';
+
+  return { preference, theme };
+}
+
+function nextPreference({ preference, theme }: ThemeSnapshot): ThemePreference {
+  if (preference === 'auto') return theme === 'dark' ? 'light' : 'dark';
+  if (preference === 'light') return 'dark';
+  return 'auto';
+}
+
+function applyPreference(preference: ThemePreference): ThemeSnapshot {
+  if (typeof window !== 'undefined' && window.__koharuTheme) {
+    return window.__koharuTheme.applyPreference(preference);
+  }
+
+  const root = document.documentElement;
+  const theme = preference === 'dark' ? 'dark' : 'light';
+  root.classList.toggle('dark', theme === 'dark');
+  root.dataset.theme = theme;
+  root.dataset.themeMode = preference;
+  root.style.colorScheme = theme;
+
+  try {
+    localStorage.setItem('theme', preference);
+  } catch (_error) {}
+
+  return { preference, theme };
+}
+
+function useTheme() {
+  const [snapshot, setSnapshot] = useState<ThemeSnapshot>(readThemeSnapshot);
+
   useEffect(() => {
     const rootElement = document.documentElement;
 
-    // Initial sync
-    setIsDark(rootElement.classList.contains('dark'));
+    setSnapshot(window.__koharuTheme?.sync() ?? readThemeSnapshot());
 
-    // Watch for class changes
     const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.attributeName === 'class') {
-          setIsDark(rootElement.classList.contains('dark'));
-        }
+      if (mutations.some((mutation) => mutation.attributeName === 'class' || mutation.attributeName === 'data-theme-mode')) {
+        setSnapshot(readThemeSnapshot());
       }
     });
 
-    observer.observe(rootElement, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(rootElement, { attributes: true, attributeFilter: ['class', 'data-theme-mode'] });
 
     return () => observer.disconnect();
   }, []);
 
-  const applyTheme = useCallback((dark: boolean) => {
-    const root = document.documentElement;
-    const theme = dark ? 'dark' : 'light';
-
-    root.classList.toggle('dark', dark);
-    root.dataset.theme = theme; // For astro-mermaid autoTheme
-    localStorage.setItem('theme', theme);
-  }, []);
-
-  const toggle = useCallback(() => {
-    const newIsDark = !isDark;
+  const cycleTheme = useCallback(() => {
+    const newPreference = nextPreference(readThemeSnapshot());
     const rootElement = document.documentElement;
 
-    // Add theme transition class
     rootElement.classList.add('theme-transition');
 
-    // Use View Transitions API if available
     if (!document.startViewTransition) {
-      // Fallback for browsers without View Transitions API
-      applyTheme(newIsDark);
-      setIsDark(newIsDark);
+      setSnapshot(applyPreference(newPreference));
       setTimeout(() => {
         rootElement.classList.remove('theme-transition');
       }, 100);
@@ -71,16 +101,15 @@ function useTheme() {
     }
 
     const transition = document.startViewTransition(() => {
-      applyTheme(newIsDark);
-      setIsDark(newIsDark);
+      setSnapshot(applyPreference(newPreference));
     });
 
     transition.finished.finally(() => {
       rootElement.classList.remove('theme-transition');
     });
-  }, [isDark, applyTheme]);
+  }, []);
 
-  return { isDark, toggle };
+  return { ...snapshot, cycleTheme };
 }
 
 interface ThemeToggleProps {
@@ -88,30 +117,25 @@ interface ThemeToggleProps {
 }
 
 export default function ThemeToggle({ className }: ThemeToggleProps) {
-  const { isDark, toggle } = useTheme();
-
-  const handleChange = () => {
-    toggle();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      toggle();
-    }
-  };
+  const { cycleTheme, preference, theme } = useTheme();
+  const label =
+    preference === 'auto'
+      ? `Theme auto (${theme}); switch to fixed ${theme === 'dark' ? 'light' : 'dark'}`
+      : `Theme fixed ${theme}; ${theme === 'light' ? 'switch to fixed dark' : 'switch to auto'}`;
 
   return (
     <button
       className={`theme-toggle scale-80 cursor-pointer transition duration-300 hover:scale-90 ${className || ''}`}
-      aria-label="toggle theme"
-      onKeyDown={handleKeyDown}
+      aria-label={label}
+      title={label}
+      data-theme={theme}
+      data-theme-mode={preference}
+      onClick={cycleTheme}
       type="button"
     >
-      <label className="toggle block cursor-pointer" aria-label="toggle theme">
-        <input type="checkbox" className="hidden" checked={isDark} onChange={handleChange} />
-        <div className="toggle-indicator" />
-      </label>
+      <span className="toggle block cursor-pointer" aria-hidden="true">
+        <span className="toggle-indicator" />
+      </span>
     </button>
   );
 }
